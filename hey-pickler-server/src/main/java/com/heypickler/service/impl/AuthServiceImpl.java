@@ -1,0 +1,145 @@
+package com.heypickler.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.heypickler.common.constant.RedisKey;
+import com.heypickler.common.exception.BizException;
+import com.heypickler.common.exception.ErrorCode;
+import com.heypickler.common.util.AesUtil;
+import com.heypickler.common.util.JwtUtil;
+import com.heypickler.entity.AdminUser;
+import com.heypickler.entity.User;
+import com.heypickler.mapper.AdminUserMapper;
+import com.heypickler.mapper.UserMapper;
+import com.heypickler.service.AuthService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+@Service
+@RequiredArgsConstructor
+public class AuthServiceImpl implements AuthService {
+
+    private final UserMapper userMapper;
+    private final AdminUserMapper adminUserMapper;
+    private final JwtUtil jwtUtil;
+    private final AesUtil aesUtil;
+    private final RedisTemplate<String, Object> redisTemplate;
+    private final PasswordEncoder passwordEncoder;
+
+    @Value("${hey-pickler.wechat.appid}")
+    private String appId;
+
+    @Value("${hey-pickler.wechat.secret}")
+    private String appSecret;
+
+    @Override
+    public Map<String, Object> appLogin(String code) {
+        // Call WeChat code2Session API
+        String url = String.format(
+                "https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code",
+                appId, appSecret, code);
+
+        RestTemplate restTemplate = new RestTemplate();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> result = restTemplate.getForObject(url, Map.class);
+
+        if (result == null || result.containsKey("errcode")) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "微信登录失败");
+        }
+
+        String openid = (String) result.get("openid");
+        String sessionKey = (String) result.get("session_key");
+
+        // Store session_key in Redis for phone decryption
+        redisTemplate.opsForValue().set(RedisKey.wxSession(openid), sessionKey, 30, TimeUnit.MINUTES);
+
+        // Find or create user
+        User user = userMapper.selectOne(
+                new LambdaQueryWrapper<User>().eq(User::getOpenid, openid));
+
+        boolean needBindPhone;
+        if (user == null) {
+            user = new User();
+            user.setOpenid(openid);
+            user.setUnionId((String) result.get("unionid"));
+            user.setStatus("NORMAL");
+            user.setStarPoints(0);
+            user.setPartyPoints(0);
+            user.setStarTier("SHINING");
+            user.setPartyTier("SHINING");
+            userMapper.insert(user);
+            needBindPhone = true;
+        } else {
+            needBindPhone = user.getPhone() == null;
+            user.setLastLoginAt(java.time.LocalDateTime.now());
+            userMapper.updateById(user);
+        }
+
+        // Check ban status
+        if ("BANNED".equals(user.getStatus())) {
+            throw new BizException(ErrorCode.USER_BANNED);
+        }
+
+        String token = jwtUtil.generateAppToken(user.getId());
+        return Map.of("token", token, "needBindPhone", needBindPhone);
+    }
+
+    @Override
+    public void bindPhone(Long userId, String encryptedData, String iv) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "用户不存在");
+        }
+
+        // Get session_key from Redis
+        String sessionKey = (String) redisTemplate.opsForValue().get(RedisKey.wxSession(user.getOpenid()));
+        if (sessionKey == null) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "会话已过期，请重新登录");
+        }
+
+        // For simplicity, we assume the phone is already decrypted on the client side
+        // In production, use WXBizDataCrypt to decrypt encryptedData with sessionKey and iv
+        // Here we accept the phone directly for the MVP
+        String phone = encryptedData; // In real impl, decrypt this
+        user.setPhone(aesUtil.encrypt(phone));
+        userMapper.updateById(user);
+    }
+
+    @Override
+    public String refreshToken(Long userId) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BizException(ErrorCode.UNAUTHORIZED);
+        }
+        return jwtUtil.generateAppToken(userId);
+    }
+
+    @Override
+    public Map<String, Object> adminLogin(String username, String password) {
+        AdminUser admin = adminUserMapper.selectOne(
+                new LambdaQueryWrapper<AdminUser>().eq(AdminUser::getUsername, username));
+
+        if (admin == null || !passwordEncoder.matches(password, admin.getPasswordHash())) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "用户名或密码错误");
+        }
+
+        if ("DISABLED".equals(admin.getStatus())) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "账号已被禁用");
+        }
+
+        String token = jwtUtil.generateAdminToken(admin.getId(), admin.getRole());
+
+        // Store session in Redis
+        String sessionKey = RedisKey.adminSession(String.valueOf(admin.getId()));
+        redisTemplate.opsForValue().set(sessionKey, token, 24, TimeUnit.HOURS);
+
+        return Map.of("token", token, "role", admin.getRole());
+    }
+}

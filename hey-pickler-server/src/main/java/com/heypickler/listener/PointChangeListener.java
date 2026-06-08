@@ -18,9 +18,9 @@ public class PointChangeListener {
     @EventListener
     public void onPointChange(PointChangeEvent event) {
         try {
-            rankingService.refreshRankings(event.getType());
+            rankingService.refreshRankings(event.type());
         } catch (Exception e) {
-            log.error("Failed to refresh rankings for type: {}", event.getType(), e);
+            log.error("Failed to refresh rankings for type: {}", event.type(), e);
         }
     }
 
