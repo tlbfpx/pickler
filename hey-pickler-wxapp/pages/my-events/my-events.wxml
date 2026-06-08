@@ -1,0 +1,84 @@
+<!-- My events page -->
+<view class="page">
+  <!-- Tabs -->
+  <view class="tab-bar">
+    <view
+      class="tab-item {{currentTab === index ? 'active' : ''}}"
+      wx:for="{{tabs}}"
+      wx:key="index"
+      data-index="{{index}}"
+      bindtap="switchTab">
+      {{item}}
+    </view>
+  </view>
+
+  <!-- Event list -->
+  <view class="event-list">
+    <view
+      class="event-item"
+      wx:for="{{registrations}}"
+      wx:key="id"
+      bindtap="navigateToDetail"
+      data-event="{{item.event}}">
+
+      <!-- Event banner -->
+      <image class="event-banner" src="{{item.event.banner_url || '/images/default-event.png'}}" mode="aspectFill"></image>
+
+      <!-- Event type badge -->
+      <view class="event-type-badge {{item.event.type === 'STAR' ? 'type-star' : 'type-party'}}">
+        {{item.event.type === 'STAR' ? 'Star 赛事' : 'Party 活动'}}
+      </view>
+
+      <!-- Registration status badge -->
+      <view class="status-badge" style="background-color: {{getRegistrationStatusColor(item)}}">
+        {{getRegistrationStatus(item)}}
+      </view>
+
+      <!-- Event info -->
+      <view class="event-info">
+        <view class="event-title">{{item.event.title}}</view>
+
+        <view class="event-meta">
+          <view class="meta-item">
+            <text class="meta-icon">📅</text>
+            <text class="meta-text">{{util.formatDate(item.event.event_time, 'MM-DD HH:mm')}}</text>
+          </view>
+
+          <view class="meta-item">
+            <text class="meta-icon">📍</text>
+            <text class="meta-text">{{item.event.location}}</text>
+          </view>
+        </view>
+
+        <!-- Registration time -->
+        <view class="registration-time">
+          <text class="time-label">报名时间：</text>
+          <text class="time-value">{{util.formatDate(item.created_at)}}</text>
+        </view>
+
+        <!-- Match type -->
+        <view class="match-type" wx:if="{{item.match_type}}">
+          <text class="type-icon">🎾</text>
+          <text class="type-text">{{item.match_type === 'SINGLES' ? '单打' : item.match_type === 'DOUBLES' ? '双打' : '混合双打'}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Loading -->
+    <view wx:if="{{loading}}" class="loading">
+      <text>加载中...</text>
+    </view>
+
+    <!-- No more data -->
+    <view wx:if="{{!hasMore && registrations.length > 0}}" class="no-more">
+      <text>没有更多了</text>
+    </view>
+
+    <!-- Empty state -->
+    <view wx:if="{{registrations.length === 0 && !loading}}" class="empty">
+      <text class="empty-icon">📋</text>
+      <text>暂无报名记录</text>
+      <text class="empty-hint">快去参加赛事活动吧</text>
+    </view>
+  </view>
+</view>

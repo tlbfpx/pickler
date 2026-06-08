@@ -1,0 +1,54 @@
+<!-- Event card component -->
+<view class="event-card" bindtap="handleTap">
+  <!-- Event banner -->
+  <image class="event-banner" src="{{event.banner_url || '/images/default-event.png'}}" mode="aspectFill"></image>
+
+  <!-- Event type badge -->
+  <view wx:if="{{showType}}" class="event-type-badge {{typeClass}}">{{typeText}}</view>
+
+  <!-- Event status badge -->
+  <view wx:if="{{showStatus}}" class="event-status-badge" style="background-color: {{statusColor}}">
+    {{statusText}}
+  </view>
+
+  <!-- Event info -->
+  <view class="event-info">
+    <view class="event-title">{{event.title}}</view>
+
+    <view class="event-meta">
+      <view class="meta-item">
+        <text class="meta-icon">📅</text>
+        <text class="meta-text">{{eventTime}}</text>
+      </view>
+
+      <view class="meta-item">
+        <text class="meta-icon">📍</text>
+        <text class="meta-text">{{event.location}}</text>
+      </view>
+    </view>
+
+    <!-- Participants info -->
+    <view class="event-participants">
+      <view class="participant-count">
+        <text class="count-icon">👥</text>
+        <text class="count-text">{{event.current_participants}}/{{event.max_participants}}</text>
+      </view>
+
+      <view wx:if="{{isFull}}" class="full-badge">已满员</view>
+      <view wx:elif="{{remainingTime}}" class="deadline-badge">
+        距截止: {{remainingTime}}
+      </view>
+    </view>
+
+    <!-- Register button -->
+    <button
+      wx:if="{{isOpen}}"
+      class="register-btn"
+      bindtap="handleRegister">
+      立即报名
+    </button>
+    <button wx:else class="register-btn disabled" disabled>
+      {{isFull ? '已满员' : '报名已截止'}}
+    </button>
+  </view>
+</view>

@@ -1,0 +1,93 @@
+<!-- Profile page -->
+<view class="page" wx:if="{{!loading && userInfo}}">
+  <!-- User header -->
+  <view class="user-header">
+    <image class="user-avatar" src="{{userInfo.avatar_url || '/images/default-avatar.png'}}" mode="aspectFill"></image>
+
+    <view class="user-info">
+      <view class="user-name">{{userInfo.nickname || '未设置昵称'}}</view>
+      <view class="user-city" bindtap="handleEditCity">
+        <text>{{userInfo.city || '未设置城市'}}</text>
+        <text class="edit-icon">✏️</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Star points card -->
+  <view class="points-card star-card">
+    <view class="points-header">
+      <text class="points-title">Star 积分</text>
+      <tier-badge tier="{{userInfo.star_tier}}" type="STAR" size="medium"></tier-badge>
+    </view>
+    <view class="points-value">{{userInfo.star_points || 0}}</view>
+    <view class="points-actions">
+      <button class="points-btn" bindtap="navigateToMyEvents" data-type="STAR">我的赛事</button>
+      <button class="points-btn" bindtap="navigateToRanking" data-type="STAR">Star排名</button>
+    </view>
+  </view>
+
+  <!-- Party points card -->
+  <view class="points-card party-card">
+    <view class="points-header">
+      <text class="points-title">Party 积分</text>
+      <tier-badge tier="{{userInfo.party_tier}}" type="PARTY" size="medium"></tier-badge>
+    </view>
+    <view class="points-value">{{userInfo.party_points || 0}}</view>
+    <view class="points-actions">
+      <button class="points-btn" bindtap="navigateToMyEvents" data-type="PARTY">我的活动</button>
+      <button class="points-btn" bindtap="navigateToRanking" data-type="PARTY">Party排名</button>
+    </view>
+  </view>
+
+  <!-- User info list -->
+  <view class="info-list">
+    <view class="info-item" bindtap="handleEditNickname">
+      <text class="info-label">昵称</text>
+      <view class="info-value">
+        <text class="value-text">{{userInfo.nickname || '未设置'}}</text>
+        <text class="edit-icon">✏️</text>
+      </view>
+    </view>
+
+    <view class="info-item" bindtap="handleEditCity">
+      <text class="info-label">城市</text>
+      <view class="info-value">
+        <text class="value-text">{{userInfo.city || '未设置'}}</text>
+        <text class="edit-icon">✏️</text>
+      </view>
+    </view>
+
+    <view class="info-item" bindtap="handleBindPhone">
+      <text class="info-label">手机号</text>
+      <view class="info-value">
+        <text class="value-text">{{userInfo.phone || '未绑定'}}</text>
+        <text class="edit-icon">{{userInfo.phone ? '' : '➕'}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Logout button -->
+  <view class="logout-section">
+    <button class="logout-btn" bindtap="handleLogout">退出登录</button>
+  </view>
+</view>
+
+<!-- Loading state -->
+<view wx:if="{{loading}}" class="loading-container">
+  <text class="loading-text">加载中...</text>
+</view>
+
+<!-- Phone modal -->
+<view wx:if="{{showPhoneModal}}" class="modal-mask" bindtap="closePhoneModal">
+  <view class="modal-content" catchtap="stopPropagation">
+    <view class="modal-title">绑定手机号</view>
+    <view class="modal-desc">绑定手机号后可以更安全地使用小程序</view>
+    <button
+      class="modal-btn"
+      open-type="getPhoneNumber"
+      bindgetphonenumber="getPhoneNumber">
+      授权手机号
+    </button>
+    <button class="modal-btn secondary" bindtap="closePhoneModal">取消</button>
+  </view>
+</view>
