@@ -1,0 +1,91 @@
+/* Ranking page styles */
+.tab-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  background-color: white;
+  border-bottom: 2rpx solid #f5f5f5;
+}
+
+.tab-item {
+  flex: 1;
+  text-align: center;
+  padding: 30rpx 0;
+  font-size: 32rpx;
+  color: #666;
+  position: relative;
+}
+
+.tab-item.active {
+  color: #4CAF50;
+  font-weight: 600;
+}
+
+.tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60rpx;
+  height: 6rpx;
+  background-color: #4CAF50;
+  border-radius: 3rpx;
+}
+
+.tier-tab-bar {
+  position: sticky;
+  top: 88rpx;
+  z-index: 99;
+  display: flex;
+  background-color: #f5f5f5;
+  padding: 16rpx 20rpx;
+  gap: 16rpx;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.tier-tab-item {
+  padding: 16rpx 32rpx;
+  background-color: white;
+  border-radius: 24rpx;
+  font-size: 28rpx;
+  color: #666;
+  border: 2rpx solid transparent;
+  flex-shrink: 0;
+}
+
+.tier-tab-item.active {
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  color: white;
+  border-color: #4CAF50;
+}
+
+.ranking-list {
+  padding: 20rpx;
+}
+
+.loading {
+  text-align: center;
+  padding: 40rpx;
+  color: #999;
+}
+
+.no-more {
+  text-align: center;
+  padding: 40rpx;
+  color: #999;
+  font-size: 28rpx;
+}
+
+.empty {
+  text-align: center;
+  padding: 120rpx 40rpx;
+}
+
+.empty-icon {
+  display: block;
+  font-size: 120rpx;
+  margin-bottom: 20rpx;
+}

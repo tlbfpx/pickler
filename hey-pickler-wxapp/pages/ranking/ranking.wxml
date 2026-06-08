@@ -1,0 +1,53 @@
+<!-- Ranking page -->
+<view class="page">
+  <!-- Type tabs (Star/Party) -->
+  <view class="tab-bar">
+    <view
+      class="tab-item {{currentTab === index ? 'active' : ''}}"
+      wx:for="{{tabs}}"
+      wx:key="index"
+      data-index="{{index}}"
+      bindtap="switchTypeTab">
+      {{item}}
+    </view>
+  </view>
+
+  <!-- Tier tabs -->
+  <view class="tier-tab-bar">
+    <view
+      class="tier-tab-item {{currentTierTab === index ? 'active' : ''}}"
+      wx:for="{{tierTabs}}"
+      wx:key="index"
+      data-index="{{index}}"
+      bindtap="switchTierTab">
+      {{item}}
+    </view>
+  </view>
+
+  <!-- Ranking list -->
+  <view class="ranking-list">
+    <ranking-item
+      wx:for="{{rankings}}"
+      wx:key="id"
+      rank="{{index + 1}}"
+      user="{{item}}"
+      bind:tap="handleRankingTap">
+    </ranking-item>
+
+    <!-- Loading -->
+    <view wx:if="{{loading}}" class="loading">
+      <text>加载中...</text>
+    </view>
+
+    <!-- No more data -->
+    <view wx:if="{{!hasMore && rankings.length > 0}}" class="no-more">
+      <text>没有更多了</text>
+    </view>
+
+    <!-- Empty state -->
+    <view wx:if="{{rankings.length === 0 && !loading}}" class="empty">
+      <text class="empty-icon">🏆</text>
+      <text>暂无排名数据</text>
+    </view>
+  </view>
+</view>

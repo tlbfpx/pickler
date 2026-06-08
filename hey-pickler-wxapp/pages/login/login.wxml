@@ -1,0 +1,54 @@
+<!-- Login page -->
+<view class="login-page">
+  <view class="login-container">
+    <!-- Logo -->
+    <view class="logo-section">
+      <image class="logo" src="/images/logo.png" mode="aspectFit"></image>
+      <text class="app-name">Hey Pickler</text>
+      <text class="app-slogan">匹克球赛事活动管理平台</text>
+    </view>
+
+    <!-- Login button -->
+    <view class="login-section">
+      <!-- New version - getUserProfile -->
+      <button
+        wx:if="{{canIGetUserProfile}}"
+        class="login-btn"
+        bindtap="getUserProfile"
+        disabled="{{loading}}">
+        <text class="btn-icon">👋</text>
+        <text class="btn-text">{{loading ? '登录中...' : '微信一键登录'}}</text>
+      </button>
+
+      <!-- Old version - getUserInfo -->
+      <button
+        wx:else
+        class="login-btn"
+        open-type="getUserInfo"
+        bindgetuserinfo="getUserInfo"
+        disabled="{{loading}}">
+        <text class="btn-icon">👋</text>
+        <text class="btn-text">{{loading ? '登录中...' : '微信一键登录'}}</text>
+      </button>
+
+      <!-- Bind phone button (shown when phone is needed) -->
+      <button
+        wx:if="{{needPhone}}"
+        class="phone-btn"
+        open-type="getPhoneNumber"
+        bindgetphonenumber="bindPhoneNumber"
+        disabled="{{loading}}">
+        <text class="btn-icon">📱</text>
+        <text class="btn-text">{{loading ? '绑定中...' : '绑定手机号'}}</text>
+      </button>
+    </view>
+
+    <!-- Terms -->
+    <view class="terms-section">
+      <text class="terms-text">登录即表示同意</text>
+      <text class="terms-link">《用户协议》</text>
+      <text class="terms-text">和</text>
+      <text class="terms-link">《隐私政策》</text>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,54 @@
+<!-- Index page - Home -->
+<view class="page">
+  <!-- Banner carousel -->
+  <swiper wx:if="{{banners.length > 0}}" class="banner-swiper" indicator-dots autoplay circular interval="3000">
+    <swiper-item wx:for="{{banners}}" wx:key="id">
+      <image
+        class="banner-image"
+        src="{{item.image_url}}"
+        mode="aspectFill"
+        bindtap="handleBannerTap"
+        data-banner="{{item}}">
+      </image>
+    </swiper-item>
+  </swiper>
+
+  <!-- Tabs -->
+  <view class="tab-bar">
+    <view
+      class="tab-item {{currentTab === index ? 'active' : ''}}"
+      wx:for="{{tabs}}"
+      wx:key="index"
+      data-index="{{index}}"
+      bindtap="switchTab">
+      {{item}}
+    </view>
+  </view>
+
+  <!-- Event list -->
+  <view class="event-list">
+    <event-card
+      wx:for="{{events}}"
+      wx:key="id"
+      event="{{item}}"
+      bind:tap="navigateToDetail"
+      bind:register="handleRegister">
+    </event-card>
+
+    <!-- Loading -->
+    <view wx:if="{{loading}}" class="loading">
+      <text>加载中...</text>
+    </view>
+
+    <!-- No more data -->
+    <view wx:if="{{!hasMore && events.length > 0}}" class="no-more">
+      <text>没有更多了</text>
+    </view>
+
+    <!-- Empty state -->
+    <view wx:if="{{events.length === 0 && !loading}}" class="empty">
+      <text class="empty-icon">📋</text>
+      <text>暂无{{tabs[currentTab]}}</text>
+    </view>
+  </view>
+</view>
