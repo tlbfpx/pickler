@@ -136,6 +136,7 @@ Banner (首页轮播图)
 | created_by | BIGINT | 创建人（管理员 ID） |
 | created_at | DATETIME | 创建时间 |
 | updated_at | DATETIME | 更新时间 |
+| deleted_at | DATETIME NULL | 软删除时间（NULL = 未删除） |
 
 索引：(type, status, event_time), (status, event_time), (created_by)
 
@@ -150,8 +151,11 @@ Banner (首页轮播图)
 | partner_id | BIGINT FK NULL | 双打搭档 ID（DOUBLES/MIXED 时必填） |
 | status | VARCHAR(16) | REGISTERED/CHECKED_IN/WITHDRAWN |
 | created_at | DATETIME | 报名时间 |
+| updated_at | DATETIME | 状态变更时间 |
 
 索引：UNIQUE(user_id, event_id)
+
+> 注：同一用户同一赛事只能报名一次（不论单打/双打）。
 
 #### point_record（积分记录表）
 
@@ -292,7 +296,7 @@ Banner (首页轮播图)
 生成 JWT token 返回
 ```
 
-- Token 存储在小端 storage，每次请求携带
+- Token 存储在小程序端 storage，每次请求携带
 - Redis 存储 session_key 用于解密手机号
 
 ### 4.3 后台管理系统
@@ -470,6 +474,9 @@ Banner (首页轮播图)
 | `/api/admin/events/{id}/points` | POST | 积分录入 |
 | `/api/admin/banners` | GET/POST | Banner 列表/创建 |
 | `/api/admin/banners/{id}` | PUT/DELETE | Banner 编辑/删除 |
+| `/api/admin/admin-users` | GET/POST | 管理员列表/创建（SUPER_ADMIN） |
+| `/api/admin/admin-users/{id}` | GET/PUT | 管理员详情/编辑（SUPER_ADMIN） |
+| `/api/admin/admin-users/{id}/reset-password` | POST | 重置密码（SUPER_ADMIN） |
 
 ### 6.3 鉴权方案
 
