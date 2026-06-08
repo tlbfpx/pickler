@@ -1,0 +1,28 @@
+<!-- Ranking item component -->
+<view class="ranking-item" bindtap="handleTap">
+  <view class="rank-number {{rankClass}}">{{rankDisplay}}</view>
+
+  <view class="user-info">
+    <image class="user-avatar" src="{{user.avatar_url || '/images/default-avatar.png'}}" mode="aspectFill"></image>
+    <view class="user-details">
+      <view class="user-name">{{user.nickname}}</view>
+      <view class="user-city">{{user.city}}</view>
+    </view>
+  </view>
+
+  <view class="ranking-stats">
+    <tier-badge
+      wx:if="{{showTier}}"
+      tier="{{user.tier}}"
+      type="{{user.type}}"
+      size="small">
+    </tier-badge>
+
+    <view class="user-points">{{user.points}} 分</view>
+
+    <view wx:if="{{showChange}}" class="rank-change {{changeClass}}">
+      <text class="change-icon">{{changeIcon}}</text>
+      <text class="change-value">{{Math.abs(user.change || 0)}}</text>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,7 @@
+<!-- Tier badge component -->
+<view
+  class="tier-badge {{tierClass}} {{sizeClass}}"
+  bindtap="handleTap"
+>
+  <text class="tier-text">{{tierName}} {{type}}</text>
+</view>
