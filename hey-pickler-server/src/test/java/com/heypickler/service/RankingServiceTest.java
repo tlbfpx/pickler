@@ -14,6 +14,7 @@ import com.heypickler.mapper.EventMapper;
 import com.heypickler.mapper.PointRecordMapper;
 import com.heypickler.mapper.RankingMapper;
 import com.heypickler.mapper.UserMapper;
+import com.heypickler.service.impl.RankingServiceImpl;
 import com.heypickler.vo.RankingVO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -70,6 +71,15 @@ class RankingServiceTest {
         testUser.setPartyTier("SHINING");
     }
 
+
+    private PointEntryRequest.PointRecordItem createItem(Long userId, int points, String reason) {
+        PointEntryRequest.PointRecordItem item = new PointEntryRequest.PointRecordItem();
+        item.setUserId(userId);
+        item.setPoints(points);
+        item.setReason(reason);
+        return item;
+    }
+
     @Test
     void testCalculateTier_Star_Shining() {
         String tier = (String) ReflectionTestUtils.invokeMethod(rankingService, "calculateTier", 0, "STAR");
@@ -111,7 +121,7 @@ class RankingServiceTest {
         when(eventMapper.selectById(1L)).thenReturn(null);
 
         PointEntryRequest request = new PointEntryRequest();
-        request.setRecords(Arrays.asList(new PointRecordItem(1L, 100, "Test")));
+        request.setRecords(Arrays.asList(createItem(1L, 100, "Test")));
 
         BizException exception = assertThrows(BizException.class, () -> {
             rankingService.enterPoints(1L, request, 1L);
@@ -131,7 +141,7 @@ class RankingServiceTest {
         when(pointRecordMapper.insert(any(PointRecord.class))).thenReturn(1);
 
         PointEntryRequest request = new PointEntryRequest();
-        request.setRecords(Arrays.asList(new PointRecordItem(1L, 100, "Test reason")));
+        request.setRecords(Arrays.asList(createItem(1L, 100, "Test reason")));
 
         rankingService.enterPoints(1L, request, 100L);
 
@@ -165,8 +175,8 @@ class RankingServiceTest {
 
         PointEntryRequest request = new PointEntryRequest();
         request.setRecords(Arrays.asList(
-            new PointRecordItem(1L, 100, "Test 1"),
-            new PointRecordItem(2L, 200, "Test 2")
+            createItem(1L, 100, "Test 1"),
+            createItem(2L, 200, "Test 2")
         ));
 
         rankingService.enterPoints(1L, request, 100L);
@@ -184,7 +194,7 @@ class RankingServiceTest {
         when(pointRecordMapper.insert(any(PointRecord.class))).thenReturn(1);
 
         PointEntryRequest request = new PointEntryRequest();
-        request.setRecords(Arrays.asList(new PointRecordItem(1L, 100, "Test")));
+        request.setRecords(Arrays.asList(createItem(1L, 100, "Test")));
 
         rankingService.enterPoints(1L, request, 100L);
 
@@ -207,7 +217,7 @@ class RankingServiceTest {
         when(pointRecordMapper.insert(any(PointRecord.class))).thenReturn(1);
 
         PointEntryRequest request = new PointEntryRequest();
-        request.setRecords(Arrays.asList(new PointRecordItem(1L, -100, "Penalty")));
+        request.setRecords(Arrays.asList(createItem(1L, -100, "Penalty")));
 
         rankingService.enterPoints(1L, request, 100L);
 
@@ -224,7 +234,7 @@ class RankingServiceTest {
         when(pointRecordMapper.insert(any(PointRecord.class))).thenReturn(1);
 
         PointEntryRequest request = new PointEntryRequest();
-        request.setRecords(Arrays.asList(new PointRecordItem(1L, 500, "Test")));
+        request.setRecords(Arrays.asList(createItem(1L, 500, "Test")));
 
         rankingService.enterPoints(1L, request, 100L);
 
@@ -326,7 +336,7 @@ class RankingServiceTest {
     void testRefreshRankings_ClearsRedisCache() {
         when(userMapper.selectList(any(LambdaQueryWrapper.class)))
             .thenReturn(Collections.emptyList());
-        when(redisTemplate.delete(anyString())).thenReturn(1L);
+        when(redisTemplate.delete(anyString())).thenReturn(true);
 
         rankingService.refreshRankings("STAR");
 
