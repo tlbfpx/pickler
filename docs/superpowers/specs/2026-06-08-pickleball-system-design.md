@@ -102,12 +102,16 @@ Banner (首页轮播图)
 | avatar_url | VARCHAR(512) | 头像 URL |
 | phone | VARCHAR(20) | 手机号 |
 | city | VARCHAR(64) | 城市 |
-| star_points | INT DEFAULT 0 | Star 模式总积分 |
-| party_points | INT DEFAULT 0 | Party 模式总积分 |
-| tier | VARCHAR(16) | 当前段位（LEGEND/SUPER/SHINING） |
+| star_points | INT DEFAULT 0 | Star 模式总积分（CHECK >= 0） |
+| party_points | INT DEFAULT 0 | Party 模式总积分（CHECK >= 0） |
+| star_tier | VARCHAR(16) | Star 段位（LEGEND/SUPER/SHINING） |
+| party_tier | VARCHAR(16) | Party 段位（LEGEND/SUPER/SHINING） |
 | status | VARCHAR(16) | 状态（NORMAL/BANNED） |
+| last_login_at | DATETIME | 最后登录时间 |
 | created_at | DATETIME | 创建时间 |
 | updated_at | DATETIME | 更新时间 |
+
+索引：UNIQUE(openid), UNIQUE(union_id)
 
 #### event（赛事/活动表）
 
@@ -133,6 +137,8 @@ Banner (首页轮播图)
 | created_at | DATETIME | 创建时间 |
 | updated_at | DATETIME | 更新时间 |
 
+索引：(type, status, event_time), (status, event_time), (created_by)
+
 #### registration（报名表）
 
 | 字段 | 类型 | 说明 |
@@ -140,7 +146,8 @@ Banner (首页轮播图)
 | id | BIGINT PK | 主键 |
 | user_id | BIGINT FK | 用户 ID |
 | event_id | BIGINT FK | 赛事/活动 ID |
-| partner_id | BIGINT FK NULL | 双打搭档 ID |
+| match_type | VARCHAR(16) | SINGLES/DOUBLES/MIXED |
+| partner_id | BIGINT FK NULL | 双打搭档 ID（DOUBLES/MIXED 时必填） |
 | status | VARCHAR(16) | REGISTERED/CHECKED_IN/WITHDRAWN |
 | created_at | DATETIME | 报名时间 |
 
@@ -159,6 +166,8 @@ Banner (首页轮播图)
 | operator_id | BIGINT | 录入人（管理员 ID） |
 | created_at | DATETIME | 录入时间 |
 
+索引：(user_id, created_at DESC), (event_id), (operator_id)
+
 #### ranking（排名快照表）
 
 | 字段 | 类型 | 说明 |
@@ -172,6 +181,22 @@ Banner (首页轮播图)
 | change | INT DEFAULT 0 | 排名变化（正=上升，负=下降） |
 | season | VARCHAR(32) | 赛季标识 |
 | updated_at | DATETIME | 更新时间 |
+
+索引：UNIQUE(user_id, type, season), (type, tier, points DESC)
+
+#### admin_user（管理员表）
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | BIGINT PK | 主键 |
+| username | VARCHAR(64) | 用户名 |
+| password_hash | VARCHAR(256) | 密码哈希（bcrypt） |
+| role | VARCHAR(16) | SUPER_ADMIN / ADMIN / OPERATOR |
+| status | VARCHAR(16) | ACTIVE / DISABLED |
+| created_at | DATETIME | 创建时间 |
+| updated_at | DATETIME | 更新时间 |
+
+索引：UNIQUE(username)
 
 #### banner（轮播图表）
 
@@ -193,14 +218,17 @@ Banner (首页轮播图)
 | operator_id | BIGINT FK | 操作人 |
 | action | VARCHAR(8) | BAN / UNBAN |
 | reason | VARCHAR(512) | 原因 |
+| ban_until | DATETIME NULL | 封禁截止时间（NULL = 永久封禁） |
 | created_at | DATETIME | 操作时间 |
 
 ### 3.3 设计要点
 
 - 赛事和活动共用 event 表，通过 type 区分，减少重复逻辑
-- 积分双轨制：Star 积分和 Party 积分独立累计
+- 积分双轨制：Star 积分和 Party 积分独立累计，各有独立段位
 - 段位由系统根据积分阈值自动计算，阈值后台可配
 - 排名快照每次积分录入后刷新，支持历史变化追踪
+- 排名重新计算为异步操作：积分写入后发布事件，由后台任务异步刷新排名快照并清除缓存
+- 赛程安排在 V1 中以富文本形式存储在 event.rules 中，V2 迁移为结构化 match 表
 
 ## 4. 功能模块设计
 
@@ -210,8 +238,8 @@ Banner (首页轮播图)
 
 - **轮播 Banner**：从后台配置加载，点击跳转对应链接
 - **双模式入口**：Star（竞技）/ Party（社交），点击进入对应列表
-- **热门赛事卡片**：展示最近 3-5 场正在报名的赛事/活动
-- **排名预览**：当前赛季 TOP 5 排名（分级展示）
+- **热门赛事卡片**：展示最近 3-5 场状态为 OPEN 且报名截止时间未过的赛事/活动
+- **排名预览**：当前赛季绝对 TOP 5 排名（不限段位）
 
 #### 赛事模块（Star 模式）
 
@@ -284,6 +312,12 @@ Banner (首页轮播图)
 - 积分录入：赛事结束后录入每个参赛者的积分，支持批量导入
 - 积分录入后自动触发排名重新计算
 
+#### 报名取消规则
+
+- 在 `registration_deadline` 前可取消报名，状态变为 WITHDRAWN
+- 取消后 `current_participants` 原子递减
+- `registration_deadline` 后不可自行取消，需联系管理员
+
 #### 内容管理
 
 - Banner 管理：上传图片、设置跳转链接、拖拽排序、启用/禁用
@@ -326,13 +360,18 @@ Banner (首页轮播图)
 管理员录入积分
     │
     ▼
-写入 point_record 表
+写入 point_record 表（单事务）
     │
     ▼
 累加用户总积分 (user.star_points / party_points)
     │
     ▼
-重新计算用户段位
+发布积分变更事件
+    │
+    ▼ [异步] 后台任务消费事件
+    │
+    ▼
+重新计算用户段位（star_tier / party_tier）
     │
     ▼
 刷新排名快照（按段位分组，按积分降序）
@@ -341,12 +380,13 @@ Banner (首页轮播图)
 计算排名变化（与上次快照对比）
     │
     ▼
-缓存到 Redis（热门排名数据）
+主动清除 Redis 排名缓存（DELETE key）
 ```
 
 ### 5.4 缓存策略
 
-- 排名数据缓存到 Redis，TTL 5 分钟
+- 排名数据缓存到 Redis（Cache-Aside 模式）
+- 积分录入后主动清除缓存（DELETE），TTL 5 分钟作为兜底
 - 首页 TOP 5 直接从 Redis 读取
 - 排名详情页从 MySQL 分页查询，Redis 做缓存加速
 
@@ -357,12 +397,54 @@ Banner (首页轮播图)
 
 ## 6. API 设计
 
+### 6.0 API 通用约定
+
+**请求格式：**
+- 分页：`page`（从 1 开始）、`size`（默认 20，最大 100）
+- 排序：`sort_by`、`order`（asc/desc）
+
+**响应格式：**
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": { ... }
+}
+```
+
+**分页响应：**
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "total": 100,
+    "page": 1,
+    "size": 20,
+    "list": [ ... ]
+  }
+}
+```
+
+**错误码：**
+- 0：成功
+- 401：未认证
+- 403：无权限
+- 404：资源不存在
+- 429：请求过于频繁
+- 1001：参数校验失败
+- 1002：用户已封禁
+- 1003：报名已满
+- 1004：重复报名
+- 1005：报名已截止
+
 ### 6.1 小程序端 API
 
 | 路由 | 方法 | 说明 |
 |------|------|------|
 | `/api/app/auth/login` | POST | 微信登录 |
 | `/api/app/auth/phone` | POST | 绑定手机号 |
+| `/api/app/auth/refresh` | POST | 刷新 token |
 | `/api/app/banners` | GET | 获取首页 Banner |
 | `/api/app/events` | GET | 赛事/活动列表（type 参数区分） |
 | `/api/app/events/{id}` | GET | 赛事/活动详情 |
@@ -391,8 +473,9 @@ Banner (首页轮播图)
 
 ### 6.3 鉴权方案
 
-- **小程序端**：JWT token，通过微信登录获取，有效期 7 天
+- **小程序端**：JWT token，通过微信登录获取，有效期 7 天；小程序每次启动静默调用 `wx.login()` 刷新 token
 - **后台管理**：JWT token + Redis 会话管理，支持强制下线
+- **角色权限**：SUPER_ADMIN（全部权限）、ADMIN（除管理员管理外的全部权限）、OPERATOR（赛事/活动/内容管理）
 - **拦截器链**：AuthFilter → RoleFilter → RateLimitFilter
 
 ## 7. 技术选型
@@ -422,14 +505,24 @@ Banner (首页轮播图)
 - 所有 API HTTPS
 - SQL 注入防护（MyBatis-Plus 参数化查询）
 - XSS 防护（输入过滤 + 输出转义）
-- 敏感信息加密存储（手机号）
+- 敏感信息加密存储（手机号 AES 加密）
 - 接口限流（Redis + 令牌桶）
+- 后台管理 CORS 白名单（仅限管理域名）
+- 文件上传限制（最大 5MB，仅 JPG/PNG，OSS 直传）
+- 请求体大小限制（1MB）
 
 ### 8.3 可观测性
 
 - 统一日志格式（JSON）
-- 关键操作审计日志（封禁、积分录入）
+- 关键操作审计日志（封禁、积分录入、管理员登录）
 - 健康检查端点
+
+### 8.4 基础设施最低配置
+
+- JVM：`-Xmx1g -Xms1g`
+- HikariCP：`maximumPoolSize=20`
+- Redis 连接池：`maxActive=50`
+- MySQL：`innodb_buffer_pool_size=512M`
 
 ## 9. 二期规划
 
