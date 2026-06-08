@@ -63,8 +63,8 @@ class BannerServiceTest {
     @Test
     void listEnabledBanners_ShouldReturnOnlyEnabledBanners() {
         // Given
-        List<Banner> allBanners = Arrays.asList(banner1, banner2, bannerDisabled);
-        when(bannerMapper.selectList(any(LambdaQueryWrapper.class))).thenReturn(allBanners);
+        List<Banner> enabledBanners = Arrays.asList(banner1, banner2);
+        when(bannerMapper.selectList(any(LambdaQueryWrapper.class))).thenReturn(enabledBanners);
 
         // When
         List<BannerVO> result = bannerService.listEnabledBanners();

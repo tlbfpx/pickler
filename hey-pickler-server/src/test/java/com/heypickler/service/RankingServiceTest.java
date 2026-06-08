@@ -22,6 +22,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -34,6 +37,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class RankingServiceTest {
 
     @Mock
@@ -46,6 +50,8 @@ class RankingServiceTest {
     private RankingMapper rankingMapper;
     @Mock
     private RedisTemplate<String, Object> redisTemplate;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private RankingServiceImpl rankingService;
@@ -139,6 +145,7 @@ class RankingServiceTest {
         when(userMapper.selectById(1L)).thenReturn(testUser);
         when(userMapper.updateById(any(User.class))).thenReturn(1);
         when(pointRecordMapper.insert(any(PointRecord.class))).thenReturn(1);
+        doNothing().when(eventPublisher).publishEvent(any(com.heypickler.listener.PointChangeListener.PointChangeEvent.class));
 
         PointEntryRequest request = new PointEntryRequest();
         request.setRecords(Arrays.asList(createItem(1L, 100, "Test reason")));
@@ -172,6 +179,7 @@ class RankingServiceTest {
         when(userMapper.selectById(2L)).thenReturn(user2);
         when(userMapper.updateById(any(User.class))).thenReturn(1);
         when(pointRecordMapper.insert(any(PointRecord.class))).thenReturn(1);
+        doNothing().when(eventPublisher).publishEvent(any());
 
         PointEntryRequest request = new PointEntryRequest();
         request.setRecords(Arrays.asList(
@@ -192,6 +200,7 @@ class RankingServiceTest {
         when(userMapper.selectById(1L)).thenReturn(testUser);
         when(userMapper.updateById(any(User.class))).thenReturn(1);
         when(pointRecordMapper.insert(any(PointRecord.class))).thenReturn(1);
+        doNothing().when(eventPublisher).publishEvent(any(com.heypickler.listener.PointChangeListener.PointChangeEvent.class));
 
         PointEntryRequest request = new PointEntryRequest();
         request.setRecords(Arrays.asList(createItem(1L, 100, "Test")));
@@ -215,6 +224,7 @@ class RankingServiceTest {
         when(userMapper.selectById(1L)).thenReturn(testUser);
         when(userMapper.updateById(any(User.class))).thenReturn(1);
         when(pointRecordMapper.insert(any(PointRecord.class))).thenReturn(1);
+        doNothing().when(eventPublisher).publishEvent(any(com.heypickler.listener.PointChangeListener.PointChangeEvent.class));
 
         PointEntryRequest request = new PointEntryRequest();
         request.setRecords(Arrays.asList(createItem(1L, -100, "Penalty")));
@@ -232,6 +242,7 @@ class RankingServiceTest {
         when(userMapper.selectById(1L)).thenReturn(testUser);
         when(userMapper.updateById(any(User.class))).thenReturn(1);
         when(pointRecordMapper.insert(any(PointRecord.class))).thenReturn(1);
+        doNothing().when(eventPublisher).publishEvent(any(com.heypickler.listener.PointChangeListener.PointChangeEvent.class));
 
         PointEntryRequest request = new PointEntryRequest();
         request.setRecords(Arrays.asList(createItem(1L, 500, "Test")));
@@ -340,7 +351,6 @@ class RankingServiceTest {
 
         rankingService.refreshRankings("STAR");
 
-        verify(redisTemplate, times(3)).delete(contains("ranking:STAR:"));
-        verify(redisTemplate).delete("heypickler:ranking:STAR:top5");
+        verify(redisTemplate, times(4)).delete(contains("ranking:STAR:"));
     }
 }

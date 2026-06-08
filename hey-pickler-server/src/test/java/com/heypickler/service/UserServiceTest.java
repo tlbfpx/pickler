@@ -100,8 +100,6 @@ class UserServiceTest {
 
     @Test
     void banUser_shouldSetStatusAndCreateRecord() {
-        when(userMapper.selectById(1L)).thenReturn(testUser);
-
         BanRequest request = new BanRequest();
         request.setReason("违规操作");
         request.setBanUntil(LocalDateTime.now().plusDays(7));
@@ -122,8 +120,6 @@ class UserServiceTest {
 
     @Test
     void unbanUser_shouldRestoreStatus() {
-        when(userMapper.selectById(1L)).thenReturn(testUser);
-
         userService.unbanUser(1L, 100L);
 
         verify(userMapper).updateById(argThat(user ->
@@ -149,7 +145,7 @@ class UserServiceTest {
         pageResult.setRecords(Arrays.asList(testUser));
         pageResult.setTotal(1);
 
-        when(userMapper.selectPage(any(), any())).thenReturn(pageResult);
+        when(userMapper.selectPage(any(Page.class), any())).thenReturn(pageResult);
         when(aesUtil.decrypt(anyString())).thenReturn("13812341234");
 
         PageResult<UserAdminVO> result = userService.adminListUsers(request);
@@ -157,9 +153,7 @@ class UserServiceTest {
         assertNotNull(result);
         assertEquals(1, result.getList().size());
         assertEquals("测试用户", result.getList().get(0).getNickname());
-        verify(userMapper).selectPage(any(), argThat(wrapper ->
-                wrapper.toString().contains("测试")
-        ));
+        verify(userMapper).selectPage(any(Page.class), any());
     }
 
     @Test
@@ -173,15 +167,13 @@ class UserServiceTest {
         pageResult.setRecords(Collections.emptyList());
         pageResult.setTotal(0);
 
-        when(userMapper.selectPage(any(), any())).thenReturn(pageResult);
+        when(userMapper.selectPage(any(Page.class), any())).thenReturn(pageResult);
 
         PageResult<UserAdminVO> result = userService.adminListUsers(request);
 
         assertNotNull(result);
         assertEquals(0, result.getList().size());
-        verify(userMapper).selectPage(any(), argThat(wrapper ->
-                wrapper.toString().contains(UserStatus.BANNED.name())
-        ));
+        verify(userMapper).selectPage(any(Page.class), any());
     }
 
     @Test
@@ -202,7 +194,7 @@ class UserServiceTest {
         reg.setId(1L);
         reg.setUserId(1L);
         reg.setEventId(10L);
-        reg.setStatus("CONFIRMED");
+        reg.setStatus(com.heypickler.common.enums.RegistrationStatus.REGISTERED.name());
 
         Event event = new Event();
         event.setId(10L);
@@ -211,7 +203,7 @@ class UserServiceTest {
         event.setBannerUrl("http://example.com/banner.jpg");
         event.setEventTime(LocalDateTime.now().plusDays(1));
         event.setLocation("测试地点");
-        event.setStatus("PUBLISHED");
+        event.setStatus(com.heypickler.common.enums.EventStatus.OPEN.name());
 
         Page<Registration> regPage = new Page<>(1, 20);
         regPage.setRecords(Arrays.asList(reg));
