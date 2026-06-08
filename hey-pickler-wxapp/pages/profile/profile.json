@@ -1,0 +1,8 @@
+{
+  "usingComponents": {
+    "tier-badge": "/components/tier-badge/tier-badge"
+  },
+  "navigationBarTitleText": "个人中心",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
+}

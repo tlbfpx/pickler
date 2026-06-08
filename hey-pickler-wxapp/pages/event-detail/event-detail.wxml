@@ -1,0 +1,134 @@
+<!-- Event detail page -->
+<view class="page" wx:if="{{!loading}}">
+  <!-- Event banner -->
+  <image class="event-banner" src="{{event.banner_url || '/images/default-event.png'}}" mode="aspectFill"></image>
+
+  <!-- Event header -->
+  <view class="event-header">
+    <view class="event-type-badge {{event.type === 'STAR' ? 'type-star' : 'type-party'}}">
+      {{event.type === 'STAR' ? 'Star 赛事' : 'Party 活动'}}
+    </view>
+
+    <view class="event-status-badge" style="background-color: {{util.getEventStatusColor(event.status)}}">
+      {{util.formatEventStatus(event.status)}}
+    </view>
+  </view>
+
+  <!-- Event info card -->
+  <view class="info-card">
+    <view class="event-title">{{event.title}}</view>
+
+    <view class="info-item">
+      <text class="info-icon">📅</text>
+      <view class="info-content">
+        <text class="info-label">比赛时间</text>
+        <text class="info-value">{{util.formatDate(event.event_time, 'YYYY-MM-DD HH:mm')}}</text>
+      </view>
+    </view>
+
+    <view class="info-item">
+      <text class="info-icon">📍</text>
+      <view class="info-content">
+        <text class="info-label">比赛地点</text>
+        <text class="info-value">{{event.location}}</text>
+      </view>
+    </view>
+
+    <view class="info-item">
+      <text class="info-icon">👥</text>
+      <view class="info-content">
+        <text class="info-label">报名人数</text>
+        <text class="info-value">{{event.current_participants}}/{{event.max_participants}}</text>
+      </view>
+    </view>
+
+    <view class="info-item">
+      <text class="info-icon">💰</text>
+      <view class="info-content">
+        <text class="info-label">报名费用</text>
+        <text class="info-value">{{event.fee > 0 ? '¥' + event.fee : '免费'}}</text>
+      </view>
+    </view>
+
+    <view class="info-item">
+      <text class="info-icon">⏰</text>
+      <view class="info-content">
+        <text class="info-label">报名截止</text>
+        <text class="info-value">{{util.formatDate(event.registration_deadline, 'YYYY-MM-DD HH:mm')}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Event description -->
+  <view class="section-card" wx:if="{{event.description}}">
+    <view class="section-title">📝 活动介绍</view>
+    <view class="section-content">{{event.description}}</view>
+  </view>
+
+  <!-- Event rules -->
+  <view class="section-card" wx:if="{{event.rules}}">
+    <view class="section-title">📋 规则说明</view>
+    <view class="section-content content-rich">{{event.rules}}</view>
+  </view>
+
+  <!-- Event prizes -->
+  <view class="section-card" wx:if="{{event.prizes}}">
+    <view class="section-title">🏆 奖项说明</view>
+    <view class="section-content content-rich">{{event.prizes}}</view>
+  </view>
+
+  <!-- Registration status -->
+  <view class="status-card" wx:if="{{isRegistered && registration}}">
+    <view class="status-header">
+      <text class="status-icon">✅</text>
+      <text class="status-text">您已报名</text>
+    </view>
+    <view class="status-info">
+      <text class="status-label">报名时间：</text>
+      <text class="status-value">{{util.formatDate(registration.created_at)}}</text>
+    </view>
+    <view class="status-info" wx:if="{{registration.match_type}}">
+      <text class="status-label">比赛类型：</text>
+      <text class="status-value">{{registration.match_type === 'SINGLES' ? '单打' : registration.match_type === 'DOUBLES' ? '双打' : '混合双打'}}</text>
+    </view>
+  </view>
+
+  <!-- Action buttons -->
+  <view class="action-bar">
+    <!-- Cancel button -->
+    <button
+      wx:if="{{isRegistered}}"
+      class="action-btn cancel-btn"
+      bindtap="handleCancel">
+      取消报名
+    </button>
+
+    <!-- Register button -->
+    <button
+      wx:elif="{{isRegistrationOpen}}"
+      class="action-btn register-btn"
+      bindtap="handleRegister">
+      立即报名
+    </button>
+
+    <!-- Disabled button -->
+    <button
+      wx:else
+      class="action-btn disabled-btn"
+      disabled>
+      {{event.status === 'FULL' ? '已满员' : event.status === 'COMPLETED' ? '已结束' : '报名已截止'}}
+    </button>
+
+    <!-- Ranking button -->
+    <button
+      class="action-btn ranking-btn"
+      bindtap="navigateToRanking">
+      查看排名
+    </button>
+  </view>
+</view>
+
+<!-- Loading state -->
+<view wx:if="{{loading}}" class="loading-container">
+  <text class="loading-text">加载中...</text>
+</view>
