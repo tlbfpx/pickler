@@ -220,10 +220,10 @@ public class EventServiceImpl implements EventService {
             throw new BizException(ErrorCode.NOT_FOUND);
         }
 
-        eventMapper.update(null,
-                new LambdaUpdateWrapper<Event>()
-                        .eq(Event::getId, eventId)
-                        .set(Event::getDeletedAt, LocalDateTime.now()));
+        Event updateEvent = new Event();
+        updateEvent.setId(eventId);
+        updateEvent.setDeletedAt(LocalDateTime.now());
+        eventMapper.updateById(updateEvent);
     }
 
     private EventVO convertToVO(Event event) {

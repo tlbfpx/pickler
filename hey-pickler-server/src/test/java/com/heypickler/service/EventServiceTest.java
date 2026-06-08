@@ -1,6 +1,8 @@
 package com.heypickler.service;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfo;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.heypickler.common.exception.BizException;
 import com.heypickler.common.exception.ErrorCode;
 import com.heypickler.dto.admin.EventCreateRequest;
@@ -10,6 +12,7 @@ import com.heypickler.entity.Registration;
 import com.heypickler.mapper.EventMapper;
 import com.heypickler.mapper.RegistrationMapper;
 import com.heypickler.service.impl.EventServiceImpl;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +32,8 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class EventServiceTest {
 
+    private static boolean tableInfoInitialized = false;
+
     @Mock private EventMapper eventMapper;
     @Mock private RegistrationMapper registrationMapper;
 
@@ -40,6 +45,11 @@ class EventServiceTest {
 
     @BeforeEach
     void setUp() {
+        // Initialize MyBatis Plus table info cache for Event entity
+        if (!tableInfoInitialized) {
+            TableInfo tableInfo = TableInfoHelper.getTableInfo(Event.class);
+            tableInfoInitialized = true;
+        }
         now = LocalDateTime.now();
         testEvent = new Event();
         testEvent.setId(1L);
@@ -200,11 +210,13 @@ class EventServiceTest {
     @Test
     void deleteEvent_softDelete() {
         when(eventMapper.selectById(1L)).thenReturn(testEvent);
-        when(eventMapper.update(eq(null), any(LambdaUpdateWrapper.class))).thenReturn(1);
+        when(eventMapper.updateById(any(Event.class))).thenReturn(1);
 
         eventService.deleteEvent(1L);
 
-        verify(eventMapper).update(eq(null), any(LambdaUpdateWrapper.class));
+        verify(eventMapper).updateById(argThat(event ->
+            event.getId().equals(1L) && event.getDeletedAt() != null
+        ));
     }
 
     @Test
