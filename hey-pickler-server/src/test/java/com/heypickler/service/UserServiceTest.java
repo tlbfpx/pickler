@@ -155,8 +155,8 @@ class UserServiceTest {
         PageResult<UserAdminVO> result = userService.adminListUsers(request);
 
         assertNotNull(result);
-        assertEquals(1, result.getRecords().size());
-        assertEquals("测试用户", result.getRecords().get(0).getNickname());
+        assertEquals(1, result.getList().size());
+        assertEquals("测试用户", result.getList().get(0).getNickname());
         verify(userMapper).selectPage(any(), argThat(wrapper ->
                 wrapper.toString().contains("测试")
         ));
@@ -178,7 +178,7 @@ class UserServiceTest {
         PageResult<UserAdminVO> result = userService.adminListUsers(request);
 
         assertNotNull(result);
-        assertEquals(0, result.getRecords().size());
+        assertEquals(0, result.getList().size());
         verify(userMapper).selectPage(any(), argThat(wrapper ->
                 wrapper.toString().contains(UserStatus.BANNED.name())
         ));
@@ -223,10 +223,10 @@ class UserServiceTest {
         PageResult<MyEventVO> result = userService.getMyEvents(1L, null, 1, 20);
 
         assertNotNull(result);
-        assertEquals(1, result.getRecords().size());
-        assertEquals("测试活动", result.getRecords().get(0).getTitle());
-        assertEquals(com.heypickler.common.enums.RegistrationStatus.CONFIRMED,
-                result.getRecords().get(0).getRegistrationStatus());
+        assertEquals(1, result.getList().size());
+        assertEquals("测试活动", result.getList().get(0).getTitle());
+        assertEquals(com.heypickler.common.enums.RegistrationStatus.REGISTERED,
+                result.getList().get(0).getRegistrationStatus());
     }
 
     @Test
@@ -254,8 +254,8 @@ class UserServiceTest {
         PageResult<PointRecordVO> result = userService.getPointHistory(1L, "STAR", 1, 20);
 
         assertNotNull(result);
-        assertEquals(1, result.getRecords().size());
-        assertEquals("测试活动", result.getRecords().get(0).getEventTitle());
-        assertEquals(10, result.getRecords().get(0).getPoints());
+        assertEquals(1, result.getList().size());
+        assertEquals("测试活动", result.getList().get(0).getEventTitle());
+        assertEquals(10, result.getList().get(0).getPoints());
     }
 }

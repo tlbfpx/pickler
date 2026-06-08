@@ -6,6 +6,7 @@ import com.heypickler.common.exception.ErrorCode;
 import com.heypickler.dto.admin.AdminUserCreateRequest;
 import com.heypickler.entity.AdminUser;
 import com.heypickler.mapper.AdminUserMapper;
+import com.heypickler.service.impl.AdminUserServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

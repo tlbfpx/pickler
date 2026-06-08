@@ -1,0 +1,25 @@
+-------------------------------------------------------------------------------
+Test set: com.heypickler.service.EventServiceTest
+-------------------------------------------------------------------------------
+Tests run: 15, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.246 s <<< FAILURE! -- in com.heypickler.service.EventServiceTest
+com.heypickler.service.EventServiceTest.deleteEvent_softDelete -- Time elapsed: 0.090 s <<< ERROR!
+com.baomidou.mybatisplus.core.exceptions.MybatisPlusException: can not find lambda cache for this entity [com.heypickler.entity.Event]
+	at com.baomidou.mybatisplus.core.toolkit.ExceptionUtils.mpe(ExceptionUtils.java:49)
+	at com.baomidou.mybatisplus.core.toolkit.Assert.isTrue(Assert.java:38)
+	at com.baomidou.mybatisplus.core.toolkit.Assert.notNull(Assert.java:72)
+	at com.baomidou.mybatisplus.core.conditions.AbstractLambdaWrapper.tryInitCache(AbstractLambdaWrapper.java:142)
+	at com.baomidou.mybatisplus.core.conditions.AbstractLambdaWrapper.getColumnCache(AbstractLambdaWrapper.java:131)
+	at com.baomidou.mybatisplus.core.conditions.AbstractLambdaWrapper.columnToString(AbstractLambdaWrapper.java:66)
+	at com.baomidou.mybatisplus.core.conditions.AbstractLambdaWrapper.columnToString(AbstractLambdaWrapper.java:62)
+	at com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper.lambda$set$0(LambdaUpdateWrapper.java:81)
+	at com.baomidou.mybatisplus.core.conditions.AbstractWrapper.maybeDo(AbstractWrapper.java:546)
+	at com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper.set(LambdaUpdateWrapper.java:79)
+	at com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper.set(LambdaUpdateWrapper.java:37)
+	at com.baomidou.mybatisplus.core.conditions.update.Update.set(Update.java:46)
+	at com.baomidou.mybatisplus.core.conditions.update.Update.set(Update.java:34)
+	at com.heypickler.service.impl.EventServiceImpl.deleteEvent(EventServiceImpl.java:226)
+	at com.heypickler.service.EventServiceTest.deleteEvent_softDelete(EventServiceTest.java:205)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+
