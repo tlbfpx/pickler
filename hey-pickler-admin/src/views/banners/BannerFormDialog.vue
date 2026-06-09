@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     :model-value="modelValue"
-    :title="banner ? 'Edit Banner' : 'Create Banner'"
+    :title="banner ? '编辑Banner' : '新建Banner'"
     width="600px"
     @update:model-value="$emit('update:modelValue', $event)"
   >
@@ -11,30 +11,30 @@
       :rules="rules"
       label-position="top"
     >
-      <el-form-item label="Title" prop="title">
-        <el-input v-model="formData.title" placeholder="Enter banner title" />
+      <el-form-item label="图片地址" prop="imageUrl">
+        <el-input v-model="formData.imageUrl" placeholder="请输入Banner图片地址" />
       </el-form-item>
-      <el-form-item label="Image" prop="imageUrl">
-        <ImageUpload v-model="formData.imageUrl" />
+      <el-form-item label="跳转链接" prop="linkUrl">
+        <el-input v-model="formData.linkUrl" placeholder="请输入跳转链接" />
       </el-form-item>
-      <el-form-item label="Link URL" prop="linkUrl">
-        <el-input v-model="formData.linkUrl" placeholder="Enter link URL" />
-      </el-form-item>
-      <el-form-item label="Order" prop="order">
+      <el-form-item label="排序" prop="sortOrder">
         <el-input-number
-          v-model="formData.order"
+          v-model="formData.sortOrder"
           :min="0"
           style="width: 100%"
         />
       </el-form-item>
-      <el-form-item label="Active" prop="isActive">
-        <el-switch v-model="formData.isActive" />
+      <el-form-item label="状态" prop="status">
+        <el-select v-model="formData.status" placeholder="请选择状态" style="width: 100%">
+          <el-option label="启用" value="ACTIVE" />
+          <el-option label="停用" value="INACTIVE" />
+        </el-select>
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="$emit('update:modelValue', false)">Cancel</el-button>
+      <el-button @click="$emit('update:modelValue', false)">取消</el-button>
       <el-button type="primary" :loading="loading" @click="handleConfirm">
-        {{ banner ? 'Update' : 'Create' }}
+        {{ banner ? '更新' : '新建' }}
       </el-button>
     </template>
   </el-dialog>
@@ -44,8 +44,14 @@
 import { ref, reactive, watch } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { createBanner, updateBanner } from '@/api/banners'
-import ImageUpload from '@/components/common/ImageUpload.vue'
-import type { Banner, CreateBannerRequest } from '@/types'
+import type { Banner } from '@/types'
+
+interface FormData {
+  imageUrl: string
+  linkUrl: string
+  sortOrder: number
+  status: string
+}
 
 const props = defineProps<{
   modelValue: boolean
@@ -60,28 +66,26 @@ const emit = defineEmits<{
 const formRef = ref<FormInstance>()
 const loading = ref(false)
 
-const formData = reactive<CreateBannerRequest>({
-  title: '',
+const formData = reactive<FormData>({
   imageUrl: '',
   linkUrl: '',
-  order: 0,
-  isActive: true
+  sortOrder: 0,
+  status: 'ACTIVE'
 })
 
 const rules: FormRules = {
-  title: [{ required: true, message: 'Please enter title', trigger: 'blur' }],
-  imageUrl: [{ required: true, message: 'Please upload image', trigger: 'change' }],
-  linkUrl: [{ required: true, message: 'Please enter link URL', trigger: 'blur' }],
-  order: [{ required: true, message: 'Please enter order', trigger: 'blur' }]
+  imageUrl: [{ required: true, message: '请输入图片地址', trigger: 'blur' }],
+  linkUrl: [{ required: false, message: '请输入跳转链接', trigger: 'blur' }],
+  sortOrder: [{ required: true, message: '请输入排序', trigger: 'blur' }],
+  status: [{ required: true, message: '请选择状态', trigger: 'change' }]
 }
 
 watch(() => props.banner, (val) => {
   if (val) {
-    formData.title = val.title
     formData.imageUrl = val.imageUrl
     formData.linkUrl = val.linkUrl
-    formData.order = val.order
-    formData.isActive = val.isActive
+    formData.sortOrder = val.order
+    formData.status = val.isActive ? 'ACTIVE' : 'INACTIVE'
   } else {
     formRef.value?.resetFields()
   }
@@ -97,30 +101,32 @@ watch(() => props.modelValue, (val) => {
 const handleConfirm = async () => {
   if (!formRef.value) return
 
-  await formRef.value.validate(async (valid) => {
-    if (!valid) return
+  try {
+    await formRef.value.validate()
+  } catch {
+    return
+  }
 
-    loading.value = true
-    try {
-      let res
-      if (props.banner) {
-        res = await updateBanner(props.banner.id, formData)
-      } else {
-        res = await createBanner(formData)
-      }
-
-      if (res.code === 0) {
-        ElMessage.success(props.banner ? 'Banner updated successfully' : 'Banner created successfully')
-        emit('success')
-        emit('update:modelValue', false)
-      } else {
-        ElMessage.error(res.message || 'Operation failed')
-      }
-    } catch (error) {
-      ElMessage.error('Operation failed')
-    } finally {
-      loading.value = false
+  loading.value = true
+  try {
+    let res
+    if (props.banner) {
+      res = await updateBanner(props.banner.id, formData)
+    } else {
+      res = await createBanner(formData)
     }
-  })
+
+    if (res.code === 0) {
+      ElMessage.success(props.banner ? 'Banner更新成功' : 'Banner创建成功')
+      emit('success')
+      emit('update:modelValue', false)
+    } else {
+      ElMessage.error(res.message || '操作失败')
+    }
+  } catch (error) {
+    ElMessage.error('操作失败')
+  } finally {
+    loading.value = false
+  }
 }
 </script>

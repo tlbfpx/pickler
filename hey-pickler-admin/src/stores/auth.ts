@@ -19,6 +19,8 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = null
     admin.value = null
     localStorage.removeItem('admin_token')
+    localStorage.removeItem('admin_info')
+    localStorage.removeItem('admin_role')
   }
 
   const isAuthenticated = () => {

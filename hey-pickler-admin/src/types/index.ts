@@ -1,55 +1,40 @@
-// User types
+// ==================== User Types ====================
+
 export interface User {
   id: number
-  phone: string
-  nickname: string
-  avatar: string
-  tier: 'LEGEND' | 'SUPER' | 'SHINING'
-  totalPoints: number
-  isBanned: boolean
-  banReason: string | null
-  banExpiresAt: string | null
+  nickname: string | null
+  avatarUrl: string | null
+  city: string | null
+  phone: string | null
+  starPoints: number
+  partyPoints: number
+  starTier: string
+  partyTier: string
+  status: 'NORMAL' | 'BANNED'
   createdAt: string
 }
 
-export interface UserListResponse {
-  users: User[]
-  total: number
-}
+// ==================== Event Types ====================
 
-export interface BanUserRequest {
-  reason: string
-  durationDays: number
-}
-
-// Event types
 export interface Event {
   id: number
   type: 'STAR' | 'PARTY'
   title: string
-  description: string
-  location: string
-  eventDate: string
-  registrationDeadline: string
-  maxParticipants: number
+  bannerUrl: string | null
+  eventTime: string | null
+  location: string | null
+  maxParticipants: number | null
   currentParticipants: number
-  status: 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED'
   fee: number
-  createdAt: string
-}
-
-export interface EventListResponse {
-  events: Event[]
-  total: number
+  status: 'DRAFT' | 'OPEN' | 'FULL' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 }
 
 export interface CreateEventRequest {
   type: 'STAR' | 'PARTY'
   title: string
-  description: string
+  bannerUrl: string
+  eventTime: string
   location: string
-  eventDate: string
-  registrationDeadline: string
   maxParticipants: number
   fee: number
 }
@@ -58,19 +43,38 @@ export interface UpdateEventRequest extends CreateEventRequest {
   id: number
 }
 
-// Ranking types
-export interface RankingEntry {
-  userId: number
-  nickname: string
-  avatar: string
-  tier: 'LEGEND' | 'SUPER' | 'SHINING'
-  totalPoints: number
-  rank: number
+// ==================== Banner Types ====================
+
+export interface Banner {
+  id: number
+  imageUrl: string
+  linkUrl: string | null
+  sortOrder: number
+  status: string
 }
 
-export interface RankingListResponse {
-  rankings: RankingEntry[]
-  type: 'STAR' | 'PARTY'
+export interface CreateBannerRequest {
+  imageUrl: string
+  linkUrl: string
+  sortOrder: number
+  status: string
+}
+
+export interface UpdateBannerRequest extends CreateBannerRequest {
+  id: number
+}
+
+// ==================== Ranking Types ====================
+
+export interface RankingEntry {
+  rank: number
+  change: number
+  userId: number
+  nickname: string | null
+  avatarUrl: string | null
+  city: string | null
+  points: number
+  tier: string
 }
 
 export interface PointEntryRecord {
@@ -83,50 +87,37 @@ export interface EnterPointsRequest {
   records: PointEntryRecord[]
 }
 
-// Banner types
-export interface Banner {
-  id: number
-  title: string
-  imageUrl: string
-  linkUrl: string
-  order: number
-  isActive: boolean
-  createdAt: string
-}
+// ==================== Admin Types ====================
 
-export interface CreateBannerRequest {
-  title: string
-  imageUrl: string
-  linkUrl: string
-  order: number
-  isActive: boolean
-}
-
-export interface UpdateBannerRequest extends CreateBannerRequest {
-  id: number
-}
-
-// Admin types
 export interface Admin {
   id: number
   username: string
-  role: 'SUPER_ADMIN' | 'ADMIN'
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'OPERATOR'
+  status: 'ACTIVE' | 'DISABLED'
   createdAt: string
+  updatedAt: string
 }
 
 export interface CreateAdminRequest {
   username: string
   password: string
-  role: 'SUPER_ADMIN' | 'ADMIN'
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'OPERATOR'
 }
 
 export interface UpdateAdminRequest {
-  username?: string
-  password?: string
-  role?: 'SUPER_ADMIN' | 'ADMIN'
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'OPERATOR'
+  status: 'ACTIVE' | 'DISABLED'
 }
 
-// Auth types
+// ==================== Ban Types ====================
+
+export interface BanRequest {
+  reason: string
+  days: number
+}
+
+// ==================== Auth Types ====================
+
 export interface LoginRequest {
   username: string
   password: string
@@ -134,33 +125,42 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   token: string
-  admin: Admin
+  role: string
 }
 
-// Dashboard stats
+// ==================== Dashboard Types ====================
+
 export interface DashboardStats {
   totalUsers: number
   activeEvents: number
   recentRegistrations: number
 }
 
-// File upload
-export interface FileUploadResponse {
-  url: string
+// ==================== Common Types ====================
+
+export interface PageResult<T> {
+  total: number
+  page: number
+  size: number
+  list: T[]
 }
 
-// API Response wrapper
 export interface ApiResponse<T> {
   code: number
   message: string
   data: T
 }
 
-// Pagination params
 export interface PageParams {
   page?: number
   size?: number
   keyword?: string
   type?: string
   status?: string
+}
+
+// ==================== File Upload ====================
+
+export interface FileUploadResponse {
+  url: string
 }

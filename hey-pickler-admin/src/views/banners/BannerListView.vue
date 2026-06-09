@@ -1,17 +1,16 @@
 <template>
   <div>
     <div class="page-header">
-      <h1>Banner Management</h1>
+      <h1>Banner管理</h1>
       <el-button type="primary" @click="handleCreate">
         <el-icon><Plus /></el-icon>
-        Create Banner
+        新建Banner
       </el-button>
     </div>
     <div class="card">
       <el-table v-loading="loading" :data="bannerList" style="width: 100%">
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="title" label="Title" width="200" />
-        <el-table-column label="Image" width="200">
+        <el-table-column label="图片" width="200">
           <template #default="{ row }">
             <el-image
               :src="row.imageUrl"
@@ -21,27 +20,22 @@
             />
           </template>
         </el-table-column>
-        <el-table-column prop="linkUrl" label="Link URL" width="250" />
-        <el-table-column prop="order" label="Order" width="80" />
-        <el-table-column label="Status" width="100">
+        <el-table-column prop="linkUrl" label="跳转链接" width="250" />
+        <el-table-column prop="sortOrder" label="排序" width="80" />
+        <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.isActive ? 'success' : 'info'">
-              {{ row.isActive ? 'Active' : 'Inactive' }}
+            <el-tag :type="row.status === 'ACTIVE' ? 'success' : 'info'">
+              {{ row.status === 'ACTIVE' ? '启用' : '停用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="Created At" width="180">
-          <template #default="{ row }">
-            {{ formatDate(row.createdAt) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="Actions" width="150" fixed="right">
+        <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="handleEdit(row)">
-              Edit
+              编辑
             </el-button>
             <el-button type="danger" size="small" @click="handleDelete(row)">
-              Delete
+              删除
             </el-button>
           </template>
         </el-table-column>
@@ -77,10 +71,10 @@ const fetchBanners = async () => {
     if (res.code === 0) {
       bannerList.value = res.data
     } else {
-      ElMessage.error(res.message || 'Failed to fetch banners')
+      ElMessage.error(res.message || '获取Banner列表失败')
     }
   } catch (error) {
-    ElMessage.error('Failed to fetch banners')
+    ElMessage.error('获取Banner列表失败')
   } finally {
     loading.value = false
   }
@@ -99,20 +93,20 @@ const handleEdit = (banner: Banner) => {
 const handleDelete = async (banner: Banner) => {
   try {
     await ElMessageBox.confirm(
-      `Are you sure you want to delete banner "${banner.title}"?`,
-      'Confirm Delete',
+      '确定要删除这个Banner吗？',
+      '确认删除',
       { type: 'warning' }
     )
     const res = await deleteBanner(banner.id)
     if (res.code === 0) {
-      ElMessage.success('Banner deleted successfully')
+      ElMessage.success('Banner删除成功')
       fetchBanners()
     } else {
-      ElMessage.error(res.message || 'Failed to delete banner')
+      ElMessage.error(res.message || '删除Banner失败')
     }
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error('Failed to delete banner')
+      ElMessage.error('删除Banner失败')
     }
   }
 }

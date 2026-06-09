@@ -1,20 +1,20 @@
 <template>
   <div>
     <div class="page-header">
-      <h1>Dashboard</h1>
+      <h1>控制台</h1>
     </div>
     <div v-loading="loading" class="stats-grid">
       <div class="stat-card">
         <div class="stat-value">{{ stats.totalUsers }}</div>
-        <div class="stat-label">Total Users</div>
+        <div class="stat-label">总用户数</div>
       </div>
       <div class="stat-card">
         <div class="stat-value">{{ stats.activeEvents }}</div>
-        <div class="stat-label">Active Events</div>
+        <div class="stat-label">活跃赛事</div>
       </div>
       <div class="stat-card">
         <div class="stat-value">{{ stats.recentRegistrations }}</div>
-        <div class="stat-label">Recent Registrations</div>
+        <div class="stat-label">近期报名</div>
       </div>
     </div>
   </div>
@@ -22,6 +22,8 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { getDashboardStats } from '@/api/dashboard'
 
 const loading = ref(true)
 
@@ -31,14 +33,27 @@ const stats = reactive({
   recentRegistrations: 0
 })
 
-// Mock data for now - should be fetched from dashboard stats API
-onMounted(() => {
-  setTimeout(() => {
-    stats.totalUsers = 1234
-    stats.activeEvents = 8
-    stats.recentRegistrations = 56
+const fetchStats = async () => {
+  loading.value = true
+  try {
+    const res = await getDashboardStats()
+    if (res.code === 0) {
+      stats.totalUsers = res.data.totalUsers
+      stats.activeEvents = res.data.activeEvents
+      stats.recentRegistrations = res.data.recentRegistrations
+    } else {
+      ElMessage.error(res.message || '获取统计数据失败')
+    }
+  } catch (error) {
+    // If dashboard API doesn't exist, use zero values
+    console.warn('Dashboard stats API not available, using zero values')
+  } finally {
     loading.value = false
-  }, 1000)
+  }
+}
+
+onMounted(() => {
+  fetchStats()
 })
 </script>
 

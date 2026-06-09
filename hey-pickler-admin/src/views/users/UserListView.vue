@@ -1,13 +1,13 @@
 <template>
   <div>
     <div class="page-header">
-      <h1>User Management</h1>
+      <h1>用户管理</h1>
     </div>
     <div class="card">
       <div class="table-header">
         <el-input
           v-model="searchKeyword"
-          placeholder="Search by phone or nickname"
+          placeholder="按手机号或昵称搜索"
           style="width: 300px"
           clearable
           @clear="handleSearch"
@@ -17,50 +17,49 @@
             <el-icon><Search /></el-icon>
           </template>
         </el-input>
-        <el-button type="primary" @click="handleSearch">Search</el-button>
+        <el-button type="primary" @click="handleSearch">搜索</el-button>
       </div>
 
       <el-table v-loading="loading" :data="userList" style="width: 100%; margin-top: 16px">
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="phone" label="Phone" width="120" />
-        <el-table-column prop="nickname" label="Nickname" width="150" />
-        <el-table-column label="Avatar" width="100">
+        <el-table-column prop="id" label="ID" width="60" />
+        <el-table-column prop="phone" label="手机号" width="130" />
+        <el-table-column prop="nickname" label="昵称" width="120" />
+        <el-table-column label="城市" width="80">
           <template #default="{ row }">
-            <el-avatar :src="row.avatar" :size="50" />
+            {{ row.city || '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="Tier" width="120">
+        <el-table-column label="明星" width="120">
           <template #default="{ row }">
-            <span
-              class="tier-badge"
-              :style="{ backgroundColor: getTierColor(row.tier) }"
-            >
-              {{ formatTier(row.tier) }}
-            </span>
+            {{ row.starTier }} / {{ row.starPoints }}分
           </template>
         </el-table-column>
-        <el-table-column prop="totalPoints" label="Total Points" width="120" />
-        <el-table-column label="Status" width="100">
+        <el-table-column label="派对" width="120">
           <template #default="{ row }">
-            <el-tag :type="row.isBanned ? 'danger' : 'success'">
-              {{ row.isBanned ? 'Banned' : 'Active' }}
+            {{ row.partyTier }} / {{ row.partyPoints }}分
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 'BANNED' ? 'danger' : 'success'">
+              {{ row.status === 'BANNED' ? '禁赛' : '正常' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="Created At" width="180">
+        <el-table-column label="注册时间" width="170">
           <template #default="{ row }">
             {{ formatDate(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="Actions" width="200" fixed="right">
+        <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
             <el-button
-              v-if="!row.isBanned"
+              v-if="row.status !== 'BANNED'"
               type="warning"
               size="small"
               @click="handleBan(row)"
             >
-              Ban
+              禁赛
             </el-button>
             <el-button
               v-else
@@ -68,7 +67,7 @@
               size="small"
               @click="handleUnban(row)"
             >
-              Unban
+              解禁
             </el-button>
           </template>
         </el-table-column>
@@ -91,7 +90,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getUserList, unbanUser } from '@/api/users'
-import { formatDate, formatTier, getTierColor } from '@/utils'
+import { formatDate } from '@/utils'
 import Pagination from '@/components/common/Pagination.vue'
 import BanDialog from './BanDialog.vue'
 import type { User } from '@/types'
@@ -118,13 +117,13 @@ const fetchUsers = async () => {
       keyword: searchKeyword.value
     })
     if (res.code === 0) {
-      userList.value = res.data.users
-      pagination.total = res.data.total
+      userList.value = res.data.list || []
+      pagination.total = res.data.total || 0
     } else {
-      ElMessage.error(res.message || 'Failed to fetch users')
+      ElMessage.error(res.message || '获取用户列表失败')
     }
   } catch (error) {
-    ElMessage.error('Failed to fetch users')
+    ElMessage.error('获取用户列表失败')
   } finally {
     loading.value = false
   }
@@ -144,13 +143,13 @@ const handleUnban = async (user: User) => {
   try {
     const res = await unbanUser(user.id)
     if (res.code === 0) {
-      ElMessage.success('User unbanned successfully')
+      ElMessage.success('用户解禁成功')
       fetchUsers()
     } else {
-      ElMessage.error(res.message || 'Failed to unban user')
+      ElMessage.error(res.message || '解禁用户失败')
     }
   } catch (error) {
-    ElMessage.error('Failed to unban user')
+    ElMessage.error('解禁用户失败')
   }
 }
 
