@@ -6,6 +6,7 @@ import com.heypickler.common.exception.BizException;
 import com.heypickler.common.exception.ErrorCode;
 import com.heypickler.common.util.AesUtil;
 import com.heypickler.common.util.JwtUtil;
+import com.heypickler.common.util.WxBizDataCrypt;
 import com.heypickler.entity.AdminUser;
 import com.heypickler.entity.User;
 import com.heypickler.mapper.AdminUserMapper;
@@ -19,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -30,8 +30,10 @@ public class AuthServiceImpl implements AuthService {
     private final AdminUserMapper adminUserMapper;
     private final JwtUtil jwtUtil;
     private final AesUtil aesUtil;
+    private final WxBizDataCrypt wxBizDataCrypt;
     private final RedisTemplate<String, Object> redisTemplate;
     private final PasswordEncoder passwordEncoder;
+    private final RestTemplate restTemplate;
 
     @Value("${hey-pickler.wechat.appid}")
     private String appId;
@@ -41,14 +43,17 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public Map<String, Object> appLogin(String code) {
-        // Call WeChat code2Session API
         String url = String.format(
                 "https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code",
                 appId, appSecret, code);
 
-        RestTemplate restTemplate = new RestTemplate();
-        @SuppressWarnings("unchecked")
-        Map<String, Object> result = restTemplate.getForObject(url, Map.class);
+        String body = restTemplate.getForObject(url, String.class);
+        Map<String, Object> result;
+        try {
+            result = new com.fasterxml.jackson.databind.ObjectMapper().readValue(body, Map.class);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "微信登录失败: 响应解析错误");
+        }
 
         if (result == null || result.containsKey("errcode")) {
             throw new BizException(ErrorCode.PARAM_ERROR, "微信登录失败");
@@ -57,10 +62,8 @@ public class AuthServiceImpl implements AuthService {
         String openid = (String) result.get("openid");
         String sessionKey = (String) result.get("session_key");
 
-        // Store session_key in Redis for phone decryption
         redisTemplate.opsForValue().set(RedisKey.wxSession(openid), sessionKey, 30, TimeUnit.MINUTES);
 
-        // Find or create user
         User user = userMapper.selectOne(
                 new LambdaQueryWrapper<User>().eq(User::getOpenid, openid));
 
@@ -82,7 +85,6 @@ public class AuthServiceImpl implements AuthService {
             userMapper.updateById(user);
         }
 
-        // Check ban status
         if ("BANNED".equals(user.getStatus())) {
             throw new BizException(ErrorCode.USER_BANNED);
         }
@@ -98,16 +100,13 @@ public class AuthServiceImpl implements AuthService {
             throw new BizException(ErrorCode.NOT_FOUND, "用户不存在");
         }
 
-        // Get session_key from Redis
         String sessionKey = (String) redisTemplate.opsForValue().get(RedisKey.wxSession(user.getOpenid()));
         if (sessionKey == null) {
             throw new BizException(ErrorCode.PARAM_ERROR, "会话已过期，请重新登录");
         }
 
-        // For simplicity, we assume the phone is already decrypted on the client side
-        // In production, use WXBizDataCrypt to decrypt encryptedData with sessionKey and iv
-        // Here we accept the phone directly for the MVP
-        String phone = encryptedData; // In real impl, decrypt this
+        // Decrypt phone number using WeChat's official AES/CBC scheme
+        String phone = wxBizDataCrypt.decryptPhoneNumber(sessionKey, encryptedData, iv);
         user.setPhone(aesUtil.encrypt(phone));
         userMapper.updateById(user);
     }
@@ -136,7 +135,6 @@ public class AuthServiceImpl implements AuthService {
 
         String token = jwtUtil.generateAdminToken(admin.getId(), admin.getRole());
 
-        // Store session in Redis
         String sessionKey = RedisKey.adminSession(String.valueOf(admin.getId()));
         redisTemplate.opsForValue().set(sessionKey, token, 24, TimeUnit.HOURS);
 

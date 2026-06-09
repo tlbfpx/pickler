@@ -15,7 +15,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.concurrent.TimeUnit;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -23,6 +23,22 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final ObjectMapper objectMapper;
+
+    /**
+     * Atomically increments the counter and sets TTL only on first increment.
+     * Returns the new count value.
+     * KEYS[1] = rate limit key
+     * ARGV[1] = TTL in seconds
+     */
+    private static final String LUA_SCRIPT =
+            "local count = redis.call('INCR', KEYS[1]) " +
+            "if count == 1 then " +
+            "  redis.call('EXPIRE', KEYS[1], ARGV[1]) " +
+            "end " +
+            "return count";
+
+    private static final DefaultRedisScript<Long> RATE_LIMIT_SCRIPT = new DefaultRedisScript<>(
+            LUA_SCRIPT, Long.class);
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -50,10 +66,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private boolean tryAcquire(String key, int maxRequests) {
-        Long count = redisTemplate.opsForValue().increment(key);
-        if (count != null && count == 1) {
-            redisTemplate.expire(key, 1, TimeUnit.MINUTES);
-        }
+        Long count = redisTemplate.execute(
+                RATE_LIMIT_SCRIPT,
+                Collections.singletonList(key),
+                "60"  // 60 seconds window
+        );
         return count != null && count <= maxRequests;
     }
 }
