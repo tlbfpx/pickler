@@ -22,7 +22,9 @@ public class RedisConfig {
 
         ObjectMapper om = new ObjectMapper();
         om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-        om.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
+        // Disable default typing to prevent deserialization attacks.
+        // Only enable for specific use cases with a strict whitelist.
+        // om.activateDefaultTyping(...) — intentionally removed
         om.registerModule(new JavaTimeModule());
 
         Jackson2JsonRedisSerializer<Object> serializer = new Jackson2JsonRedisSerializer<>(om, Object.class);

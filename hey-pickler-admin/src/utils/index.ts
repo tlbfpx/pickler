@@ -20,8 +20,10 @@ export const formatTier = (tier: string): string => {
 
 export const formatEventStatus = (status: string): string => {
   const statusMap: Record<string, string> = {
-    UPCOMING: '即将开始',
-    ONGOING: '进行中',
+    DRAFT: '草稿',
+    OPEN: '报名中',
+    FULL: '名额已满',
+    IN_PROGRESS: '进行中',
     COMPLETED: '已结束',
     CANCELLED: '已取消'
   }
@@ -47,8 +49,10 @@ export const getTierColor = (tier: string): string => {
 
 export const getEventStatusColor = (status: string): string => {
   const colorMap: Record<string, string> = {
-    UPCOMING: '#3B82F6',
-    ONGOING: '#10B981',
+    DRAFT: '#9CA3AF',
+    OPEN: '#10B981',
+    FULL: '#F59E0B',
+    IN_PROGRESS: '#3B82F6',
     COMPLETED: '#6B7280',
     CANCELLED: '#EF4444'
   }
@@ -66,7 +70,8 @@ export const getEventTypeColor = (type: string): string => {
 export const getAdminRoleColor = (role: string): string => {
   const colorMap: Record<string, string> = {
     SUPER_ADMIN: '#EF4444',
-    ADMIN: '#3B82F6'
+    ADMIN: '#3B82F6',
+    OPERATOR: '#10B981'
   }
   return colorMap[role] || '#6B7280'
 }
@@ -74,7 +79,8 @@ export const getAdminRoleColor = (role: string): string => {
 export const formatAdminRole = (role: string): string => {
   const roleMap: Record<string, string> = {
     SUPER_ADMIN: '超级管理员',
-    ADMIN: '管理员'
+    ADMIN: '管理员',
+    OPERATOR: '运营人员'
   }
   return roleMap[role] || role
 }

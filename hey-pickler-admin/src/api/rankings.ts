@@ -1,8 +1,8 @@
 import request from './request'
-import type { RankingListResponse, EnterPointsRequest, ApiResponse } from '@/types'
+import type { RankingEntry, EnterPointsRequest, ApiResponse, PageResult } from '@/types'
 
-export const getRankings = (type: 'STAR' | 'PARTY') => {
-  return request.get<any, ApiResponse<RankingListResponse>>(`/rankings/${type.toLowerCase()}`)
+export const getRankings = (params: { type: 'STAR' | 'PARTY'; page: number; size: number }) => {
+  return request.get<any, ApiResponse<PageResult<RankingEntry>>>(`/rankings/${params.type}`)
 }
 
 export const enterPoints = (data: EnterPointsRequest) => {

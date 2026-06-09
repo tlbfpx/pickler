@@ -5,7 +5,7 @@
     <swiper-item wx:for="{{banners}}" wx:key="id">
       <image
         class="banner-image"
-        src="{{item.image_url}}"
+        src="{{item.imageUrl}}"
         mode="aspectFill"
         bindtap="handleBannerTap"
         data-banner="{{item}}">

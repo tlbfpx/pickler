@@ -1,5 +1,7 @@
 package com.heypickler.controller.admin;
 
+import com.heypickler.common.annotation.RequireRole;
+import com.heypickler.common.enums.UserRole;
 import com.heypickler.common.exception.BizException;
 import com.heypickler.common.exception.ErrorCode;
 import com.heypickler.common.result.PageResult;
@@ -26,36 +28,34 @@ public class AdminAdminController {
 
     @GetMapping
     @Operation(summary = "管理员列表")
+    @RequireRole(UserRole.SUPER_ADMIN)
     public Result<PageResult<AdminUser>> list(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int size,
-            HttpServletRequest request) {
-        checkSuperAdmin(request);
+            @RequestParam(defaultValue = "20") int size) {
         return Result.ok(adminUserService.listAdminUsers(page, size));
     }
 
     @PostMapping
     @Operation(summary = "创建管理员")
-    public Result<Map<String, Object>> create(@RequestBody @Valid AdminUserCreateRequest body,
-                                                HttpServletRequest request) {
-        checkSuperAdmin(request);
+    @RequireRole(UserRole.SUPER_ADMIN)
+    public Result<Map<String, Object>> create(@RequestBody @Valid AdminUserCreateRequest body) {
         Long id = adminUserService.createAdminUser(body);
         return Result.ok(Map.of("id", id));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "管理员详情")
-    public Result<AdminUser> get(@PathVariable Long id, HttpServletRequest request) {
-        checkSuperAdmin(request);
+    @RequireRole(UserRole.SUPER_ADMIN)
+    public Result<AdminUser> get(@PathVariable Long id) {
         return Result.ok(adminUserService.getAdminUser(id));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "编辑管理员")
+    @RequireRole(UserRole.SUPER_ADMIN)
     public Result<Void> update(@PathVariable Long id,
                                 @RequestBody Map<String, String> body,
                                 HttpServletRequest request) {
-        checkSuperAdmin(request);
         Long currentAdminId = (Long) request.getAttribute("adminId");
         if (id.equals(currentAdminId)) {
             throw new BizException(ErrorCode.PARAM_ERROR, "不能修改自己的角色");
@@ -66,22 +66,15 @@ public class AdminAdminController {
 
     @PostMapping("/{id}/reset-password")
     @Operation(summary = "重置密码")
+    @RequireRole(UserRole.SUPER_ADMIN)
     public Result<Void> resetPassword(@PathVariable Long id,
                                        @RequestBody Map<String, String> body,
                                        HttpServletRequest request) {
-        checkSuperAdmin(request);
         Long currentAdminId = (Long) request.getAttribute("adminId");
         if (id.equals(currentAdminId)) {
             throw new BizException(ErrorCode.PARAM_ERROR, "不能通过此接口重置自己的密码");
         }
         adminUserService.resetPassword(id, body.get("newPassword"));
         return Result.ok();
-    }
-
-    private void checkSuperAdmin(HttpServletRequest request) {
-        String role = (String) request.getAttribute("adminRole");
-        if (!"SUPER_ADMIN".equals(role)) {
-            throw new BizException(ErrorCode.FORBIDDEN);
-        }
     }
 }

@@ -28,9 +28,6 @@
             <el-button type="primary" size="small" @click="handleEdit(row)">
               编辑
             </el-button>
-            <el-button type="danger" size="small" @click="handleDelete(row)">
-              删除
-            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -47,7 +44,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getAdminList, deleteAdmin } from '@/api/admins'
+import { getAdminList } from '@/api/admins'
 import { formatDate, formatAdminRole } from '@/utils'
 import AdminFormDialog from './AdminFormDialog.vue'
 import type { Admin } from '@/types'
@@ -61,9 +58,9 @@ const selectedAdmin = ref<Admin | null>(null)
 const fetchAdmins = async () => {
   loading.value = true
   try {
-    const res = await getAdminList()
+    const res = await getAdminList({ page: 1, size: 100 })
     if (res.code === 0) {
-      adminList.value = res.data
+      adminList.value = res.data.list || []
     } else {
       ElMessage.error(res.message || '获取管理员列表失败')
     }
@@ -82,27 +79,6 @@ const handleCreate = () => {
 const handleEdit = (admin: Admin) => {
   selectedAdmin.value = admin
   formDialogVisible.value = true
-}
-
-const handleDelete = async (admin: Admin) => {
-  try {
-    await ElMessageBox.confirm(
-      `确定要删除管理员"${admin.username}"吗？`,
-      '确认删除',
-      { type: 'warning' }
-    )
-    const res = await deleteAdmin(admin.id)
-    if (res.code === 0) {
-      ElMessage.success('删除成功')
-      fetchAdmins()
-    } else {
-      ElMessage.error(res.message || '删除失败')
-    }
-  } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error('删除失败')
-    }
-  }
 }
 
 onMounted(() => {

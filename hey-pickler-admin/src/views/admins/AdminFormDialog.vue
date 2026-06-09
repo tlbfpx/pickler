@@ -26,7 +26,7 @@
           show-password
         />
         <div v-if="admin" class="form-tip">
-          留空则保持原密码不变
+          留空则保持当前密码不变
         </div>
       </el-form-item>
       <el-form-item label="角色" prop="role">
@@ -106,41 +106,41 @@ watch(() => props.modelValue, (val) => {
 const handleConfirm = async () => {
   if (!formRef.value) return
 
-  await formRef.value.validate(async (valid) => {
-    if (!valid) return
+  try {
+    await formRef.value.validate()
+  } catch {
+    return
+  }
 
-    loading.value = true
-    try {
-      let res
-      if (props.admin) {
-        const updateData: UpdateAdminRequest = {
-          role: formData.role
-        }
-        if (formData.password) {
-          updateData.password = formData.password
-        }
-        res = await updateAdmin(props.admin.id, updateData)
-      } else {
-        res = await createAdmin({
-          username: formData.username,
-          password: formData.password!,
-          role: formData.role
-        })
+  loading.value = true
+  try {
+    let res
+    if (props.admin) {
+      const updateData: UpdateAdminRequest = {
+        role: formData.role,
+        status: 'ACTIVE' // Default to ACTIVE when updating
       }
-
-      if (res.code === 0) {
-        ElMessage.success(props.admin ? '管理员更新成功' : '管理员创建成功')
-        emit('success')
-        emit('update:modelValue', false)
-      } else {
-        ElMessage.error(res.message || '操作失败')
-      }
-    } catch (error) {
-      ElMessage.error('操作失败')
-    } finally {
-      loading.value = false
+      res = await updateAdmin(props.admin.id, updateData)
+    } else {
+      res = await createAdmin({
+        username: formData.username,
+        password: formData.password!,
+        role: formData.role
+      })
     }
-  })
+
+    if (res.code === 0) {
+      ElMessage.success(props.admin ? '管理员更新成功' : '管理员创建成功')
+      emit('success')
+      emit('update:modelValue', false)
+    } else {
+      ElMessage.error(res.message || '操作失败')
+    }
+  } catch (error) {
+    ElMessage.error('操作失败')
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 

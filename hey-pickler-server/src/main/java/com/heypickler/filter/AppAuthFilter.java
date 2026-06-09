@@ -22,17 +22,32 @@ public class AppAuthFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final ObjectMapper objectMapper;
 
-    private static final Set<String> EXCLUDE_PATHS = Set.of(
+    private static final Set<String> PUBLIC_GET_PREFIXES = Set.of(
+            "/api/app/banners",
+            "/api/app/events",
+            "/api/app/rankings"
+    );
+
+    private static final Set<String> PUBLIC_PATHS = Set.of(
             "/api/app/auth/login",
             "/api/app/auth/phone",
-            "/api/app/auth/refresh",
-            "/api/app/banners"
+            "/api/app/auth/refresh"
     );
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return !path.startsWith("/api/app/") || EXCLUDE_PATHS.contains(path);
+        if (!path.startsWith("/api/app/")) return true;
+
+        // Auth endpoints are always public
+        if (PUBLIC_PATHS.contains(path)) return true;
+
+        // Read-only public APIs: banners, events, rankings
+        if ("GET".equals(request.getMethod()) && PUBLIC_GET_PREFIXES.stream().anyMatch(path::startsWith)) {
+            return true;
+        }
+
+        return false;
     }
 
     @Override

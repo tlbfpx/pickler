@@ -24,15 +24,15 @@
             <el-table-column label="用户" width="250">
               <template #default="{ row }">
                 <div class="user-cell">
-                  <el-avatar :src="row.avatar" :size="40" />
+                  <el-avatar :src="row.avatarUrl || undefined" :size="40" />
                   <div class="user-info">
-                    <div class="user-name">{{ row.nickname }}</div>
+                    <div class="user-name">{{ row.nickname || '-' }}</div>
                     <div class="user-id">ID: {{ row.userId }}</div>
                   </div>
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="等级" width="120">
+            <el-table-column label="级别" width="120">
               <template #default="{ row }">
                 <span
                   class="tier-badge"
@@ -42,7 +42,12 @@
                 </span>
               </template>
             </el-table-column>
-            <el-table-column prop="totalPoints" label="总积分" width="150" />
+            <el-table-column prop="points" label="积分" width="120" />
+            <el-table-column label="城市" width="100">
+              <template #default="{ row }">
+                {{ row.city || '-' }}
+              </template>
+            </el-table-column>
           </el-table>
         </div>
       </el-tab-pane>
@@ -54,15 +59,15 @@
             <el-table-column label="用户" width="250">
               <template #default="{ row }">
                 <div class="user-cell">
-                  <el-avatar :src="row.avatar" :size="40" />
+                  <el-avatar :src="row.avatarUrl || undefined" :size="40" />
                   <div class="user-info">
-                    <div class="user-name">{{ row.nickname }}</div>
+                    <div class="user-name">{{ row.nickname || '-' }}</div>
                     <div class="user-id">ID: {{ row.userId }}</div>
                   </div>
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="等级" width="120">
+            <el-table-column label="级别" width="120">
               <template #default="{ row }">
                 <span
                   class="tier-badge"
@@ -72,7 +77,12 @@
                 </span>
               </template>
             </el-table-column>
-            <el-table-column prop="totalPoints" label="总积分" width="150" />
+            <el-table-column prop="points" label="积分" width="120" />
+            <el-table-column label="城市" width="100">
+              <template #default="{ row }">
+                {{ row.city || '-' }}
+              </template>
+            </el-table-column>
           </el-table>
         </div>
       </el-tab-pane>
@@ -100,18 +110,18 @@ const fetchRankings = async () => {
   loading.value = true
   try {
     const [starRes, partyRes] = await Promise.all([
-      getRankings('STAR'),
-      getRankings('PARTY')
+      getRankings({ type: 'STAR', page: 1, size: 100 }),
+      getRankings({ type: 'PARTY', page: 1, size: 100 })
     ])
 
     if (starRes.code === 0) {
-      starRankings.value = starRes.data.rankings
+      starRankings.value = starRes.data.list || []
     } else {
       ElMessage.error(starRes.message || '获取明星排名失败')
     }
 
     if (partyRes.code === 0) {
-      partyRankings.value = partyRes.data.rankings
+      partyRankings.value = partyRes.data.list || []
     } else {
       ElMessage.error(partyRes.message || '获取派对排名失败')
     }
@@ -134,7 +144,7 @@ const handleRefresh = async (type: 'STAR' | 'PARTY') => {
   try {
     const res = await refreshRankings(type)
     if (res.code === 0) {
-      ElMessage.success(`${type}排名刷新成功`)
+      ElMessage.success(`${type === 'STAR' ? '明星' : '派对'}排名刷新成功`)
       fetchRankings()
     } else {
       ElMessage.error(res.message || '刷新排名失败')

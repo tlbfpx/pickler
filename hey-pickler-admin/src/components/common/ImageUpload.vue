@@ -51,7 +51,7 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
   }
   const isLt5M = file.size / 1024 / 1024 < 5
   if (!isLt5M) {
-    ElMessage.error('图片大小必须小于5MB！')
+    ElMessage.error('图片大小不能超过5MB！')
     return false
   }
   return true

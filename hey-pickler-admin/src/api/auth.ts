@@ -5,6 +5,10 @@ export const login = (data: LoginRequest) => {
   return request.post<any, ApiResponse<LoginResponse>>('/auth/login', data)
 }
 
+// NOTE: Backend does not have a logout endpoint
+// Just clear token from local storage
 export const logout = () => {
-  return request.post<any, ApiResponse<void>>('/auth/logout')
+  localStorage.removeItem('admin_token')
+  localStorage.removeItem('admin_info')
+  return Promise.resolve()
 }

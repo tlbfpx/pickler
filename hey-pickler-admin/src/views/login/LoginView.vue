@@ -64,27 +64,31 @@ const rules: FormRules = {
 const handleLogin = async () => {
   if (!formRef.value) return
 
-  await formRef.value.validate(async (valid) => {
-    if (!valid) return
+  try {
+    await formRef.value.validate()
+  } catch {
+    return
+  }
 
-    loading.value = true
-    try {
-      const res = await login(formData)
-      if (res.code === 0) {
-        authStore.setToken(res.data.token)
-        authStore.setAdmin(res.data.admin)
-        localStorage.setItem('admin_info', JSON.stringify(res.data.admin))
-        ElMessage.success('登录成功！')
-        router.push('/')
-      } else {
-        ElMessage.error(res.message || '登录失败')
-      }
-    } catch (error) {
-      ElMessage.error('登录失败，请重试')
-    } finally {
-      loading.value = false
+  loading.value = true
+  try {
+    const res = await login(formData)
+    if (res.code === 0) {
+      authStore.setToken(res.data.token)
+      // Note: LoginResponse only returns { token, role }, not full admin object
+      // We'll need to fetch admin info separately or adjust the response
+      localStorage.setItem('admin_token', res.data.token)
+      localStorage.setItem('admin_role', res.data.role)
+      ElMessage.success('登录成功！')
+      router.push('/')
+    } else {
+      ElMessage.error(res.message || '登录失败')
     }
-  })
+  } catch (error) {
+    ElMessage.error('登录失败，请重试')
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 

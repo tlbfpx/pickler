@@ -27,11 +27,19 @@ Component({
 
     tierName() {
       const tierMap = {
-        LEGEND: 'Legend',
-        SUPER: 'Super',
-        SHINING: 'Shining'
+        LEGEND: '传奇',
+        SUPER: '超级',
+        SHINING: '闪耀'
       }
-      return tierMap[this.data.tier] || 'Unknown'
+      return tierMap[this.data.tier] || '未知'
+    },
+
+    typeName() {
+      const typeMap = {
+        STAR: '明星',
+        PARTY: '派对'
+      }
+      return typeMap[this.data.type] || ''
     },
 
     sizeClass() {

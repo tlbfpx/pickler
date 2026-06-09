@@ -2,7 +2,7 @@
   "usingComponents": {
     "event-card": "/components/event-card/event-card"
   },
-  "navigationBarTitleText": "Hey Pickler",
+  "navigationBarTitleText": "首页",
   "enablePullDownRefresh": true,
   "backgroundTextStyle": "dark"
 }

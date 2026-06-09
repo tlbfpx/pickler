@@ -29,15 +29,15 @@
         />
       </el-form-item>
       <el-form-item label="地点" prop="location">
-        <el-input v-model="formData.location" placeholder="请输入赛事地点" />
+        <el-input v-model="formData.location" placeholder="请输入比赛地点" />
       </el-form-item>
-      <el-form-item label="比赛时间" prop="eventDate">
+      <el-form-item label="比赛时间" prop="eventTime">
         <el-date-picker
-          v-model="formData.eventDate"
+          v-model="formData.eventTime"
           type="datetime"
           placeholder="请选择比赛时间"
           format="YYYY-MM-DD HH:mm"
-          value-format="YYYY-MM-DD HH:mm:ss"
+          value-format="YYYY-MM-DDTHH:mm:ss"
           style="width: 100%"
         />
       </el-form-item>
@@ -47,7 +47,7 @@
           type="datetime"
           placeholder="请选择报名截止时间"
           format="YYYY-MM-DD HH:mm"
-          value-format="YYYY-MM-DD HH:mm:ss"
+          value-format="YYYY-MM-DDTHH:mm:ss"
           style="width: 100%"
         />
       </el-form-item>
@@ -58,7 +58,7 @@
           style="width: 100%"
         />
       </el-form-item>
-      <el-form-item label="费用（元）" prop="fee">
+      <el-form-item label="费用 (元)" prop="fee">
         <el-input-number
           v-model="formData.fee"
           :min="0"
@@ -100,7 +100,7 @@ const formData = reactive<CreateEventRequest>({
   title: '',
   description: '',
   location: '',
-  eventDate: '',
+  eventTime: '',
   registrationDeadline: '',
   maxParticipants: 50,
   fee: 0
@@ -111,7 +111,7 @@ const rules: FormRules = {
   title: [{ required: true, message: '请输入标题', trigger: 'blur' }],
   description: [{ required: true, message: '请输入描述', trigger: 'blur' }],
   location: [{ required: true, message: '请输入地点', trigger: 'blur' }],
-  eventDate: [{ required: true, message: '请选择比赛时间', trigger: 'change' }],
+  eventTime: [{ required: true, message: '请选择比赛时间', trigger: 'change' }],
   registrationDeadline: [{ required: true, message: '请选择报名截止时间', trigger: 'change' }],
   maxParticipants: [{ required: true, message: '请输入最大人数', trigger: 'blur' }],
   fee: [{ required: true, message: '请输入费用', trigger: 'blur' }]
@@ -123,7 +123,7 @@ watch(() => props.event, (val) => {
     formData.title = val.title
     formData.description = val.description
     formData.location = val.location
-    formData.eventDate = val.eventDate
+    formData.eventTime = val.eventTime
     formData.registrationDeadline = val.registrationDeadline
     formData.maxParticipants = val.maxParticipants
     formData.fee = val.fee
@@ -141,30 +141,32 @@ watch(() => props.modelValue, (val) => {
 const handleConfirm = async () => {
   if (!formRef.value) return
 
-  await formRef.value.validate(async (valid) => {
-    if (!valid) return
+  try {
+    await formRef.value.validate()
+  } catch {
+    return
+  }
 
-    loading.value = true
-    try {
-      let res
-      if (props.event) {
-        res = await updateEvent(props.event.id, formData)
-      } else {
-        res = await createEvent(formData)
-      }
-
-      if (res.code === 0) {
-        ElMessage.success(props.event ? '赛事更新成功' : '赛事创建成功')
-        emit('success')
-        emit('update:modelValue', false)
-      } else {
-        ElMessage.error(res.message || '操作失败')
-      }
-    } catch (error) {
-      ElMessage.error('操作失败')
-    } finally {
-      loading.value = false
+  loading.value = true
+  try {
+    let res
+    if (props.event) {
+      res = await updateEvent(props.event.id, formData)
+    } else {
+      res = await createEvent(formData)
     }
-  })
+
+    if (res.code === 0) {
+      ElMessage.success(props.event ? '赛事更新成功' : '赛事创建成功')
+      emit('success')
+      emit('update:modelValue', false)
+    } else {
+      ElMessage.error(res.message || '操作失败')
+    }
+  } catch (error) {
+    ElMessage.error('操作失败')
+  } finally {
+    loading.value = false
+  }
 }
 </script>
