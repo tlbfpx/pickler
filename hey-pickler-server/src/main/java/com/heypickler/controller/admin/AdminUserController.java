@@ -1,5 +1,7 @@
 package com.heypickler.controller.admin;
 
+import com.heypickler.common.annotation.RequireRole;
+import com.heypickler.common.enums.UserRole;
 import com.heypickler.common.result.PageResult;
 import com.heypickler.common.result.Result;
 import com.heypickler.dto.admin.BanRequest;
@@ -44,6 +46,7 @@ public class AdminUserController {
 
     @PostMapping("/{id}/ban")
     @Operation(summary = "封禁用户")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
     public Result<Void> banUser(HttpServletRequest request,
                                  @PathVariable Long id,
                                  @Valid @RequestBody BanRequest banRequest) {
@@ -54,6 +57,7 @@ public class AdminUserController {
 
     @PostMapping("/{id}/unban")
     @Operation(summary = "解封用户")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
     public Result<Void> unbanUser(HttpServletRequest request,
                                    @PathVariable Long id) {
         Long adminId = (Long) request.getAttribute("adminId");

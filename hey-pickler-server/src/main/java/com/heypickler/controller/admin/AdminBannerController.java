@@ -1,5 +1,7 @@
 package com.heypickler.controller.admin;
 
+import com.heypickler.common.annotation.RequireRole;
+import com.heypickler.common.enums.UserRole;
 import com.heypickler.common.result.Result;
 import com.heypickler.dto.admin.BannerCreateRequest;
 import com.heypickler.service.BannerService;
@@ -28,6 +30,7 @@ public class AdminBannerController {
 
     @PostMapping
     @Operation(summary = "创建Banner")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
     public Result<Map<String, Object>> create(@RequestBody @Valid BannerCreateRequest request) {
         Long id = bannerService.createBanner(request);
         return Result.ok(Map.of("id", id));
@@ -35,6 +38,7 @@ public class AdminBannerController {
 
     @PutMapping("/{id}")
     @Operation(summary = "编辑Banner")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
     public Result<Void> update(@PathVariable Long id, @RequestBody @Valid BannerCreateRequest request) {
         bannerService.updateBanner(id, request);
         return Result.ok();
@@ -42,6 +46,7 @@ public class AdminBannerController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "删除Banner")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
     public Result<Void> delete(@PathVariable Long id) {
         bannerService.deleteBanner(id);
         return Result.ok();
