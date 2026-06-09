@@ -62,13 +62,13 @@ function formatRelativeTime(date) {
  */
 function formatTier(tier, type = 'STAR') {
   const tierMap = {
-    LEGEND: 'Legend',
-    SUPER: 'Super',
-    SHINING: 'Shining'
+    LEGEND: '传奇',
+    SUPER: '超级',
+    SHINING: '闪耀'
   }
 
-  const typeSuffix = type === 'STAR' ? ' Star' : ' Party'
-  return tierMap[tier] ? `${tierMap[tier]}${typeSuffix}` : 'Unknown'
+  const typeSuffix = type === 'STAR' ? '明星' : '派对'
+  return tierMap[tier] ? `${tierMap[tier]}${typeSuffix}` : '未知'
 }
 
 /**

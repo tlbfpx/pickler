@@ -7,7 +7,7 @@
       <div class="table-header">
         <el-input
           v-model="searchKeyword"
-          placeholder="搜索手机号或昵称"
+          placeholder="按手机号或昵称搜索"
           style="width: 300px"
           clearable
           @clear="handleSearch"
@@ -21,46 +21,45 @@
       </div>
 
       <el-table v-loading="loading" :data="userList" style="width: 100%; margin-top: 16px">
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="phone" label="手机号" width="120" />
-        <el-table-column prop="nickname" label="昵称" width="150" />
-        <el-table-column label="头像" width="100">
+        <el-table-column prop="id" label="ID" width="60" />
+        <el-table-column prop="phone" label="手机号" width="130" />
+        <el-table-column prop="nickname" label="昵称" width="120" />
+        <el-table-column label="城市" width="80">
           <template #default="{ row }">
-            <el-avatar :src="row.avatar" :size="50" />
+            {{ row.city || '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="等级" width="120">
+        <el-table-column label="明星" width="120">
           <template #default="{ row }">
-            <span
-              class="tier-badge"
-              :style="{ backgroundColor: getTierColor(row.tier) }"
-            >
-              {{ formatTier(row.tier) }}
-            </span>
+            {{ row.starTier }} / {{ row.starPoints }}分
           </template>
         </el-table-column>
-        <el-table-column prop="totalPoints" label="总积分" width="120" />
-        <el-table-column label="状态" width="100">
+        <el-table-column label="派对" width="120">
           <template #default="{ row }">
-            <el-tag :type="row.isBanned ? 'danger' : 'success'">
-              {{ row.isBanned ? '已封禁' : '正常' }}
+            {{ row.partyTier }} / {{ row.partyPoints }}分
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 'BANNED' ? 'danger' : 'success'">
+              {{ row.status === 'BANNED' ? '禁赛' : '正常' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="创建时间" width="180">
+        <el-table-column label="注册时间" width="170">
           <template #default="{ row }">
             {{ formatDate(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
             <el-button
-              v-if="!row.isBanned"
+              v-if="row.status !== 'BANNED'"
               type="warning"
               size="small"
               @click="handleBan(row)"
             >
-              封禁
+              禁赛
             </el-button>
             <el-button
               v-else
@@ -68,7 +67,7 @@
               size="small"
               @click="handleUnban(row)"
             >
-              解封
+              解禁
             </el-button>
           </template>
         </el-table-column>
@@ -91,7 +90,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getUserList, unbanUser } from '@/api/users'
-import { formatDate, formatTier, getTierColor } from '@/utils'
+import { formatDate } from '@/utils'
 import Pagination from '@/components/common/Pagination.vue'
 import BanDialog from './BanDialog.vue'
 import type { User } from '@/types'
@@ -118,8 +117,8 @@ const fetchUsers = async () => {
       keyword: searchKeyword.value
     })
     if (res.code === 0) {
-      userList.value = res.data.users
-      pagination.total = res.data.total
+      userList.value = res.data.list || []
+      pagination.total = res.data.total || 0
     } else {
       ElMessage.error(res.message || '获取用户列表失败')
     }
@@ -144,13 +143,13 @@ const handleUnban = async (user: User) => {
   try {
     const res = await unbanUser(user.id)
     if (res.code === 0) {
-      ElMessage.success('解封成功')
+      ElMessage.success('用户解禁成功')
       fetchUsers()
     } else {
-      ElMessage.error(res.message || '解封失败')
+      ElMessage.error(res.message || '解禁用户失败')
     }
   } catch (error) {
-    ElMessage.error('解封失败')
+    ElMessage.error('解禁用户失败')
   }
 }
 

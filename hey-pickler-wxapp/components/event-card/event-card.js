@@ -45,8 +45,8 @@ Component({
 
     typeText() {
       const typeMap = {
-        STAR: '赛事',
-        PARTY: '活动'
+        STAR: '明星赛事',
+        PARTY: '派对活动'
       }
       return typeMap[this.data.event?.type] || '赛事'
     },

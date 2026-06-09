@@ -13,15 +13,27 @@ public class CorsConfig {
 
     @Bean
     public CorsFilter corsFilter() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
-        config.setMaxAge(3600L);
+        CorsConfiguration adminConfig = new CorsConfiguration();
+        adminConfig.setAllowedOrigins(List.of(
+                "http://localhost:5173",
+                "http://localhost:3000",
+                "http://127.0.0.1:5173"
+        ));
+        adminConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        adminConfig.setAllowedHeaders(List.of("*"));
+        adminConfig.setAllowCredentials(true);
+        adminConfig.setMaxAge(3600L);
+
+        CorsConfiguration appConfig = new CorsConfiguration();
+        appConfig.setAllowedOriginPatterns(List.of("*"));
+        appConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        appConfig.setAllowedHeaders(List.of("*"));
+        appConfig.setAllowCredentials(true);
+        appConfig.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/api/admin/**", config);
+        source.registerCorsConfiguration("/api/admin/**", adminConfig);
+        source.registerCorsConfiguration("/api/app/**", appConfig);
 
         return new CorsFilter(source);
     }

@@ -1,5 +1,7 @@
 package com.heypickler.controller.admin;
 
+import com.heypickler.common.annotation.RequireRole;
+import com.heypickler.common.enums.UserRole;
 import com.heypickler.common.result.PageResult;
 import com.heypickler.common.result.Result;
 import com.heypickler.dto.admin.EventCreateRequest;
@@ -38,6 +40,7 @@ public class AdminEventController {
 
     @PostMapping
     @Operation(summary = "创建赛事")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
     public Result<Map<String, Long>> createEvent(
             HttpServletRequest request,
             @Valid @RequestBody EventCreateRequest req) {
@@ -48,6 +51,7 @@ public class AdminEventController {
 
     @PutMapping("/{id}")
     @Operation(summary = "更新赛事")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
     public Result<Void> updateEvent(
             @PathVariable Long id,
             @Valid @RequestBody EventUpdateRequest req) {
@@ -57,6 +61,7 @@ public class AdminEventController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "删除赛事")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
     public Result<Void> deleteEvent(@PathVariable Long id) {
         eventService.deleteEvent(id);
         return Result.ok();
@@ -64,6 +69,7 @@ public class AdminEventController {
 
     @PostMapping("/{id}/points")
     @Operation(summary = "录入积分")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
     public Result<Void> enterPoints(
             HttpServletRequest request,
             @PathVariable Long id,

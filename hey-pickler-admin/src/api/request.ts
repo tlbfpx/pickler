@@ -1,5 +1,6 @@
-import axios, { AxiosInstance, AxiosError } from 'axios'
+import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
+import router from '@/router'
 
 const baseURL = '/api/admin'
 
@@ -10,9 +11,9 @@ const request: AxiosInstance = axios.create({
 
 // Request interceptor
 request.interceptors.request.use(
-  (config) => {
+  (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem('admin_token')
-    if (token) {
+    if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`
     }
     return config
@@ -34,7 +35,8 @@ request.interceptors.response.use(
         case 401:
           ElMessage.error('未授权，请重新登录')
           localStorage.removeItem('admin_token')
-          window.location.href = '/login'
+          localStorage.removeItem('admin_info')
+          router.push('/login')
           break
         case 403:
           ElMessage.error('没有权限访问')

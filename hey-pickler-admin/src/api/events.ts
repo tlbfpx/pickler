@@ -1,8 +1,8 @@
 import request from './request'
-import type { EventListResponse, CreateEventRequest, UpdateEventRequest, ApiResponse, PageParams } from '@/types'
+import type { Event, CreateEventRequest, UpdateEventRequest, ApiResponse, PageParams } from '@/types'
 
 export const getEventList = (params: PageParams) => {
-  return request.get<any, ApiResponse<EventListResponse>>('/events', { params })
+  return request.get<any, ApiResponse<PageResult<Event>>>('/events', { params })
 }
 
 export const createEvent = (data: CreateEventRequest) => {

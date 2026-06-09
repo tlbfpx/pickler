@@ -6,7 +6,7 @@ import util from '../../utils/util'
 Page({
   data: {
     type: 'ALL', // ALL, STAR, PARTY
-    tabs: ['全部', 'Star 赛事', 'Party 活动'],
+    tabs: ['全部', '明星赛事', '派对活动'],
     currentTab: 0,
     events: [],
     registrations: [],

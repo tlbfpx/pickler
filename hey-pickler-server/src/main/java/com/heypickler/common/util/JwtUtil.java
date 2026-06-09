@@ -23,8 +23,13 @@ public class JwtUtil {
     @Value("${hey-pickler.jwt.admin-expiration}")
     private long adminExpiration;
 
+    private volatile SecretKey cachedKey;
+
     private SecretKey getKey() {
-        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        if (cachedKey == null) {
+            cachedKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        }
+        return cachedKey;
     }
 
     public String generateAppToken(Long userId) {
