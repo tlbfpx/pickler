@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     :model-value="modelValue"
-    title="Enter Points"
+    title="录入积分"
     width="600px"
     @update:model-value="$emit('update:modelValue', $event)"
   >
@@ -12,36 +12,36 @@
         class="record-item"
       >
         <div class="record-header">
-          <span>Record #{{ index + 1 }}</span>
+          <span>记录 #{{ index + 1 }}</span>
           <el-button
             v-if="records.length > 1"
             type="danger"
             size="small"
             @click="removeRecord(index)"
           >
-            Remove
+            删除
           </el-button>
         </div>
         <el-form :model="record" label-position="top">
-          <el-form-item label="User ID">
+          <el-form-item label="用户ID">
             <el-input-number
               v-model="record.userId"
               :min="1"
-              placeholder="Enter user ID"
+              placeholder="请输入用户ID"
               style="width: 100%"
             />
           </el-form-item>
-          <el-form-item label="Points">
+          <el-form-item label="积分">
             <el-input-number
               v-model="record.points"
-              placeholder="Enter points"
+              placeholder="请输入积分"
               style="width: 100%"
             />
           </el-form-item>
-          <el-form-item label="Reason">
+          <el-form-item label="原因">
             <el-input
               v-model="record.reason"
-              placeholder="Enter reason"
+              placeholder="请输入原因"
             />
           </el-form-item>
         </el-form>
@@ -49,13 +49,13 @@
 
       <el-button type="dashed" style="width: 100%" @click="addRecord">
         <el-icon><Plus /></el-icon>
-        Add Record
+        添加记录
       </el-button>
     </div>
     <template #footer>
-      <el-button @click="$emit('update:modelValue', false)">Cancel</el-button>
+      <el-button @click="$emit('update:modelValue', false)">取消</el-button>
       <el-button type="primary" :loading="loading" @click="handleConfirm">
-        Submit
+        提交
       </el-button>
     </template>
   </el-dialog>
@@ -102,7 +102,7 @@ const handleConfirm = async () => {
   // Validate records
   for (const record of records) {
     if (!record.userId || record.points === 0 || !record.reason) {
-      ElMessage.error('Please fill in all fields')
+      ElMessage.error('请填写所有字段')
       return
     }
   }
@@ -111,14 +111,14 @@ const handleConfirm = async () => {
   try {
     const res = await enterPoints({ records })
     if (res.code === 0) {
-      ElMessage.success('Points entered successfully')
+      ElMessage.success('积分录入成功')
       emit('success')
       emit('update:modelValue', false)
     } else {
-      ElMessage.error(res.message || 'Failed to enter points')
+      ElMessage.error(res.message || '积分录入失败')
     }
   } catch (error) {
-    ElMessage.error('Failed to enter points')
+    ElMessage.error('积分录入失败')
   } finally {
     loading.value = false
   }

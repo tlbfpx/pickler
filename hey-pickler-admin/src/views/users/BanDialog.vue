@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     :model-value="modelValue"
-    title="Ban User"
+    title="禁赛用户"
     width="500px"
     @update:model-value="$emit('update:modelValue', $event)"
   >
@@ -12,20 +12,20 @@
       label-position="top"
       v-if="user"
     >
-      <el-form-item label="User">
+      <el-form-item label="用户">
         <el-input :value="user.nickname" disabled />
       </el-form-item>
-      <el-form-item label="Ban Reason" prop="reason">
+      <el-form-item label="禁赛原因" prop="reason">
         <el-input
           v-model="formData.reason"
           type="textarea"
           :rows="3"
-          placeholder="Enter ban reason"
+          placeholder="请输入禁赛原因"
         />
       </el-form-item>
-      <el-form-item label="Duration (Days)" prop="durationDays">
+      <el-form-item label="禁赛天数" prop="days">
         <el-input-number
-          v-model="formData.durationDays"
+          v-model="formData.days"
           :min="1"
           :max="365"
           style="width: 100%"
@@ -33,9 +33,9 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="$emit('update:modelValue', false)">Cancel</el-button>
+      <el-button @click="$emit('update:modelValue', false)">取消</el-button>
       <el-button type="danger" :loading="loading" @click="handleConfirm">
-        Confirm Ban
+        确认禁赛
       </el-button>
     </template>
   </el-dialog>
@@ -62,43 +62,45 @@ const loading = ref(false)
 
 const formData = reactive({
   reason: '',
-  durationDays: 7
+  days: 7
 })
 
 const rules: FormRules = {
-  reason: [{ required: true, message: 'Please enter ban reason', trigger: 'blur' }],
-  durationDays: [{ required: true, message: 'Please enter duration', trigger: 'blur' }]
+  reason: [{ required: true, message: '请输入禁赛原因', trigger: 'blur' }],
+  days: [{ required: true, message: '请输入禁赛天数', trigger: 'blur' }]
 }
 
 watch(() => props.modelValue, (val) => {
   if (!val) {
     formRef.value?.resetFields()
     formData.reason = ''
-    formData.durationDays = 7
+    formData.days = 7
   }
 })
 
 const handleConfirm = async () => {
   if (!formRef.value || !props.user) return
 
-  await formRef.value.validate(async (valid) => {
-    if (!valid) return
+  try {
+    await formRef.value.validate()
+  } catch {
+    return
+  }
 
-    loading.value = true
-    try {
-      const res = await banUser(props.user.id, formData)
-      if (res.code === 0) {
-        ElMessage.success('User banned successfully')
-        emit('success')
-        emit('update:modelValue', false)
-      } else {
-        ElMessage.error(res.message || 'Failed to ban user')
-      }
-    } catch (error) {
-      ElMessage.error('Failed to ban user')
-    } finally {
-      loading.value = false
+  loading.value = true
+  try {
+    const res = await banUser(props.user.id, formData)
+    if (res.code === 0) {
+      ElMessage.success('用户禁赛成功')
+      emit('success')
+      emit('update:modelValue', false)
+    } else {
+      ElMessage.error(res.message || '禁赛用户失败')
     }
-  })
+  } catch (error) {
+    ElMessage.error('禁赛用户失败')
+  } finally {
+    loading.value = false
+  }
 }
 </script>

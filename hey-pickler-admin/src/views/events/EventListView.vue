@@ -1,57 +1,59 @@
 <template>
   <div>
     <div class="page-header">
-      <h1>Event Management</h1>
+      <h1>赛事管理</h1>
       <el-button type="primary" @click="handleCreate">
         <el-icon><Plus /></el-icon>
-        Create Event
+        新建赛事
       </el-button>
     </div>
     <div class="card">
       <div class="filter-bar">
         <el-select
           v-model="filterType"
-          placeholder="Filter by type"
+          placeholder="按类型筛选"
           clearable
           style="width: 150px"
           @change="handleFilter"
         >
-          <el-option label="Star Event" value="STAR" />
-          <el-option label="Party Event" value="PARTY" />
+          <el-option label="明星赛" value="STAR" />
+          <el-option label="派对赛" value="PARTY" />
         </el-select>
         <el-select
           v-model="filterStatus"
-          placeholder="Filter by status"
+          placeholder="按状态筛选"
           clearable
           style="width: 150px"
           @change="handleFilter"
         >
-          <el-option label="Upcoming" value="UPCOMING" />
-          <el-option label="Ongoing" value="ONGOING" />
-          <el-option label="Completed" value="COMPLETED" />
-          <el-option label="Cancelled" value="CANCELLED" />
+          <el-option label="草稿" value="DRAFT" />
+          <el-option label="即将开始" value="UPCOMING" />
+          <el-option label="报名中" value="OPEN" />
+          <el-option label="进行中" value="ONGOING" />
+          <el-option label="已结束" value="COMPLETED" />
+          <el-option label="已取消" value="CANCELLED" />
         </el-select>
       </div>
 
       <el-table v-loading="loading" :data="eventList" style="width: 100%; margin-top: 16px">
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column label="Type" width="120">
+        <el-table-column label="类型" width="120">
           <template #default="{ row }">
             <el-tag :color="getEventTypeColor(row.type)" effect="dark">
               {{ formatEventType(row.type) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="title" label="Title" width="200" />
-        <el-table-column prop="location" label="Location" width="150" />
-        <el-table-column label="Event Date" width="180">
+        <el-table-column prop="title" label="标题" width="200" />
+        <el-table-column prop="location" label="地点" width="150" />
+        <el-table-column label="比赛时间" width="180">
           <template #default="{ row }">
-            {{ formatDate(row.eventDate) }}
+            {{ formatDate(row.eventTime) }}
           </template>
         </el-table-column>
-        <el-table-column prop="maxParticipants" label="Max" width="80" />
-        <el-table-column prop="currentParticipants" label="Current" width="80" />
-        <el-table-column label="Status" width="120">
+        <el-table-column prop="maxParticipants" label="上限" width="80" />
+        <el-table-column prop="currentParticipants" label="已报名" width="80" />
+        <el-table-column label="状态" width="120">
           <template #default="{ row }">
             <span
               class="status-badge"
@@ -61,18 +63,18 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="fee" label="Fee" width="100">
+        <el-table-column prop="fee" label="费用" width="100">
           <template #default="{ row }">
             ¥{{ row.fee }}
           </template>
         </el-table-column>
-        <el-table-column label="Actions" width="150" fixed="right">
+        <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="handleEdit(row)">
-              Edit
+              编辑
             </el-button>
             <el-button type="danger" size="small" @click="handleDelete(row)">
-              Delete
+              删除
             </el-button>
           </template>
         </el-table-column>
@@ -128,13 +130,13 @@ const fetchEvents = async () => {
       status: filterStatus.value
     })
     if (res.code === 0) {
-      eventList.value = res.data.events
-      pagination.total = res.data.total
+      eventList.value = res.data.list || []
+      pagination.total = res.data.total || 0
     } else {
-      ElMessage.error(res.message || 'Failed to fetch events')
+      ElMessage.error(res.message || '获取赛事列表失败')
     }
   } catch (error) {
-    ElMessage.error('Failed to fetch events')
+    ElMessage.error('获取赛事列表失败')
   } finally {
     loading.value = false
   }
@@ -158,20 +160,20 @@ const handleEdit = (event: Event) => {
 const handleDelete = async (event: Event) => {
   try {
     await ElMessageBox.confirm(
-      `Are you sure you want to delete event "${event.title}"?`,
-      'Confirm Delete',
+      `确定要删除赛事 "${event.title}" 吗？`,
+      '确认删除',
       { type: 'warning' }
     )
     const res = await deleteEvent(event.id)
     if (res.code === 0) {
-      ElMessage.success('Event deleted successfully')
+      ElMessage.success('赛事删除成功')
       fetchEvents()
     } else {
-      ElMessage.error(res.message || 'Failed to delete event')
+      ElMessage.error(res.message || '删除赛事失败')
     }
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error('Failed to delete event')
+      ElMessage.error('删除赛事失败')
     }
   }
 }

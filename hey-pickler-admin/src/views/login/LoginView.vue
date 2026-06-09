@@ -1,21 +1,21 @@
 <template>
   <div class="login-container">
     <div class="login-card">
-      <h1 class="login-title">Hey Pickler Admin</h1>
+      <h1 class="login-title">Hey Pickler 管理后台</h1>
       <el-form ref="formRef" :model="formData" :rules="rules" label-position="top">
-        <el-form-item label="Username" prop="username">
+        <el-form-item label="用户名" prop="username">
           <el-input
             v-model="formData.username"
-            placeholder="Enter username"
+            placeholder="请输入用户名"
             size="large"
             :prefix-icon="User"
           />
         </el-form-item>
-        <el-form-item label="Password" prop="password">
+        <el-form-item label="密码" prop="password">
           <el-input
             v-model="formData.password"
             type="password"
-            placeholder="Enter password"
+            placeholder="请输入密码"
             size="large"
             :prefix-icon="Lock"
             @keyup.enter="handleLogin"
@@ -29,7 +29,7 @@
             @click="handleLogin"
             style="width: 100%"
           >
-            Login
+            登录
           </el-button>
         </el-form-item>
       </el-form>
@@ -57,34 +57,38 @@ const formData = reactive({
 })
 
 const rules: FormRules = {
-  username: [{ required: true, message: 'Please enter username', trigger: 'blur' }],
-  password: [{ required: true, message: 'Please enter password', trigger: 'blur' }]
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
 const handleLogin = async () => {
   if (!formRef.value) return
 
-  await formRef.value.validate(async (valid) => {
-    if (!valid) return
+  try {
+    await formRef.value.validate()
+  } catch {
+    return
+  }
 
-    loading.value = true
-    try {
-      const res = await login(formData)
-      if (res.code === 0) {
-        authStore.setToken(res.data.token)
-        authStore.setAdmin(res.data.admin)
-        localStorage.setItem('admin_info', JSON.stringify(res.data.admin))
-        ElMessage.success('Login successful!')
-        router.push('/')
-      } else {
-        ElMessage.error(res.message || 'Login failed')
-      }
-    } catch (error) {
-      ElMessage.error('Login failed, please try again')
-    } finally {
-      loading.value = false
+  loading.value = true
+  try {
+    const res = await login(formData)
+    if (res.code === 0) {
+      authStore.setToken(res.data.token)
+      // Note: LoginResponse only returns { token, role }, not full admin object
+      // We'll need to fetch admin info separately or adjust the response
+      localStorage.setItem('admin_token', res.data.token)
+      localStorage.setItem('admin_role', res.data.role)
+      ElMessage.success('登录成功！')
+      router.push('/')
+    } else {
+      ElMessage.error(res.message || '登录失败')
     }
-  })
+  } catch (error) {
+    ElMessage.error('登录失败，请重试')
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
