@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     :model-value="modelValue"
-    :title="admin ? 'Edit Admin' : 'Create Admin'"
+    :title="admin ? '编辑管理员' : '新建管理员'"
     width="500px"
     @update:model-value="$emit('update:modelValue', $event)"
   >
@@ -11,35 +11,35 @@
       :rules="rules"
       label-position="top"
     >
-      <el-form-item label="Username" prop="username">
+      <el-form-item label="用户名" prop="username">
         <el-input
           v-model="formData.username"
-          placeholder="Enter username"
+          placeholder="请输入用户名"
           :disabled="!!admin"
         />
       </el-form-item>
-      <el-form-item label="Password" prop="password">
+      <el-form-item label="密码" prop="password">
         <el-input
           v-model="formData.password"
           type="password"
-          placeholder="Enter password"
+          placeholder="请输入密码"
           show-password
         />
         <div v-if="admin" class="form-tip">
-          Leave empty to keep current password
+          留空则保持原密码不变
         </div>
       </el-form-item>
-      <el-form-item label="Role" prop="role">
-        <el-select v-model="formData.role" placeholder="Select role" style="width: 100%">
-          <el-option label="Super Admin" value="SUPER_ADMIN" />
-          <el-option label="Admin" value="ADMIN" />
+      <el-form-item label="角色" prop="role">
+        <el-select v-model="formData.role" placeholder="请选择角色" style="width: 100%">
+          <el-option label="超级管理员" value="SUPER_ADMIN" />
+          <el-option label="管理员" value="ADMIN" />
         </el-select>
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="$emit('update:modelValue', false)">Cancel</el-button>
+      <el-button @click="$emit('update:modelValue', false)">取消</el-button>
       <el-button type="primary" :loading="loading" @click="handleConfirm">
-        {{ admin ? 'Update' : 'Create' }}
+        {{ admin ? '更新' : '新建' }}
       </el-button>
     </template>
   </el-dialog>
@@ -71,12 +71,12 @@ const formData = reactive<CreateAdminRequest & { password?: string }>({
 })
 
 const rules: FormRules = {
-  username: [{ required: true, message: 'Please enter username', trigger: 'blur' }],
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   password: [
     {
       validator: (rule, value, callback) => {
         if (!props.admin && !value) {
-          callback(new Error('Please enter password'))
+          callback(new Error('请输入密码'))
         } else {
           callback()
         }
@@ -84,7 +84,7 @@ const rules: FormRules = {
       trigger: 'blur'
     }
   ],
-  role: [{ required: true, message: 'Please select role', trigger: 'change' }]
+  role: [{ required: true, message: '请选择角色', trigger: 'change' }]
 }
 
 watch(() => props.admin, (val) => {
@@ -129,14 +129,14 @@ const handleConfirm = async () => {
       }
 
       if (res.code === 0) {
-        ElMessage.success(props.admin ? 'Admin updated successfully' : 'Admin created successfully')
+        ElMessage.success(props.admin ? '管理员更新成功' : '管理员创建成功')
         emit('success')
         emit('update:modelValue', false)
       } else {
-        ElMessage.error(res.message || 'Operation failed')
+        ElMessage.error(res.message || '操作失败')
       }
     } catch (error) {
-      ElMessage.error('Operation failed')
+      ElMessage.error('操作失败')
     } finally {
       loading.value = false
     }

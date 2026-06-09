@@ -6,15 +6,15 @@
     <div v-loading="loading" class="stats-grid">
       <div class="stat-card">
         <div class="stat-value">{{ stats.totalUsers }}</div>
-        <div class="stat-label">Total Users</div>
+        <div class="stat-label">用户总数</div>
       </div>
       <div class="stat-card">
         <div class="stat-value">{{ stats.activeEvents }}</div>
-        <div class="stat-label">Active Events</div>
+        <div class="stat-label">进行中赛事</div>
       </div>
       <div class="stat-card">
         <div class="stat-value">{{ stats.recentRegistrations }}</div>
-        <div class="stat-label">Recent Registrations</div>
+        <div class="stat-label">最近报名</div>
       </div>
     </div>
   </div>

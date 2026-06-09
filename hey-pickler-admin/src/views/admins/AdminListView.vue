@@ -1,35 +1,35 @@
 <template>
   <div>
     <div class="page-header">
-      <h1>Admin Account Management</h1>
+      <h1>管理员管理</h1>
       <el-button type="primary" @click="handleCreate">
         <el-icon><Plus /></el-icon>
-        Create Admin
+        新建管理员
       </el-button>
     </div>
     <div class="card">
       <el-table v-loading="loading" :data="adminList" style="width: 100%">
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="username" label="Username" width="200" />
-        <el-table-column label="Role" width="150">
+        <el-table-column prop="username" label="用户名" width="200" />
+        <el-table-column label="角色" width="150">
           <template #default="{ row }">
             <el-tag :type="row.role === 'SUPER_ADMIN' ? 'danger' : 'primary'">
               {{ formatAdminRole(row.role) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="Created At" width="200">
+        <el-table-column label="创建时间" width="200">
           <template #default="{ row }">
             {{ formatDate(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="Actions" width="150" fixed="right">
+        <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="handleEdit(row)">
-              Edit
+              编辑
             </el-button>
             <el-button type="danger" size="small" @click="handleDelete(row)">
-              Delete
+              删除
             </el-button>
           </template>
         </el-table-column>
@@ -65,10 +65,10 @@ const fetchAdmins = async () => {
     if (res.code === 0) {
       adminList.value = res.data
     } else {
-      ElMessage.error(res.message || 'Failed to fetch admins')
+      ElMessage.error(res.message || '获取管理员列表失败')
     }
   } catch (error) {
-    ElMessage.error('Failed to fetch admins')
+    ElMessage.error('获取管理员列表失败')
   } finally {
     loading.value = false
   }
@@ -87,20 +87,20 @@ const handleEdit = (admin: Admin) => {
 const handleDelete = async (admin: Admin) => {
   try {
     await ElMessageBox.confirm(
-      `Are you sure you want to delete admin "${admin.username}"?`,
-      'Confirm Delete',
+      `确定要删除管理员"${admin.username}"吗？`,
+      '确认删除',
       { type: 'warning' }
     )
     const res = await deleteAdmin(admin.id)
     if (res.code === 0) {
-      ElMessage.success('Admin deleted successfully')
+      ElMessage.success('删除成功')
       fetchAdmins()
     } else {
-      ElMessage.error(res.message || 'Failed to delete admin')
+      ElMessage.error(res.message || '删除失败')
     }
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error('Failed to delete admin')
+      ElMessage.error('删除失败')
     }
   }
 }

@@ -1,7 +1,7 @@
 <template>
   <div class="header">
     <div class="header-left">
-      <h2>Hey Pickler Admin Panel</h2>
+      <h2>Hey Pickler 管理后台</h2>
     </div>
     <div class="header-right">
       <el-dropdown @command="handleCommand">
@@ -14,7 +14,7 @@
           <el-dropdown-menu>
             <el-dropdown-item command="logout">
               <el-icon><SwitchButton /></el-icon>
-              Logout
+              退出登录
             </el-dropdown-item>
           </el-dropdown-menu>
         </template>
@@ -34,7 +34,7 @@ const authStore = useAuthStore()
 const handleCommand = async (command: string) => {
   if (command === 'logout') {
     try {
-      await ElMessageBox.confirm('Are you sure you want to logout?', 'Confirm', {
+      await ElMessageBox.confirm('确定要退出登录吗？', '确认', {
         type: 'warning'
       })
       authStore.logout()
