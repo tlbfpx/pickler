@@ -1,6 +1,6 @@
 <template>
   <div class="sidebar">
-    <div class="sidebar-logo">Hey Pickler Admin</div>
+    <div class="sidebar-logo">Hey Pickler 管理后台</div>
     <el-menu
       :default-active="activeMenu"
       class="sidebar-menu"
@@ -11,27 +11,27 @@
     >
       <el-menu-item index="/">
         <el-icon><DataBoard /></el-icon>
-        <span>Dashboard</span>
+        <span>控制台</span>
       </el-menu-item>
       <el-menu-item index="/users">
         <el-icon><User /></el-icon>
-        <span>Users</span>
+        <span>用户管理</span>
       </el-menu-item>
       <el-menu-item index="/events">
         <el-icon><Calendar /></el-icon>
-        <span>Events</span>
+        <span>赛事管理</span>
       </el-menu-item>
       <el-menu-item index="/rankings">
         <el-icon><Trophy /></el-icon>
-        <span>Rankings</span>
+        <span>排名管理</span>
       </el-menu-item>
       <el-menu-item index="/banners">
         <el-icon><Picture /></el-icon>
-        <span>Banners</span>
+        <span>Banner管理</span>
       </el-menu-item>
       <el-menu-item index="/admins">
         <el-icon><UserFilled /></el-icon>
-        <span>Admin Accounts</span>
+        <span>管理员管理</span>
       </el-menu-item>
     </el-menu>
   </div>

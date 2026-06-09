@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     :model-value="modelValue"
-    title="Ban User"
+    title="封禁用户"
     width="500px"
     @update:model-value="$emit('update:modelValue', $event)"
   >
@@ -12,18 +12,18 @@
       label-position="top"
       v-if="user"
     >
-      <el-form-item label="User">
+      <el-form-item label="用户">
         <el-input :value="user.nickname" disabled />
       </el-form-item>
-      <el-form-item label="Ban Reason" prop="reason">
+      <el-form-item label="封禁原因" prop="reason">
         <el-input
           v-model="formData.reason"
           type="textarea"
           :rows="3"
-          placeholder="Enter ban reason"
+          placeholder="请输入封禁原因"
         />
       </el-form-item>
-      <el-form-item label="Duration (Days)" prop="durationDays">
+      <el-form-item label="封禁天数" prop="durationDays">
         <el-input-number
           v-model="formData.durationDays"
           :min="1"
@@ -33,9 +33,9 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="$emit('update:modelValue', false)">Cancel</el-button>
+      <el-button @click="$emit('update:modelValue', false)">取消</el-button>
       <el-button type="danger" :loading="loading" @click="handleConfirm">
-        Confirm Ban
+        确认封禁
       </el-button>
     </template>
   </el-dialog>
@@ -66,8 +66,8 @@ const formData = reactive({
 })
 
 const rules: FormRules = {
-  reason: [{ required: true, message: 'Please enter ban reason', trigger: 'blur' }],
-  durationDays: [{ required: true, message: 'Please enter duration', trigger: 'blur' }]
+  reason: [{ required: true, message: '请输入封禁原因', trigger: 'blur' }],
+  durationDays: [{ required: true, message: '请输入封禁天数', trigger: 'blur' }]
 }
 
 watch(() => props.modelValue, (val) => {
@@ -88,14 +88,14 @@ const handleConfirm = async () => {
     try {
       const res = await banUser(props.user.id, formData)
       if (res.code === 0) {
-        ElMessage.success('User banned successfully')
+        ElMessage.success('封禁成功')
         emit('success')
         emit('update:modelValue', false)
       } else {
-        ElMessage.error(res.message || 'Failed to ban user')
+        ElMessage.error(res.message || '封禁失败')
       }
     } catch (error) {
-      ElMessage.error('Failed to ban user')
+      ElMessage.error('封禁失败')
     } finally {
       loading.value = false
     }

@@ -1,27 +1,27 @@
 <template>
   <div>
     <div class="page-header">
-      <h1>Ranking Management</h1>
+      <h1>排名管理</h1>
       <div class="header-actions">
         <el-button type="primary" @click="handleEnterPoints">
           <el-icon><Plus /></el-icon>
-          Enter Points
+          录入积分
         </el-button>
         <el-button type="success" @click="handleRefresh('STAR')">
-          Refresh Star Rankings
+          刷新明星排名
         </el-button>
         <el-button type="success" @click="handleRefresh('PARTY')">
-          Refresh Party Rankings
+          刷新派对排名
         </el-button>
       </div>
     </div>
 
     <el-tabs v-model="activeTab" @tab-change="handleTabChange">
-      <el-tab-pane label="Star Rankings" name="STAR">
+      <el-tab-pane label="明星排名" name="STAR">
         <div class="card">
           <el-table v-loading="loading" :data="starRankings" style="width: 100%">
-            <el-table-column prop="rank" label="Rank" width="80" />
-            <el-table-column label="User" width="250">
+            <el-table-column prop="rank" label="排名" width="80" />
+            <el-table-column label="用户" width="250">
               <template #default="{ row }">
                 <div class="user-cell">
                   <el-avatar :src="row.avatar" :size="40" />
@@ -32,7 +32,7 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="Tier" width="120">
+            <el-table-column label="等级" width="120">
               <template #default="{ row }">
                 <span
                   class="tier-badge"
@@ -42,16 +42,16 @@
                 </span>
               </template>
             </el-table-column>
-            <el-table-column prop="totalPoints" label="Total Points" width="150" />
+            <el-table-column prop="totalPoints" label="总积分" width="150" />
           </el-table>
         </div>
       </el-tab-pane>
 
-      <el-tab-pane label="Party Rankings" name="PARTY">
+      <el-tab-pane label="派对排名" name="PARTY">
         <div class="card">
           <el-table v-loading="loading" :data="partyRankings" style="width: 100%">
-            <el-table-column prop="rank" label="Rank" width="80" />
-            <el-table-column label="User" width="250">
+            <el-table-column prop="rank" label="排名" width="80" />
+            <el-table-column label="用户" width="250">
               <template #default="{ row }">
                 <div class="user-cell">
                   <el-avatar :src="row.avatar" :size="40" />
@@ -62,7 +62,7 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="Tier" width="120">
+            <el-table-column label="等级" width="120">
               <template #default="{ row }">
                 <span
                   class="tier-badge"
@@ -72,7 +72,7 @@
                 </span>
               </template>
             </el-table-column>
-            <el-table-column prop="totalPoints" label="Total Points" width="150" />
+            <el-table-column prop="totalPoints" label="总积分" width="150" />
           </el-table>
         </div>
       </el-tab-pane>
@@ -107,16 +107,16 @@ const fetchRankings = async () => {
     if (starRes.code === 0) {
       starRankings.value = starRes.data.rankings
     } else {
-      ElMessage.error(starRes.message || 'Failed to fetch star rankings')
+      ElMessage.error(starRes.message || '获取明星排名失败')
     }
 
     if (partyRes.code === 0) {
       partyRankings.value = partyRes.data.rankings
     } else {
-      ElMessage.error(partyRes.message || 'Failed to fetch party rankings')
+      ElMessage.error(partyRes.message || '获取派对排名失败')
     }
   } catch (error) {
-    ElMessage.error('Failed to fetch rankings')
+    ElMessage.error('获取排名失败')
   } finally {
     loading.value = false
   }
@@ -134,13 +134,13 @@ const handleRefresh = async (type: 'STAR' | 'PARTY') => {
   try {
     const res = await refreshRankings(type)
     if (res.code === 0) {
-      ElMessage.success(`${type} rankings refreshed successfully`)
+      ElMessage.success(`${type}排名刷新成功`)
       fetchRankings()
     } else {
-      ElMessage.error(res.message || 'Failed to refresh rankings')
+      ElMessage.error(res.message || '刷新排名失败')
     }
   } catch (error) {
-    ElMessage.error('Failed to refresh rankings')
+    ElMessage.error('刷新排名失败')
   }
 }
 

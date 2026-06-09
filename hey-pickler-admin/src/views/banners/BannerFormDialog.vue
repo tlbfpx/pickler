@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     :model-value="modelValue"
-    :title="banner ? 'Edit Banner' : 'Create Banner'"
+    :title="banner ? '编辑Banner' : '新建Banner'"
     width="600px"
     @update:model-value="$emit('update:modelValue', $event)"
   >
@@ -11,30 +11,30 @@
       :rules="rules"
       label-position="top"
     >
-      <el-form-item label="Title" prop="title">
-        <el-input v-model="formData.title" placeholder="Enter banner title" />
+      <el-form-item label="标题" prop="title">
+        <el-input v-model="formData.title" placeholder="请输入Banner标题" />
       </el-form-item>
-      <el-form-item label="Image" prop="imageUrl">
+      <el-form-item label="图片" prop="imageUrl">
         <ImageUpload v-model="formData.imageUrl" />
       </el-form-item>
-      <el-form-item label="Link URL" prop="linkUrl">
-        <el-input v-model="formData.linkUrl" placeholder="Enter link URL" />
+      <el-form-item label="跳转链接" prop="linkUrl">
+        <el-input v-model="formData.linkUrl" placeholder="请输入跳转链接" />
       </el-form-item>
-      <el-form-item label="Order" prop="order">
+      <el-form-item label="排序" prop="order">
         <el-input-number
           v-model="formData.order"
           :min="0"
           style="width: 100%"
         />
       </el-form-item>
-      <el-form-item label="Active" prop="isActive">
+      <el-form-item label="启用" prop="isActive">
         <el-switch v-model="formData.isActive" />
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="$emit('update:modelValue', false)">Cancel</el-button>
+      <el-button @click="$emit('update:modelValue', false)">取消</el-button>
       <el-button type="primary" :loading="loading" @click="handleConfirm">
-        {{ banner ? 'Update' : 'Create' }}
+        {{ banner ? '更新' : '新建' }}
       </el-button>
     </template>
   </el-dialog>
@@ -69,10 +69,10 @@ const formData = reactive<CreateBannerRequest>({
 })
 
 const rules: FormRules = {
-  title: [{ required: true, message: 'Please enter title', trigger: 'blur' }],
-  imageUrl: [{ required: true, message: 'Please upload image', trigger: 'change' }],
-  linkUrl: [{ required: true, message: 'Please enter link URL', trigger: 'blur' }],
-  order: [{ required: true, message: 'Please enter order', trigger: 'blur' }]
+  title: [{ required: true, message: '请输入标题', trigger: 'blur' }],
+  imageUrl: [{ required: true, message: '请上传图片', trigger: 'change' }],
+  linkUrl: [{ required: true, message: '请输入跳转链接', trigger: 'blur' }],
+  order: [{ required: true, message: '请输入排序', trigger: 'blur' }]
 }
 
 watch(() => props.banner, (val) => {
@@ -110,14 +110,14 @@ const handleConfirm = async () => {
       }
 
       if (res.code === 0) {
-        ElMessage.success(props.banner ? 'Banner updated successfully' : 'Banner created successfully')
+        ElMessage.success(props.banner ? 'Banner更新成功' : 'Banner创建成功')
         emit('success')
         emit('update:modelValue', false)
       } else {
-        ElMessage.error(res.message || 'Operation failed')
+        ElMessage.error(res.message || '操作失败')
       }
     } catch (error) {
-      ElMessage.error('Operation failed')
+      ElMessage.error('操作失败')
     } finally {
       loading.value = false
     }
