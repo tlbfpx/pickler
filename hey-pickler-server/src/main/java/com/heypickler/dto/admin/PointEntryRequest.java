@@ -13,11 +13,14 @@ public class PointEntryRequest {
     @Valid
     private List<PointRecordItem> records;
 
+    private String type;
+
     @Data
     public static class PointRecordItem {
+        @jakarta.validation.constraints.NotNull(message = "User ID cannot be null")
         private Long userId;
 
-        @jakarta.validation.constraints.NotNull(message = "User ID cannot be null")
+        @jakarta.validation.constraints.NotNull(message = "Points cannot be null")
         private Integer points;
 
         private String reason;

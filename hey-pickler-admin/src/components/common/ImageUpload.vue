@@ -10,14 +10,14 @@
     >
       <el-button type="primary">
         <el-icon><Upload /></el-icon>
-        Upload Image
+        上传图片
       </el-button>
     </el-upload>
     <div v-if="modelValue" class="image-preview">
       <el-image :src="modelValue" fit="contain" :preview-src-list="[modelValue]" />
       <el-button type="danger" size="small" @click="handleRemove">
         <el-icon><Delete /></el-icon>
-        Remove
+        删除
       </el-button>
     </div>
   </div>
@@ -46,12 +46,12 @@ const headers = computed(() => ({
 const beforeUpload: UploadProps['beforeUpload'] = (file) => {
   const isImage = file.type.startsWith('image/')
   if (!isImage) {
-    ElMessage.error('You can only upload image files!')
+    ElMessage.error('只能上传图片文件！')
     return false
   }
   const isLt5M = file.size / 1024 / 1024 < 5
   if (!isLt5M) {
-    ElMessage.error('Image size must be less than 5MB!')
+    ElMessage.error('图片大小不能超过5MB！')
     return false
   }
   return true
@@ -60,9 +60,9 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
 const handleSuccess: UploadProps['onSuccess'] = (response: any) => {
   if (response.code === 0) {
     emit('update:modelValue', response.data.url)
-    ElMessage.success('Image uploaded successfully!')
+    ElMessage.success('图片上传成功！')
   } else {
-    ElMessage.error(response.message || 'Upload failed')
+    ElMessage.error(response.message || '上传失败')
   }
 }
 

@@ -20,10 +20,10 @@ import com.heypickler.vo.RankingVO;
 import com.heypickler.listener.PointChangeListener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -41,44 +41,56 @@ public class RankingServiceImpl implements RankingService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final ApplicationEventPublisher eventPublisher;
 
+    private static final String CURRENT_SEASON = "2026-Q2";
+    private static final int MAX_PAGE_SIZE = 100;
+
     @Override
     @Transactional
     public void enterPoints(Long eventId, PointEntryRequest request, Long operatorId) {
-        Event event = eventMapper.selectById(eventId);
-        if (event == null) {
-            throw new BizException(ErrorCode.NOT_FOUND);
+        String type = "STAR";
+        if (eventId != null && eventId > 0) {
+            Event event = eventMapper.selectById(eventId);
+            if (event == null) {
+                throw new BizException(ErrorCode.NOT_FOUND, "赛事不存在");
+            }
+            type = event.getType();
+        } else if (request.getType() != null) {
+            type = request.getType();
         }
 
-        String type = event.getType();
+        // Batch load all users needed
+        List<Long> userIds = request.getRecords().stream()
+                .map(PointEntryRequest.PointRecordItem::getUserId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, User> userMap = batchLoadUsers(userIds);
 
         for (PointEntryRequest.PointRecordItem item : request.getRecords()) {
-            User user = userMapper.selectById(item.getUserId());
-            if (user == null) {
-                continue;
-            }
+            User user = userMap.get(item.getUserId());
+            if (user == null) continue;
 
             PointRecord record = new PointRecord();
             record.setUserId(item.getUserId());
-            record.setEventId(eventId);
+            record.setEventId(eventId != null && eventId > 0 ? eventId : null);
             record.setType(type);
             record.setPoints(item.getPoints());
             record.setReason(item.getReason());
             record.setOperatorId(operatorId);
             pointRecordMapper.insert(record);
 
-            int currentPoints;
+            int newPoints;
             if ("STAR".equals(type)) {
-                currentPoints = user.getStarPoints() != null ? user.getStarPoints() : 0;
-                int newPoints = Math.max(0, currentPoints + item.getPoints());
+                int current = user.getStarPoints() != null ? user.getStarPoints() : 0;
+                newPoints = Math.max(0, current + item.getPoints());
                 user.setStarPoints(newPoints);
                 user.setStarTier(calculateTier(newPoints, type));
             } else {
-                currentPoints = user.getPartyPoints() != null ? user.getPartyPoints() : 0;
-                int newPoints = Math.max(0, currentPoints + item.getPoints());
+                int current = user.getPartyPoints() != null ? user.getPartyPoints() : 0;
+                newPoints = Math.max(0, current + item.getPoints());
                 user.setPartyPoints(newPoints);
                 user.setPartyTier(calculateTier(newPoints, type));
             }
-
             userMapper.updateById(user);
         }
 
@@ -100,44 +112,39 @@ public class RankingServiceImpl implements RankingService {
     @Override
     @Transactional
     public void refreshRankings(String type) {
-        String season = "S1";
-
         LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
         if ("STAR".equals(type)) {
-            queryWrapper.gt(User::getStarPoints, 0)
-                       .orderByDesc(User::getStarPoints);
+            queryWrapper.gt(User::getStarPoints, 0).orderByDesc(User::getStarPoints);
         } else {
-            queryWrapper.gt(User::getPartyPoints, 0)
-                       .orderByDesc(User::getPartyPoints);
+            queryWrapper.gt(User::getPartyPoints, 0).orderByDesc(User::getPartyPoints);
         }
 
         List<User> users = userMapper.selectList(queryWrapper);
 
+        // Batch load existing rankings for all users
+        List<Long> userIds = users.stream().map(User::getId).collect(Collectors.toList());
+        Map<Long, Ranking> existingRankingMap = batchLoadRankings(userIds, type);
+
+        // Delete old rankings for this type+season
+        rankingMapper.delete(new LambdaQueryWrapper<Ranking>()
+                .eq(Ranking::getType, type));
+
+        List<Ranking> toInsert = new ArrayList<>();
         Map<String, List<User>> tierGroups = users.stream()
-            .collect(Collectors.groupingBy(u -> {
-                int points = "STAR".equals(type) ? u.getStarPoints() : u.getPartyPoints();
-                return calculateTier(points, type);
-            }));
+                .collect(Collectors.groupingBy(u -> {
+                    int points = "STAR".equals(type) ? u.getStarPoints() : u.getPartyPoints();
+                    return calculateTier(points, type);
+                }));
 
         for (Map.Entry<String, List<User>> entry : tierGroups.entrySet()) {
             String tier = entry.getKey();
             List<User> tierUsers = entry.getValue();
             int rank = 1;
-
             for (User user : tierUsers) {
                 int points = "STAR".equals(type) ? user.getStarPoints() : user.getPartyPoints();
 
-                LambdaQueryWrapper<Ranking> rankingQuery = new LambdaQueryWrapper<Ranking>()
-                    .eq(Ranking::getUserId, user.getId())
-                    .eq(Ranking::getType, type)
-                    .eq(Ranking::getSeason, season);
-
-                Ranking existing = rankingMapper.selectOne(rankingQuery);
-
-                int change = 0;
-                if (existing != null) {
-                    change = existing.getRank() - rank;
-                }
+                Ranking existing = existingRankingMap.get(user.getId());
+                int change = existing != null ? existing.getRank() - rank : 0;
 
                 Ranking ranking = new Ranking();
                 ranking.setUserId(user.getId());
@@ -146,18 +153,18 @@ public class RankingServiceImpl implements RankingService {
                 ranking.setRank(rank);
                 ranking.setPoints(points);
                 ranking.setChange(change);
-                ranking.setSeason(season);
-
-                if (existing != null) {
-                    ranking.setId(existing.getId());
-                    rankingMapper.updateById(ranking);
-                } else {
-                    rankingMapper.insert(ranking);
-                }
+                ranking.setSeason(CURRENT_SEASON);
+                toInsert.add(ranking);
                 rank++;
             }
         }
 
+        // Batch insert
+        for (Ranking ranking : toInsert) {
+            rankingMapper.insert(ranking);
+        }
+
+        // Clear caches after DB is updated
         for (String tier : Arrays.asList("LEGEND", "SUPER", "SHINING")) {
             redisTemplate.delete(RedisKey.ranking(type, tier));
         }
@@ -166,23 +173,32 @@ public class RankingServiceImpl implements RankingService {
 
     @Override
     public PageResult<RankingVO> getRankings(RankingQuery query) {
+        // Clamp page size
+        int size = Math.min(query.getSize(), MAX_PAGE_SIZE);
+        int page = Math.max(query.getPage(), 1);
+
         String cacheKey = RedisKey.ranking(query.getType(), query.getTier());
 
         List<RankingVO> cached = (List<RankingVO>) redisTemplate.opsForValue().get(cacheKey);
         if (cached != null) {
-            int start = (query.getPage() - 1) * query.getSize();
-            int end = Math.min(start + query.getSize(), cached.size());
-            List<RankingVO> pageData = cached.subList(start, end);
-            return PageResult.of(cached.size(), query.getPage(), query.getSize(), pageData);
+            int start = (page - 1) * size;
+            int end = Math.min(start + size, cached.size());
+            if (start >= cached.size()) {
+                return PageResult.of(cached.size(), page, size, Collections.emptyList());
+            }
+            return PageResult.of(cached.size(), page, size, cached.subList(start, end));
         }
 
         LambdaQueryWrapper<Ranking> queryWrapper = new LambdaQueryWrapper<Ranking>()
-            .eq(Ranking::getType, query.getType())
-            .eq(Ranking::getTier, query.getTier())
-            .eq(Ranking::getSeason, "S1")
-            .orderByAsc(Ranking::getRank);
+                .eq(Ranking::getType, query.getType())
+                .eq(query.getTier() != null, Ranking::getTier, query.getTier())
+                .orderByAsc(Ranking::getRank);
 
         List<Ranking> rankings = rankingMapper.selectList(queryWrapper);
+
+        // Batch load users to fix N+1
+        List<Long> userIds = rankings.stream().map(Ranking::getUserId).distinct().collect(Collectors.toList());
+        Map<Long, User> userMap = batchLoadUsers(userIds);
 
         List<RankingVO> result = rankings.stream().map(ranking -> {
             RankingVO vo = new RankingVO();
@@ -192,22 +208,23 @@ public class RankingServiceImpl implements RankingService {
             vo.setPoints(ranking.getPoints());
             vo.setTier(ranking.getTier());
 
-            User user = userMapper.selectById(ranking.getUserId());
+            User user = userMap.get(ranking.getUserId());
             if (user != null) {
                 vo.setNickname(user.getNickname());
                 vo.setAvatarUrl(user.getAvatarUrl());
                 vo.setCity(user.getCity());
             }
-
             return vo;
         }).collect(Collectors.toList());
 
         redisTemplate.opsForValue().set(cacheKey, result, 5, TimeUnit.MINUTES);
 
-        int start = (query.getPage() - 1) * query.getSize();
-        int end = Math.min(start + query.getSize(), result.size());
-        List<RankingVO> pageData = result.subList(start, end);
-        return PageResult.of(result.size(), query.getPage(), query.getSize(), pageData);
+        int start = (page - 1) * size;
+        int end = Math.min(start + size, result.size());
+        if (start >= result.size()) {
+            return PageResult.of(result.size(), page, size, Collections.emptyList());
+        }
+        return PageResult.of(result.size(), page, size, result.subList(start, end));
     }
 
     @Override
@@ -215,17 +232,18 @@ public class RankingServiceImpl implements RankingService {
         String cacheKey = RedisKey.rankingTop5(type);
 
         List<RankingVO> cached = (List<RankingVO>) redisTemplate.opsForValue().get(cacheKey);
-        if (cached != null) {
-            return cached;
-        }
+        if (cached != null) return cached;
 
         LambdaQueryWrapper<Ranking> queryWrapper = new LambdaQueryWrapper<Ranking>()
-            .eq(Ranking::getType, type)
-            .eq(Ranking::getSeason, "S1")
-            .orderByAsc(Ranking::getRank)
-            .last("LIMIT 5");
+                .eq(Ranking::getType, type)
+                .orderByAsc(Ranking::getRank)
+                .last("LIMIT 5");
 
         List<Ranking> rankings = rankingMapper.selectList(queryWrapper);
+
+        // Batch load users
+        List<Long> userIds = rankings.stream().map(Ranking::getUserId).distinct().collect(Collectors.toList());
+        Map<Long, User> userMap = batchLoadUsers(userIds);
 
         List<RankingVO> result = rankings.stream().map(ranking -> {
             RankingVO vo = new RankingVO();
@@ -235,18 +253,31 @@ public class RankingServiceImpl implements RankingService {
             vo.setPoints(ranking.getPoints());
             vo.setTier(ranking.getTier());
 
-            User user = userMapper.selectById(ranking.getUserId());
+            User user = userMap.get(ranking.getUserId());
             if (user != null) {
                 vo.setNickname(user.getNickname());
                 vo.setAvatarUrl(user.getAvatarUrl());
                 vo.setCity(user.getCity());
             }
-
             return vo;
         }).collect(Collectors.toList());
 
         redisTemplate.opsForValue().set(cacheKey, result, 5, TimeUnit.MINUTES);
-
         return result;
+    }
+
+    private Map<Long, User> batchLoadUsers(List<Long> userIds) {
+        if (userIds.isEmpty()) return Collections.emptyMap();
+        return userMapper.selectBatchIds(userIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+    }
+
+    private Map<Long, Ranking> batchLoadRankings(List<Long> userIds, String type) {
+        if (userIds.isEmpty()) return Collections.emptyMap();
+        List<Ranking> rankings = rankingMapper.selectList(
+                new LambdaQueryWrapper<Ranking>()
+                        .eq(Ranking::getType, type)
+                        .in(Ranking::getUserId, userIds));
+        return rankings.stream().collect(Collectors.toMap(Ranking::getUserId, r -> r, (a, b) -> a));
     }
 }

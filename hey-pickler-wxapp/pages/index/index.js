@@ -8,7 +8,7 @@ Page({
     banners: [],
     events: [],
     currentTab: 0, // 0: Star, 1: Party
-    tabs: ['Star 赛事', 'Party 活动'],
+    tabs: ['明星赛事', '派对活动'],
     loading: false,
     hasMore: true,
     page: 1,
@@ -148,9 +148,9 @@ Page({
   // Banner tap
   handleBannerTap(e) {
     const { banner } = e.currentTarget.dataset
-    if (banner.link_url) {
+    if (banner.linkUrl) {
       wx.navigateTo({
-        url: banner.link_url
+        url: banner.linkUrl
       })
     }
   }
