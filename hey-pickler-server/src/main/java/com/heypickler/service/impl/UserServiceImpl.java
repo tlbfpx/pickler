@@ -260,7 +260,7 @@ public class UserServiceImpl implements UserService {
         vo.setNickname(user.getNickname());
         vo.setAvatarUrl(user.getAvatarUrl());
         vo.setCity(user.getCity());
-        vo.setPhone(aesUtil.decrypt(user.getPhone()));
+        vo.setPhone(safeDecrypt(user.getPhone()));
         vo.setStarPoints(user.getStarPoints());
         vo.setPartyPoints(user.getPartyPoints());
         vo.setStarTier(user.getStarTier());
@@ -270,9 +270,18 @@ public class UserServiceImpl implements UserService {
         return vo;
     }
 
+    private String safeDecrypt(String value) {
+        if (value == null) return null;
+        try {
+            return aesUtil.decrypt(value);
+        } catch (Exception e) {
+            return value;
+        }
+    }
+
     private String maskPhone(String encryptedPhone) {
         if (encryptedPhone == null) return null;
-        String phone = aesUtil.decrypt(encryptedPhone);
+        String phone = safeDecrypt(encryptedPhone);
         if (phone.length() >= 7) {
             return phone.substring(0, 3) + "****" + phone.substring(7);
         }

@@ -16,26 +16,26 @@
   <!-- Star points card -->
   <view class="points-card star-card">
     <view class="points-header">
-      <text class="points-title">Star 积分</text>
+      <text class="points-title">明星积分</text>
       <tier-badge tier="{{userInfo.star_tier}}" type="STAR" size="medium"></tier-badge>
     </view>
     <view class="points-value">{{userInfo.star_points || 0}}</view>
     <view class="points-actions">
       <button class="points-btn" bindtap="navigateToMyEvents" data-type="STAR">我的赛事</button>
-      <button class="points-btn" bindtap="navigateToRanking" data-type="STAR">Star排名</button>
+      <button class="points-btn" bindtap="navigateToRanking" data-type="STAR">明星排名</button>
     </view>
   </view>
 
   <!-- Party points card -->
   <view class="points-card party-card">
     <view class="points-header">
-      <text class="points-title">Party 积分</text>
+      <text class="points-title">派对积分</text>
       <tier-badge tier="{{userInfo.party_tier}}" type="PARTY" size="medium"></tier-badge>
     </view>
     <view class="points-value">{{userInfo.party_points || 0}}</view>
     <view class="points-actions">
       <button class="points-btn" bindtap="navigateToMyEvents" data-type="PARTY">我的活动</button>
-      <button class="points-btn" bindtap="navigateToRanking" data-type="PARTY">Party排名</button>
+      <button class="points-btn" bindtap="navigateToRanking" data-type="PARTY">派对排名</button>
     </view>
   </view>
 

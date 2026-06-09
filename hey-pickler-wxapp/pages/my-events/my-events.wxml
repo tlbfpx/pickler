@@ -26,7 +26,7 @@
 
       <!-- Event type badge -->
       <view class="event-type-badge {{item.event.type === 'STAR' ? 'type-star' : 'type-party'}}">
-        {{item.event.type === 'STAR' ? 'Star 赛事' : 'Party 活动'}}
+        {{item.event.type === 'STAR' ? '明星赛事' : '派对活动'}}
       </view>
 
       <!-- Registration status badge -->

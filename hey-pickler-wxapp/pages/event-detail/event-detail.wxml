@@ -6,7 +6,7 @@
   <!-- Event header -->
   <view class="event-header">
     <view class="event-type-badge {{event.type === 'STAR' ? 'type-star' : 'type-party'}}">
-      {{event.type === 'STAR' ? 'Star 赛事' : 'Party 活动'}}
+      {{event.type === 'STAR' ? '明星赛事' : '派对活动'}}
     </view>
 
     <view class="event-status-badge" style="background-color: {{util.getEventStatusColor(event.status)}}">

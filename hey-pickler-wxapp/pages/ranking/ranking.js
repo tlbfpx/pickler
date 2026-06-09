@@ -6,8 +6,8 @@ Page({
   data: {
     type: 'STAR', // STAR or PARTY
     tier: 'ALL', // ALL, LEGEND, SUPER, SHINING
-    tabs: ['Star 排名', 'Party 排名'],
-    tierTabs: ['全部', 'Legend', 'Super', 'Shining'],
+    tabs: ['明星排名', '派对排名'],
+    tierTabs: ['全部', '传奇', '超级', '闪耀'],
     currentTab: 0,
     currentTierTab: 0,
     rankings: [],
