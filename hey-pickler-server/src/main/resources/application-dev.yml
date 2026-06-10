@@ -47,3 +47,4 @@ hey-pickler:
   wechat:
     appid: ${WX_APPID:your-appid}
     secret: ${WX_SECRET:your-secret}
+    dev-mode: ${WX_DEV_MODE:true}

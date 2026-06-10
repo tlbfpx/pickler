@@ -21,6 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -44,6 +45,7 @@ class AuthServiceTest {
     void setUp() {
         ReflectionTestUtils.setField(authService, "appId", "test-appid");
         ReflectionTestUtils.setField(authService, "appSecret", "test-secret");
+        ReflectionTestUtils.setField(authService, "devMode", false);
     }
 
     @Test
@@ -107,5 +109,56 @@ class AuthServiceTest {
         BizException ex = assertThrows(BizException.class,
                 () -> authService.adminLogin("admin", "pass"));
         assertEquals(ErrorCode.PARAM_ERROR.getCode(), ex.getCode());
+    }
+
+    @Test
+    void appLogin_devMode_newUser_shouldCreateAndReturnToken() {
+        ReflectionTestUtils.setField(authService, "devMode", true);
+        when(userMapper.selectOne(any())).thenReturn(null);
+        when(userMapper.insert(any(User.class))).thenAnswer(invocation -> {
+            User u = invocation.getArgument(0);
+            u.setId(1L);
+            return 1;
+        });
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(jwtUtil.generateAppToken(1L)).thenReturn("dev-token");
+
+        Map<String, Object> result = authService.appLogin("mock-code");
+
+        assertEquals("dev-token", result.get("token"));
+        assertEquals(true, result.get("needBindPhone"));
+        verify(valueOperations).set(contains("dev_mock-code"), eq("dev_session_mock-code"), eq(30L), eq(TimeUnit.MINUTES));
+    }
+
+    @Test
+    void appLogin_devMode_existingUser_shouldReturnToken() {
+        ReflectionTestUtils.setField(authService, "devMode", true);
+        User existingUser = new User();
+        existingUser.setId(2L);
+        existingUser.setOpenid("dev_mock-code");
+        existingUser.setPhone("13800000000");
+        existingUser.setStatus("NORMAL");
+        when(userMapper.selectOne(any())).thenReturn(existingUser);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(jwtUtil.generateAppToken(2L)).thenReturn("existing-token");
+
+        Map<String, Object> result = authService.appLogin("mock-code");
+
+        assertEquals("existing-token", result.get("token"));
+        assertEquals(false, result.get("needBindPhone"));
+    }
+
+    @Test
+    void appLogin_devMode_bannedUser_shouldThrow() {
+        ReflectionTestUtils.setField(authService, "devMode", true);
+        User bannedUser = new User();
+        bannedUser.setId(3L);
+        bannedUser.setOpenid("dev_mock-code");
+        bannedUser.setStatus("BANNED");
+        when(userMapper.selectOne(any())).thenReturn(bannedUser);
+
+        BizException ex = assertThrows(BizException.class,
+                () -> authService.appLogin("mock-code"));
+        assertEquals(ErrorCode.USER_BANNED.getCode(), ex.getCode());
     }
 }

@@ -8,6 +8,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
@@ -22,6 +23,18 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
+
+    @Value("${hey-pickler.rate-limit.login:10}")
+    private int loginRateLimit;
+
+    @Value("${hey-pickler.rate-limit.admin:120}")
+    private int adminRateLimit;
+
+    @Value("${hey-pickler.rate-limit.admin-anon:30}")
+    private int adminAnonRateLimit;
+
+    @Value("${hey-pickler.rate-limit.default:60}")
+    private int defaultRateLimit;
 
     private static final String LUA_SCRIPT =
             "local count = redis.call('INCR', KEYS[1]) " +
@@ -45,20 +58,20 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         if (isLoginEndpoint(path)) {
             key = "heypickler:ratelimit:login:" + clientIp;
-            maxRequests = 10;
+            maxRequests = loginRateLimit;
             windowSeconds = 60;
         } else if (path.startsWith("/api/admin/")) {
             Object adminIdAttr = request.getAttribute("adminId");
             if (adminIdAttr != null) {
                 key = "heypickler:ratelimit:admin:" + adminIdAttr;
-                maxRequests = 120;
+                maxRequests = adminRateLimit;
             } else {
                 key = "heypickler:ratelimit:admin:anon:" + clientIp;
-                maxRequests = 30;
+                maxRequests = adminAnonRateLimit;
             }
         } else {
             key = "heypickler:ratelimit:" + clientIp;
-            maxRequests = 60;
+            maxRequests = defaultRateLimit;
         }
 
         if (!tryAcquire(key, maxRequests, windowSeconds)) {
