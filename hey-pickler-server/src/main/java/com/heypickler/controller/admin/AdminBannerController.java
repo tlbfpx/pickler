@@ -24,6 +24,7 @@ public class AdminBannerController {
 
     @GetMapping
     @Operation(summary = "Banner列表")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
     public Result<List<BannerVO>> list() {
         return Result.ok(bannerService.adminListAll());
     }

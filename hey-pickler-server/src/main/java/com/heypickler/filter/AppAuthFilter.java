@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.heypickler.common.exception.ErrorCode;
 import com.heypickler.common.result.Result;
 import com.heypickler.common.util.JwtUtil;
+import com.heypickler.mapper.UserMapper;
+import com.heypickler.entity.User;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,6 +23,7 @@ public class AppAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final ObjectMapper objectMapper;
+    private final UserMapper userMapper;
 
     private static final Set<String> PUBLIC_GET_PREFIXES = Set.of(
             "/api/app/banners",
@@ -39,10 +42,8 @@ public class AppAuthFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         if (!path.startsWith("/api/app/")) return true;
 
-        // Auth endpoints are always public
         if (PUBLIC_PATHS.contains(path)) return true;
 
-        // Read-only public APIs: banners, events, rankings
         if ("GET".equals(request.getMethod()) && PUBLIC_GET_PREFIXES.stream().anyMatch(path::startsWith)) {
             return true;
         }
@@ -66,6 +67,13 @@ public class AppAuthFilter extends OncePerRequestFilter {
         }
 
         Long userId = jwtUtil.getUserId(token);
+
+        User user = userMapper.selectById(userId);
+        if (user == null || "BANNED".equals(user.getStatus())) {
+            writeError(response, ErrorCode.USER_BANNED);
+            return;
+        }
+
         request.setAttribute("userId", userId);
         filterChain.doFilter(request, response);
     }
@@ -80,7 +88,8 @@ public class AppAuthFilter extends OncePerRequestFilter {
 
     private void writeError(HttpServletResponse response, ErrorCode errorCode) throws IOException {
         response.setContentType("application/json;charset=UTF-8");
-        response.setStatus(HttpServletResponse.SC_OK);
+        int status = errorCode == ErrorCode.USER_BANNED ? HttpServletResponse.SC_FORBIDDEN : HttpServletResponse.SC_UNAUTHORIZED;
+        response.setStatus(status);
         objectMapper.writeValue(response.getOutputStream(), Result.fail(errorCode.getCode(), errorCode.getMessage()));
     }
 }

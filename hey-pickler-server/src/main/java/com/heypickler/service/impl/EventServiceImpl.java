@@ -11,10 +11,13 @@ import com.heypickler.dto.admin.EventUpdateRequest;
 import com.heypickler.dto.app.RegisterRequest;
 import com.heypickler.entity.Event;
 import com.heypickler.entity.Registration;
+import com.heypickler.entity.User;
 import com.heypickler.mapper.EventMapper;
 import com.heypickler.mapper.RegistrationMapper;
+import com.heypickler.mapper.UserMapper;
 import com.heypickler.service.EventService;
 import com.heypickler.vo.EventDetailVO;
+import com.heypickler.vo.EventParticipantVO;
 import com.heypickler.vo.EventVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -22,7 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +34,7 @@ public class EventServiceImpl implements EventService {
 
     private final EventMapper eventMapper;
     private final RegistrationMapper registrationMapper;
+    private final UserMapper userMapper;
 
     @Override
     public PageResult<EventVO> listEvents(String type, String status, int page, int size) {
@@ -224,6 +228,44 @@ public class EventServiceImpl implements EventService {
         updateEvent.setId(eventId);
         updateEvent.setDeletedAt(LocalDateTime.now());
         eventMapper.updateById(updateEvent);
+    }
+
+    @Override
+    public List<EventParticipantVO> getParticipants(Long eventId) {
+        Event event = eventMapper.selectById(eventId);
+        if (event == null || event.getDeletedAt() != null) {
+            throw new BizException(ErrorCode.NOT_FOUND);
+        }
+
+        List<Registration> registrations = registrationMapper.selectList(
+                new LambdaQueryWrapper<Registration>()
+                        .eq(Registration::getEventId, eventId)
+                        .eq(Registration::getStatus, "REGISTERED"));
+
+        if (registrations.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> userIds = registrations.stream()
+                .map(Registration::getUserId)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, User> userMap = userMapper.selectBatchIds(userIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+
+        return registrations.stream().map(reg -> {
+            EventParticipantVO vo = new EventParticipantVO();
+            vo.setUserId(reg.getUserId());
+            vo.setMatchType(reg.getMatchType());
+            vo.setRegistrationStatus(reg.getStatus());
+            User user = userMap.get(reg.getUserId());
+            if (user != null) {
+                vo.setNickname(user.getNickname());
+                vo.setAvatarUrl(user.getAvatarUrl());
+                vo.setCity(user.getCity());
+            }
+            return vo;
+        }).collect(Collectors.toList());
     }
 
     private EventVO convertToVO(Event event) {

@@ -5,7 +5,10 @@ import com.heypickler.dto.admin.EventCreateRequest;
 import com.heypickler.dto.admin.EventUpdateRequest;
 import com.heypickler.dto.app.RegisterRequest;
 import com.heypickler.vo.EventDetailVO;
+import com.heypickler.vo.EventParticipantVO;
 import com.heypickler.vo.EventVO;
+
+import java.util.List;
 
 public interface EventService {
     PageResult<EventVO> listEvents(String type, String status, int page, int size);
@@ -23,4 +26,6 @@ public interface EventService {
     void updateEvent(Long eventId, EventUpdateRequest request);
 
     void deleteEvent(Long eventId);
+
+    List<EventParticipantVO> getParticipants(Long eventId);
 }

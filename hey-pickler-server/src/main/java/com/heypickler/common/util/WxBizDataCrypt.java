@@ -22,6 +22,9 @@ import java.util.Arrays;
 @Component
 public class WxBizDataCrypt {
 
+    @org.springframework.beans.factory.annotation.Value("${hey-pickler.wechat.appid}")
+    private String appId;
+
     private static final String ALGORITHM = "AES/CBC/PKCS5Padding";
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -49,9 +52,13 @@ public class WxBizDataCrypt {
             String json = new String(decrypted, StandardCharsets.UTF_8);
             JsonNode node = objectMapper.readTree(json);
 
-            // Verify watermark (optional but recommended)
-            // JsonNode watermark = node.get("watermark");
-            // if (watermark != null) { ... verify appid ... }
+            JsonNode watermark = node.get("watermark");
+            if (watermark != null) {
+                String watermarkAppId = watermark.has("appid") ? watermark.get("appid").asText() : "";
+                if (!appId.equals(watermarkAppId)) {
+                    throw new BizException(ErrorCode.PARAM_ERROR, "数据校验失败");
+                }
+            }
 
             JsonNode phoneNode = node.get("phoneNumber");
             if (phoneNode == null || phoneNode.asText().isEmpty()) {

@@ -48,12 +48,14 @@ public class RankingServiceImpl implements RankingService {
     @Transactional
     public void enterPoints(Long eventId, PointEntryRequest request, Long operatorId) {
         String type = "STAR";
+        String eventTitle = null;
         if (eventId != null && eventId > 0) {
             Event event = eventMapper.selectById(eventId);
             if (event == null) {
                 throw new BizException(ErrorCode.NOT_FOUND, "赛事不存在");
             }
             type = event.getType();
+            eventTitle = event.getTitle();
         } else if (request.getType() != null) {
             type = request.getType();
         }
@@ -75,7 +77,9 @@ public class RankingServiceImpl implements RankingService {
             record.setEventId(eventId != null && eventId > 0 ? eventId : null);
             record.setType(type);
             record.setPoints(item.getPoints());
-            record.setReason(item.getReason());
+            record.setReason(eventTitle != null
+                    ? "[" + eventTitle + "] " + item.getReason()
+                    : item.getReason());
             record.setOperatorId(operatorId);
             pointRecordMapper.insert(record);
 

@@ -1,6 +1,7 @@
 package com.heypickler.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import java.time.LocalDateTime;
 
@@ -9,7 +10,9 @@ import java.time.LocalDateTime;
 public class User {
     @TableId(type = IdType.AUTO)
     private Long id;
+    @JsonIgnore
     private String openid;
+    @JsonIgnore
     private String unionId;
     private String nickname;
     private String avatarUrl;

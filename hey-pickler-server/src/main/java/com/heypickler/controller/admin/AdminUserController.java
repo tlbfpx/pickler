@@ -28,18 +28,21 @@ public class AdminUserController {
 
     @GetMapping
     @Operation(summary = "获取用户列表")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
     public Result<PageResult<UserAdminVO>> listUsers(UserQueryRequest request) {
         return Result.ok(userService.adminListUsers(request));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "获取用户详情")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
     public Result<UserAdminVO> getUser(@PathVariable Long id) {
         return Result.ok(userService.adminGetUser(id));
     }
 
     @GetMapping("/{id}/points")
     @Operation(summary = "用户积分明细")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
     public Result<PageResult<PointRecordVO>> getPointHistory(
             @PathVariable Long id,
             @RequestParam(required = false) String type,
@@ -50,6 +53,7 @@ public class AdminUserController {
 
     @GetMapping("/{id}/events")
     @Operation(summary = "用户参赛记录")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
     public Result<PageResult<MyEventVO>> getEventHistory(
             @PathVariable Long id,
             @RequestParam(required = false) String type,
@@ -60,6 +64,7 @@ public class AdminUserController {
 
     @PutMapping("/{id}")
     @Operation(summary = "更新用户信息")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
     public Result<Void> updateUser(@PathVariable Long id,
                                    @RequestBody UserUpdateRequest request) {
         userService.adminUpdateUser(id, request);

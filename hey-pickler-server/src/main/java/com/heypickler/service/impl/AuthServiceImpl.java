@@ -19,6 +19,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -45,7 +47,9 @@ public class AuthServiceImpl implements AuthService {
     public Map<String, Object> appLogin(String code) {
         String url = String.format(
                 "https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code",
-                appId, appSecret, code);
+                URLEncoder.encode(appId, StandardCharsets.UTF_8),
+                URLEncoder.encode(appSecret, StandardCharsets.UTF_8),
+                URLEncoder.encode(code, StandardCharsets.UTF_8));
 
         String body = restTemplate.getForObject(url, String.class);
         Map<String, Object> result;

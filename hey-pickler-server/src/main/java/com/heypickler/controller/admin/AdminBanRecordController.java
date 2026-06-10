@@ -37,6 +37,7 @@ public class AdminBanRecordController {
 
     @GetMapping
     @Operation(summary = "封禁操作日志列表")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
     public Result<PageResult<BanRecordVO>> list(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size,
