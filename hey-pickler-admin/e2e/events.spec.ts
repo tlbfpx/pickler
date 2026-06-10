@@ -28,7 +28,6 @@ test.describe('赛事管理', () => {
     const eventTimeInput = adminPage.locator('.el-dialog .el-form-item').filter({ hasText: '比赛时间' }).locator('input').first()
     await eventTimeInput.click()
     await eventTimeInput.fill('2026-09-01 10:00')
-    // 点击表单其他区域关闭日期选择器
     await adminPage.locator('.el-dialog .el-form-item').filter({ hasText: '标题' }).click()
 
     // 设置报名截止时间
@@ -43,8 +42,9 @@ test.describe('赛事管理', () => {
       await maxInput.fill('50')
     }
 
-    await adminPage.locator('.el-dialog__footer').getByRole('button', { name: '提交' }).or(adminPage.locator('.el-dialog__footer').getByRole('button', { name: '新建' })).click()
-    await expect(adminPage.getByText(/成功/)).toBeVisible({ timeout: 10000 })
+    // Button is "新建" not "提交"
+    await adminPage.locator('.el-dialog__footer').getByRole('button', { name: '新建' }).click()
+    await expect(adminPage.getByText('赛事创建成功')).toBeVisible({ timeout: 10000 })
   })
 
   test('编辑赛事', async ({ adminPage }) => {
@@ -56,12 +56,12 @@ test.describe('赛事管理', () => {
       await editBtn.click()
       await expect(adminPage.locator('.el-dialog')).toBeVisible()
 
-      // 修改标题
       const titleInput = adminPage.locator('.el-dialog .el-form-item').filter({ hasText: '标题' }).getByRole('textbox')
       await titleInput.clear()
       await titleInput.fill('E2E编辑后的赛事')
 
-      await adminPage.locator('.el-dialog__footer').getByRole('button', { name: '提交' }).or(adminPage.locator('.el-dialog__footer').getByRole('button', { name: '保存' })).click()
+      // Edit mode button is "更新"
+      await adminPage.locator('.el-dialog__footer').getByRole('button', { name: '更新' }).click()
       await expect(adminPage.getByText(/成功/)).toBeVisible({ timeout: 10000 })
     }
   })
@@ -75,9 +75,9 @@ test.describe('赛事管理', () => {
     if (await deleteBtn.isVisible()) {
       await deleteBtn.click()
 
-      // 确认删除弹窗
-      await adminPage.locator('.el-message-box__btns').getByRole('button', { name: '确认' }).or(adminPage.locator('.el-message-box__btns').getByRole('button', { name: '删除' })).click()
-      await expect(adminPage.getByText(/成功/)).toBeVisible({ timeout: 10000 })
+      // Confirm in ElMessageBox
+      await adminPage.locator('.el-message-box__btns').getByRole('button', { name: '确定' }).click()
+      await expect(adminPage.getByText('赛事删除成功')).toBeVisible({ timeout: 10000 })
     }
   })
 
@@ -100,7 +100,6 @@ test.describe('赛事管理', () => {
     const statusSelect = adminPage.locator('.filter-bar .el-select, .el-form-item').filter({ hasText: '状态' }).locator('.el-select').first()
     if (await statusSelect.isVisible()) {
       await statusSelect.click()
-      // 选择一个状态选项
       const firstOption = adminPage.getByRole('option').first()
       if (await firstOption.isVisible()) {
         await firstOption.click()
@@ -130,10 +129,8 @@ test.describe('赛事管理', () => {
     await adminPage.getByRole('button', { name: '新建赛事' }).click()
     await expect(adminPage.locator('.el-dialog')).toBeVisible()
 
-    // 不填写任何内容直接提交
-    await adminPage.locator('.el-dialog__footer').getByRole('button', { name: '提交' }).or(adminPage.locator('.el-dialog__footer').getByRole('button', { name: '新建' })).click()
+    await adminPage.locator('.el-dialog__footer').getByRole('button', { name: '新建' }).click()
 
-    // 验证出现表单验证错误提示
     await expect(adminPage.locator('.el-form-item__error').first()).toBeVisible()
   })
 
@@ -141,8 +138,7 @@ test.describe('赛事管理', () => {
     await adminPage.locator('.el-menu-item').filter({ hasText: '赛事管理' }).click()
     await expect(adminPage.locator('.el-table')).toBeVisible()
 
-    // 查找有详情/参赛者按钮的行
-    const detailBtn = adminPage.locator('.el-table__body-wrapper .el-table__row').first().getByRole('button', { name: '详情' }).or(adminPage.locator('.el-table__body-wrapper .el-table__row').first().getByRole('button', { name: '参赛者' }))
+    const detailBtn = adminPage.locator('.el-table__body-wrapper .el-table__row').first().getByRole('button', { name: '详情' })
     if (await detailBtn.isVisible()) {
       await detailBtn.click()
       await expect(adminPage.locator('.el-drawer, .el-dialog')).toBeVisible()
@@ -156,7 +152,6 @@ test.describe('赛事管理', () => {
     await adminPage.getByRole('button', { name: '新建赛事' }).click()
     await expect(adminPage.locator('.el-dialog')).toBeVisible()
 
-    // 选择赛事类型: 派对赛
     await adminPage.locator('.el-dialog .el-form-item').filter({ hasText: '赛事类型' }).locator('.el-select').click()
     await adminPage.getByRole('option', { name: '派对赛', exact: true }).click()
 
@@ -174,7 +169,7 @@ test.describe('赛事管理', () => {
     await deadlineInput.fill('2026-08-25 18:00')
     await adminPage.locator('.el-dialog .el-form-item').filter({ hasText: '标题' }).click()
 
-    await adminPage.locator('.el-dialog__footer').getByRole('button', { name: '提交' }).or(adminPage.locator('.el-dialog__footer').getByRole('button', { name: '新建' })).click()
-    await expect(adminPage.getByText(/成功/)).toBeVisible({ timeout: 10000 })
+    await adminPage.locator('.el-dialog__footer').getByRole('button', { name: '新建' }).click()
+    await expect(adminPage.getByText('赛事创建成功')).toBeVisible({ timeout: 10000 })
   })
 })

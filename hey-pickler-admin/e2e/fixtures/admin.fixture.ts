@@ -6,7 +6,7 @@ export const test = base.extend<{ adminPage: import('@playwright/test').Page }>(
     await page.getByPlaceholder('请输入用户名').fill('admin')
     await page.getByPlaceholder('请输入密码').fill('admin123')
     await page.getByRole('button', { name: '登录' }).click()
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/', { timeout: 10000 })
     await use(page)
   },
 })

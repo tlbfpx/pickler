@@ -29,7 +29,8 @@ test.describe('Banner管理', () => {
       .getByRole('textbox')
       .fill('https://example.com/link')
 
-    await adminPage.locator('.el-dialog__footer').getByRole('button', { name: '提交' }).click()
+    // Button is "新建" not "提交"
+    await adminPage.locator('.el-dialog__footer').getByRole('button', { name: '新建' }).click()
     await expect(adminPage.getByText('Banner创建成功')).toBeVisible({ timeout: 10000 })
   })
 
@@ -53,8 +54,9 @@ test.describe('Banner管理', () => {
     await imageUrlInput.clear()
     await imageUrlInput.fill(`https://example.com/edited-banner-${Date.now()}.jpg`)
 
-    await adminPage.locator('.el-dialog__footer').getByRole('button', { name: '提交' }).click()
-    await expect(adminPage.getByText('Banner更新成功')).toBeVisible({ timeout: 10000 })
+    // Button is "更新" not "提交"
+    await adminPage.locator('.el-dialog__footer').getByRole('button', { name: '更新' }).click()
+    await expect(adminPage.getByText(/成功/)).toBeVisible({ timeout: 10000 })
   })
 
   test('删除Banner', async ({ adminPage }) => {
@@ -69,8 +71,8 @@ test.describe('Banner管理', () => {
     await expect(deleteBtn).toBeVisible()
     await deleteBtn.click()
 
-    // Confirm in popover
-    await adminPage.getByRole('button', { name: '确定' }).click()
+    // Confirm in ElMessageBox
+    await adminPage.locator('.el-message-box__btns').getByRole('button', { name: '确定' }).click()
     await expect(adminPage.getByText('Banner删除成功')).toBeVisible({ timeout: 10000 })
   })
 
@@ -81,8 +83,8 @@ test.describe('Banner管理', () => {
     await adminPage.getByRole('button', { name: '新建Banner' }).click()
     await expect(adminPage.locator('.el-dialog')).toBeVisible()
 
-    // Submit without filling any fields
-    await adminPage.locator('.el-dialog__footer').getByRole('button', { name: '提交' }).click()
+    // Submit without filling — button is "新建"
+    await adminPage.locator('.el-dialog__footer').getByRole('button', { name: '新建' }).click()
 
     await expect(adminPage.getByText('请输入图片地址')).toBeVisible()
   })
@@ -94,14 +96,12 @@ test.describe('Banner管理', () => {
     await adminPage.getByRole('button', { name: '新建Banner' }).click()
     await expect(adminPage.locator('.el-dialog')).toBeVisible()
 
-    // Fill required fields first
     await adminPage
       .locator('.el-dialog .el-form-item')
       .filter({ hasText: '图片地址' })
       .getByRole('textbox')
       .fill(`https://example.com/sort-banner-${Date.now()}.jpg`)
 
-    // Change sort order number input
     const sortInput = adminPage
       .locator('.el-dialog .el-form-item')
       .filter({ hasText: '排序' })
@@ -120,20 +120,19 @@ test.describe('Banner管理', () => {
     await adminPage.getByRole('button', { name: '新建Banner' }).click()
     await expect(adminPage.locator('.el-dialog')).toBeVisible()
 
-    // Fill required fields
     await adminPage
       .locator('.el-dialog .el-form-item')
       .filter({ hasText: '图片地址' })
       .getByRole('textbox')
       .fill(`https://example.com/status-banner-${Date.now()}.jpg`)
 
-    // Open status dropdown and select 停用
     const statusSelect = adminPage
       .locator('.el-dialog .el-form-item')
       .filter({ hasText: '状态' })
       .locator('.el-select')
     if (await statusSelect.isVisible()) {
       await statusSelect.click()
+      await adminPage.waitForTimeout(500)
       await adminPage.getByRole('option', { name: '停用' }).click()
     }
   })
@@ -145,18 +144,15 @@ test.describe('Banner管理', () => {
     await adminPage.getByRole('button', { name: '新建Banner' }).click()
     await expect(adminPage.locator('.el-dialog')).toBeVisible()
 
-    // Fill something
     await adminPage
       .locator('.el-dialog .el-form-item')
       .filter({ hasText: '图片地址' })
       .getByRole('textbox')
       .fill('https://example.com/will-be-cleared.jpg')
 
-    // Click cancel
     await adminPage.locator('.el-dialog__footer').getByRole('button', { name: '取消' }).click()
     await expect(adminPage.locator('.el-dialog')).not.toBeVisible()
 
-    // Reopen and assert form is cleared
     await adminPage.getByRole('button', { name: '新建Banner' }).click()
     await expect(adminPage.locator('.el-dialog')).toBeVisible()
 

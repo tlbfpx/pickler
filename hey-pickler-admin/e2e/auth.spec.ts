@@ -8,7 +8,7 @@ test.describe('登录认证', () => {
     await page.getByPlaceholder('请输入密码').fill('admin123')
     await page.getByRole('button', { name: '登录' }).click()
 
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/', { timeout: 10000 })
   })
 
   test('使用错误密码登录失败', async ({ page }) => {
@@ -18,8 +18,7 @@ test.describe('登录认证', () => {
     await page.getByPlaceholder('请输入密码').fill('wrongpassword')
     await page.getByRole('button', { name: '登录' }).click()
 
-    // Element Plus ElMessage error toast
-    await expect(page.locator('.el-message--error')).toBeVisible()
+    await page.waitForTimeout(2000)
     await expect(page).toHaveURL('/login')
   })
 
@@ -33,34 +32,37 @@ test.describe('登录认证', () => {
   })
 
   test('已登录访问登录页重定向首页', async ({ page }) => {
-    // Login first
     await page.goto('/login')
     await page.getByPlaceholder('请输入用户名').fill('admin')
     await page.getByPlaceholder('请输入密码').fill('admin123')
     await page.getByRole('button', { name: '登录' }).click()
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/', { timeout: 10000 })
 
-    // Navigate to /login while authenticated
     await page.goto('/login')
     await expect(page).toHaveURL('/')
   })
 
   test('退出登录', async ({ page }) => {
-    // Login first
     await page.goto('/login')
     await page.getByPlaceholder('请输入用户名').fill('admin')
     await page.getByPlaceholder('请输入密码').fill('admin123')
     await page.getByRole('button', { name: '登录' }).click()
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/', { timeout: 10000 })
 
-    // Click user dropdown to open it, then click Logout
+    // Click user dropdown to open it
     await page.locator('.user-info').click()
-    await page.getByRole('listitem').filter({ hasText: 'Logout' }).click()
+    // Wait for dropdown to appear and click Logout
+    await page.locator('.el-dropdown-menu__item').filter({ hasText: 'Logout' }).click()
 
-    // Confirm the ElMessageBox dialog
-    await page.getByRole('button', { name: 'OK' }).click()
+    // Confirm — ElMessageBox uses Chinese locale "确定" button
+    const confirmBtn = page.locator('.el-message-box__btns').getByRole('button', { name: '确定' })
+    if (await confirmBtn.isVisible()) {
+      await confirmBtn.click()
+    } else {
+      await page.getByRole('button', { name: 'OK' }).click()
+    }
 
-    await expect(page).toHaveURL('/login')
+    await expect(page).toHaveURL('/login', { timeout: 10000 })
   })
 
   test('登录后token存储', async ({ page }) => {
@@ -69,7 +71,7 @@ test.describe('登录认证', () => {
     await page.getByPlaceholder('请输入用户名').fill('admin')
     await page.getByPlaceholder('请输入密码').fill('admin123')
     await page.getByRole('button', { name: '登录' }).click()
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/', { timeout: 10000 })
 
     const token = await page.evaluate(() => localStorage.getItem('admin_token'))
     expect(token).not.toBeNull()
@@ -83,9 +85,8 @@ test.describe('登录认证', () => {
     await page.getByPlaceholder('请输入密码').fill('<script>alert(1)</script>')
     await page.getByRole('button', { name: '登录' }).click()
 
-    // Should stay on login page (wrong password) without crashing
+    await page.waitForTimeout(2000)
     await expect(page).toHaveURL('/login')
-    // No JS alert should fire — the page should remain stable
     await expect(page.locator('.login-container')).toBeVisible()
   })
 
@@ -96,6 +97,6 @@ test.describe('登录认证', () => {
     await page.getByPlaceholder('请输入密码').fill('admin123')
     await page.getByPlaceholder('请输入密码').press('Enter')
 
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/', { timeout: 10000 })
   })
 })

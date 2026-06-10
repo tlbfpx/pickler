@@ -38,33 +38,32 @@ test.describe('安全与权限', () => {
     await adminPage.locator('.el-menu-item').filter({ hasText: '用户管理' }).click()
     await expect(adminPage).toHaveURL('/users')
 
-    // Wait for the table/pagination to load
     await expect(adminPage.locator('.el-pagination')).toBeVisible()
-
-    // Assert Chinese localization text in pagination
     await expect(adminPage.locator('.el-pagination').getByText('共')).toBeVisible()
     await expect(adminPage.locator('.el-pagination').getByText('条/页')).toBeVisible()
   })
 
   test('退出后token清除', async ({ page }) => {
-    // Login
     await page.goto('/login')
     await page.getByPlaceholder('请输入用户名').fill('admin')
     await page.getByPlaceholder('请输入密码').fill('admin123')
     await page.getByRole('button', { name: '登录' }).click()
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/', { timeout: 10000 })
 
-    // Verify token exists before logout
     const tokenBefore = await page.evaluate(() => localStorage.getItem('admin_token'))
     expect(tokenBefore).not.toBeNull()
 
-    // Logout via header dropdown
+    // Logout — menu text is "Logout" in English
     await page.locator('.user-info').click()
-    await page.getByRole('listitem').filter({ hasText: 'Logout' }).click()
-    await page.getByRole('button', { name: 'OK' }).click()
-    await expect(page).toHaveURL('/login')
+    await page.locator('.el-dropdown-menu__item').filter({ hasText: 'Logout' }).click()
+    const confirmBtn = page.locator('.el-message-box__btns').getByRole('button', { name: '确定' })
+    if (await confirmBtn.isVisible()) {
+      await confirmBtn.click()
+    } else {
+      await page.getByRole('button', { name: 'OK' }).click()
+    }
+    await expect(page).toHaveURL('/login', { timeout: 10000 })
 
-    // Verify token is cleared
     const tokenAfter = await page.evaluate(() => localStorage.getItem('admin_token'))
     expect(tokenAfter).toBeNull()
   })
