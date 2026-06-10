@@ -2,6 +2,15 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Admin } from '@/types'
 
+function isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.exp * 1000 < Date.now() + 30000 // 30s clock skew tolerance
+  } catch {
+    return true
+  }
+}
+
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('admin_token'))
   const admin = ref<Admin | null>(null)
@@ -24,7 +33,12 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const isAuthenticated = () => {
-    return !!token.value
+    if (!token.value) return false
+    if (isTokenExpired(token.value)) {
+      logout()
+      return false
+    }
+    return true
   }
 
   return {

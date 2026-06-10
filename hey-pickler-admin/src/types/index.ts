@@ -22,6 +22,7 @@ export interface Event {
   title: string
   bannerUrl: string | null
   eventTime: string | null
+  registrationDeadline: string | null
   location: string | null
   maxParticipants: number | null
   currentParticipants: number
@@ -32,11 +33,15 @@ export interface Event {
 export interface CreateEventRequest {
   type: 'STAR' | 'PARTY'
   title: string
-  bannerUrl: string
-  eventTime: string
+  description?: string
+  bannerUrl?: string
+  rules?: string
   location: string
+  eventTime: string
+  registrationDeadline: string
   maxParticipants: number
   fee: number
+  prizes?: string
 }
 
 export interface UpdateEventRequest extends CreateEventRequest {
@@ -84,6 +89,8 @@ export interface PointEntryRecord {
 }
 
 export interface EnterPointsRequest {
+  eventId?: number | null
+  type?: string
   records: PointEntryRecord[]
 }
 

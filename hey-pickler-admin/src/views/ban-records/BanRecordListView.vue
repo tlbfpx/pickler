@@ -24,7 +24,7 @@
             <div class="user-cell">
               <div class="user-info">
                 <div class="user-name">{{ row.userNickname || '-' }}</div>
-                <div class="user-sub">{{ row.userPhone || '-' }}  ·  ID: {{ row.userId }}</div>
+                <div class="user-sub">{{ maskPhone(row.userPhone) }}  ·  ID: {{ row.userId }}</div>
               </div>
             </div>
           </template>
@@ -107,6 +107,11 @@ const fetchRecords = async () => {
 const handleFilter = () => {
   pagination.page = 1
   fetchRecords()
+}
+
+const maskPhone = (phone: string) => {
+  if (!phone || phone.length < 7) return phone || '-'
+  return phone.slice(0, 3) + '****' + phone.slice(-4)
 }
 
 onMounted(() => {

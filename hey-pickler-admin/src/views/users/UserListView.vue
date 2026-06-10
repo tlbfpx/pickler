@@ -30,7 +30,11 @@
 
       <el-table v-loading="loading" :data="userList" style="width: 100%; margin-top: 16px">
         <el-table-column prop="id" label="ID" width="60" />
-        <el-table-column prop="phone" label="手机号" width="130" />
+        <el-table-column label="手机号" width="130">
+          <template #default="{ row }">
+            {{ maskPhone(row.phone) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="nickname" label="昵称" width="120" />
         <el-table-column label="城市" width="80">
           <template #default="{ row }">
@@ -173,6 +177,11 @@ const handleUnban = async (user: User) => {
   } catch (error) {
     ElMessage.error('解禁用户失败')
   }
+}
+
+const maskPhone = (phone: string) => {
+  if (!phone || phone.length < 7) return phone || '-'
+  return phone.slice(0, 3) + '****' + phone.slice(-4)
 }
 
 onMounted(() => {

@@ -21,6 +21,10 @@
         <el-icon><Calendar /></el-icon>
         <span>赛事管理</span>
       </el-menu-item>
+      <el-menu-item index="/activities">
+        <el-icon><Football /></el-icon>
+        <span>活动管理</span>
+      </el-menu-item>
       <el-menu-item index="/rankings">
         <el-icon><Trophy /></el-icon>
         <span>排名管理</span>

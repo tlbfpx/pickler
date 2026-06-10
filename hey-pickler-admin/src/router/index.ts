@@ -31,6 +31,11 @@ const router = createRouter({
           component: () => import('@/views/events/EventListView.vue')
         },
         {
+          path: 'activities',
+          name: 'Activities',
+          component: () => import('@/views/activities/ActivityListView.vue')
+        },
+        {
           path: 'rankings',
           name: 'Rankings',
           component: () => import('@/views/rankings/RankingView.vue')

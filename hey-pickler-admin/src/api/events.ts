@@ -1,8 +1,21 @@
 import request from './request'
 import type { Event, CreateEventRequest, UpdateEventRequest, ApiResponse, PageParams } from '@/types'
 
+export interface EventParticipant {
+  userId: number
+  nickname: string | null
+  avatarUrl: string | null
+  city: string | null
+  matchType: string
+  registrationStatus: string
+}
+
 export const getEventList = (params: PageParams) => {
   return request.get<any, ApiResponse<PageResult<Event>>>('/events', { params })
+}
+
+export const getEventParticipants = (eventId: number) => {
+  return request.get<any, ApiResponse<EventParticipant[]>>(`/events/${eventId}/participants`)
 }
 
 export const createEvent = (data: CreateEventRequest) => {

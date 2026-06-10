@@ -20,7 +20,7 @@
           <div class="info-items">
             <div class="info-item">
               <span class="label">手机号</span>
-              <span class="value">{{ user?.phone || '-' }}</span>
+              <span class="value">{{ maskPhone(user?.phone) }}</span>
             </div>
             <div class="info-item">
               <span class="label">状态</span>
@@ -278,6 +278,11 @@ function regTagType(status: string) {
 function formatRegStatus(status: string) {
   const map: Record<string, string> = { REGISTERED: '已报名', CHECKED_IN: '已签到', WITHDRAWN: '已退赛' }
   return map[status] || status
+}
+
+function maskPhone(phone: string | null | undefined) {
+  if (!phone || phone.length < 7) return phone || '-'
+  return phone.slice(0, 3) + '****' + phone.slice(-4)
 }
 </script>
 
