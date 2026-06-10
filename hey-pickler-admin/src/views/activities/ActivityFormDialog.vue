@@ -63,6 +63,16 @@
           style="width: 100%"
         />
       </el-form-item>
+      <el-form-item v-if="event" label="状态">
+        <el-select v-model="formData.status" placeholder="请选择状态" style="width: 100%">
+          <el-option
+            v-for="opt in editStatusOptions"
+            :key="opt.value"
+            :label="opt.label"
+            :value="opt.value"
+          />
+        </el-select>
+      </el-form-item>
     </el-form>
     <template #footer>
       <el-button @click="$emit('update:modelValue', false)">取消</el-button>
@@ -74,9 +84,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { createEvent, updateEvent } from '@/api/events'
+import { formatEventStatus } from '@/utils'
 import ImageUpload from '@/components/common/ImageUpload.vue'
 import type { Event, CreateEventRequest } from '@/types'
 
@@ -93,7 +104,7 @@ const emit = defineEmits<{
 const formRef = ref<FormInstance>()
 const loading = ref(false)
 
-const formData = reactive<CreateEventRequest>({
+const formData = reactive<CreateEventRequest & { status?: string }>({
   type: 'PARTY',
   title: '',
   description: '',
@@ -102,7 +113,8 @@ const formData = reactive<CreateEventRequest>({
   eventTime: '',
   registrationDeadline: '',
   maxParticipants: 30,
-  fee: 0
+  fee: 0,
+  status: undefined
 })
 
 const rules: FormRules = {
@@ -115,6 +127,22 @@ const rules: FormRules = {
   fee: [{ required: true, message: '请输入费用', trigger: 'blur' }]
 }
 
+const FORM_STATUS_TRANSITIONS: Record<string, string[]> = {
+  DRAFT: ['DRAFT', 'OPEN'],
+  OPEN: ['OPEN', 'CANCELLED'],
+  FULL: ['FULL', 'CANCELLED'],
+  IN_PROGRESS: ['IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
+  COMPLETED: ['COMPLETED'],
+  CANCELLED: ['CANCELLED']
+}
+
+const editStatusOptions = computed(() => {
+  if (!props.event) return []
+  const current = props.event.status
+  const allowed = FORM_STATUS_TRANSITIONS[current] || [current]
+  return allowed.map(s => ({ value: s, label: formatEventStatus(s) }))
+})
+
 watch(() => props.event, (val) => {
   if (val) {
     formData.type = 'PARTY'
@@ -126,7 +154,9 @@ watch(() => props.event, (val) => {
     formData.registrationDeadline = val.registrationDeadline || ''
     formData.maxParticipants = val.maxParticipants || 30
     formData.fee = val.fee || 0
+    formData.status = val.status
   } else {
+    formData.status = undefined
     formRef.value?.resetFields()
   }
 })

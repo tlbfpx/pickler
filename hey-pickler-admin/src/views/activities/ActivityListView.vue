@@ -17,9 +17,9 @@
           @change="handleFilter"
         >
           <el-option label="草稿" value="DRAFT" />
-          <el-option label="即将开始" value="UPCOMING" />
           <el-option label="报名中" value="OPEN" />
-          <el-option label="进行中" value="ONGOING" />
+          <el-option label="名额已满" value="FULL" />
+          <el-option label="进行中" value="IN_PROGRESS" />
           <el-option label="已结束" value="COMPLETED" />
           <el-option label="已取消" value="CANCELLED" />
         </el-select>
@@ -41,14 +41,38 @@
         </el-table-column>
         <el-table-column prop="maxParticipants" label="上限" width="70" />
         <el-table-column prop="currentParticipants" label="已报名" width="70" />
-        <el-table-column label="状态" width="100">
+        <el-table-column label="状态" width="130">
           <template #default="{ row }">
-            <span
-              class="status-badge"
-              :style="{ backgroundColor: getEventStatusColor(row.status) }"
+            <el-popover
+              placement="bottom"
+              :width="160"
+              trigger="click"
+              :visible="row._statusPopoverVisible"
+              @update:visible="(val: boolean) => row._statusPopoverVisible = val"
             >
-              {{ formatEventStatus(row.status) }}
-            </span>
+              <template #reference>
+                <span
+                  class="status-badge clickable"
+                  :style="{ backgroundColor: getEventStatusColor(row.status) }"
+                >
+                  {{ formatEventStatus(row.status) }} ▾
+                </span>
+              </template>
+              <div class="status-options">
+                <div
+                  v-for="target in getAllowedStatusTransitions(row.status)"
+                  :key="target.value"
+                  class="status-option"
+                  @click="handleChangeStatus(row, target.value)"
+                >
+                  <span class="status-dot" :style="{ backgroundColor: getEventStatusColor(target.value) }"></span>
+                  {{ target.label }}
+                </div>
+                <div v-if="getAllowedStatusTransitions(row.status).length === 0" class="status-option disabled">
+                  无可用转换
+                </div>
+              </div>
+            </el-popover>
           </template>
         </el-table-column>
         <el-table-column label="费用" width="80">
@@ -88,7 +112,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getEventList, deleteEvent } from '@/api/events'
+import { getEventList, deleteEvent, changeEventStatus } from '@/api/events'
 import { formatDate, formatEventStatus, getEventStatusColor } from '@/utils'
 import Pagination from '@/components/common/Pagination.vue'
 import ActivityFormDialog from './ActivityFormDialog.vue'
@@ -165,6 +189,37 @@ const handleDelete = async (activity: Event) => {
   }
 }
 
+const STATUS_TRANSITIONS: Record<string, { value: string; label: string }[]> = {
+  DRAFT: [{ value: 'OPEN', label: '报名中' }],
+  OPEN: [{ value: 'CANCELLED', label: '已取消' }],
+  FULL: [{ value: 'CANCELLED', label: '已取消' }],
+  IN_PROGRESS: [
+    { value: 'COMPLETED', label: '已结束' },
+    { value: 'CANCELLED', label: '已取消' }
+  ],
+  COMPLETED: [],
+  CANCELLED: []
+}
+
+const getAllowedStatusTransitions = (status: string) => {
+  return STATUS_TRANSITIONS[status] || []
+}
+
+const handleChangeStatus = async (activity: Event, targetStatus: string) => {
+  try {
+    const res = await changeEventStatus(activity.id, targetStatus)
+    if (res.code === 0) {
+      ElMessage.success('状态变更成功')
+      activity._statusPopoverVisible = false
+      fetchActivities()
+    } else {
+      ElMessage.error(res.message || '状态变更失败')
+    }
+  } catch {
+    ElMessage.error('状态变更失败')
+  }
+}
+
 onMounted(() => {
   fetchActivities()
 })
@@ -180,5 +235,41 @@ onMounted(() => {
 .filter-bar {
   display: flex;
   gap: 12px;
+}
+
+.status-badge.clickable {
+  cursor: pointer;
+}
+
+.status-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.status-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.status-option:hover {
+  background-color: #f5f7fa;
+}
+
+.status-option.disabled {
+  color: #c0c4cc;
+  cursor: default;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 </style>

@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.heypickler.common.exception.BizException;
 import com.heypickler.common.exception.ErrorCode;
 import com.heypickler.common.result.PageResult;
+import com.heypickler.common.util.StatusTransitionValidator;
 import com.heypickler.dto.admin.EventCreateRequest;
 import com.heypickler.dto.admin.EventUpdateRequest;
 import com.heypickler.dto.app.RegisterRequest;
@@ -131,6 +132,18 @@ public class EventServiceImpl implements EventService {
         registration.setPartnerId(request.getPartnerId());
         registration.setStatus("REGISTERED");
         registrationMapper.insert(registration);
+
+        // Auto transition: OPEN → FULL when capacity reached
+        if ("OPEN".equals(event.getStatus()) && event.getMaxParticipants() != null) {
+            Event updated = eventMapper.selectById(eventId);
+            if (updated.getCurrentParticipants() >= event.getMaxParticipants()) {
+                eventMapper.update(null,
+                        new LambdaUpdateWrapper<Event>()
+                                .eq(Event::getId, eventId)
+                                .eq(Event::getStatus, "OPEN")
+                                .set(Event::getStatus, "FULL"));
+            }
+        }
     }
 
     @Override
@@ -164,6 +177,18 @@ public class EventServiceImpl implements EventService {
                         .eq(Event::getId, eventId)
                         .gt(Event::getCurrentParticipants, 0)
                         .setSql("current_participants = current_participants - 1"));
+
+        // Auto transition: FULL → OPEN when participants drop below capacity
+        if ("FULL".equals(event.getStatus()) && event.getMaxParticipants() != null) {
+            Event updated = eventMapper.selectById(eventId);
+            if (updated.getCurrentParticipants() < event.getMaxParticipants()) {
+                eventMapper.update(null,
+                        new LambdaUpdateWrapper<Event>()
+                                .eq(Event::getId, eventId)
+                                .eq(Event::getStatus, "FULL")
+                                .set(Event::getStatus, "OPEN"));
+            }
+        }
     }
 
     @Override
@@ -209,6 +234,12 @@ public class EventServiceImpl implements EventService {
         Event event = eventMapper.selectById(eventId);
         if (event == null || event.getDeletedAt() != null) {
             throw new BizException(ErrorCode.NOT_FOUND);
+        }
+
+        if (request.getStatus() != null && !request.getStatus().equals(event.getStatus())) {
+            if (!StatusTransitionValidator.canTransit(event.getStatus(), request.getStatus())) {
+                throw new BizException(ErrorCode.INVALID_STATUS_TRANSITION);
+            }
         }
 
         Event updateEntity = new Event();

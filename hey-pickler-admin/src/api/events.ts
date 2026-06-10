@@ -29,3 +29,7 @@ export const updateEvent = (id: number, data: UpdateEventRequest) => {
 export const deleteEvent = (id: number) => {
   return request.delete<any, ApiResponse<void>>(`/events/${id}`)
 }
+
+export const changeEventStatus = (id: number, status: string) => {
+  return request.patch<any, ApiResponse<void>>(`/events/${id}/status`, { status })
+}

@@ -28,6 +28,13 @@ mybatis-plus:
       logic-not-delete-value: "NULL"
 
 hey-pickler:
+  rate-limit:
+    login: 200
+    admin: 600
+    admin-anon: 200
+    default: 600
+  scheduler:
+    status-transition-enabled: true
   jwt:
     secret: ${JWT_SECRET:HeyPickler2026DevSecretK3y!MustChangeInProd!!}
     app-expiration: ${JWT_APP_EXPIRATION:604800000}

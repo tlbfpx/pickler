@@ -42,6 +42,7 @@ export interface CreateEventRequest {
   maxParticipants: number
   fee: number
   prizes?: string
+  status?: 'DRAFT' | 'OPEN' | 'FULL' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 }
 
 export interface UpdateEventRequest extends CreateEventRequest {

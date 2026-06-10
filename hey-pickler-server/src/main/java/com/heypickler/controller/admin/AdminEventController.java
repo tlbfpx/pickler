@@ -70,6 +70,17 @@ public class AdminEventController {
         return Result.ok();
     }
 
+    @PatchMapping("/{id}/status")
+    @Operation(summary = "变更赛事状态")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
+    public Result<Void> changeStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        String targetStatus = body.get("status");
+        EventUpdateRequest req = new EventUpdateRequest();
+        req.setStatus(targetStatus);
+        eventService.updateEvent(id, req);
+        return Result.ok();
+    }
+
     @GetMapping("/{id}/participants")
     @Operation(summary = "获取赛事参赛者列表")
     @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
