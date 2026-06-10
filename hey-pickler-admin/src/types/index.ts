@@ -116,6 +116,19 @@ export interface BanRequest {
   days: number
 }
 
+export interface BanRecordItem {
+  id: number
+  userId: number
+  userNickname: string | null
+  userPhone: string | null
+  operatorId: number
+  operatorName: string | null
+  action: 'BAN' | 'UNBAN'
+  reason: string | null
+  banUntil: string | null
+  createdAt: string
+}
+
 // ==================== Auth Types ====================
 
 export interface LoginRequest {

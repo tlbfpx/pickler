@@ -8,6 +8,8 @@ import com.heypickler.dto.admin.BanRequest;
 import com.heypickler.dto.admin.UserQueryRequest;
 import com.heypickler.dto.app.UserUpdateRequest;
 import com.heypickler.service.UserService;
+import com.heypickler.vo.MyEventVO;
+import com.heypickler.vo.PointRecordVO;
 import com.heypickler.vo.UserAdminVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,6 +36,26 @@ public class AdminUserController {
     @Operation(summary = "获取用户详情")
     public Result<UserAdminVO> getUser(@PathVariable Long id) {
         return Result.ok(userService.adminGetUser(id));
+    }
+
+    @GetMapping("/{id}/points")
+    @Operation(summary = "用户积分明细")
+    public Result<PageResult<PointRecordVO>> getPointHistory(
+            @PathVariable Long id,
+            @RequestParam(required = false) String type,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return Result.ok(userService.getPointHistory(id, type, page, size));
+    }
+
+    @GetMapping("/{id}/events")
+    @Operation(summary = "用户参赛记录")
+    public Result<PageResult<MyEventVO>> getEventHistory(
+            @PathVariable Long id,
+            @RequestParam(required = false) String type,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return Result.ok(userService.getMyEvents(id, type, page, size));
     }
 
     @PutMapping("/{id}")

@@ -44,6 +44,11 @@ const router = createRouter({
           path: 'admins',
           name: 'Admins',
           component: () => import('@/views/admins/AdminListView.vue')
+        },
+        {
+          path: 'ban-records',
+          name: 'BanRecords',
+          component: () => import('@/views/ban-records/BanRecordListView.vue')
         }
       ]
     }

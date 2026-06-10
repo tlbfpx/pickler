@@ -33,6 +33,10 @@
         <el-icon><UserFilled /></el-icon>
         <span>管理员管理</span>
       </el-menu-item>
+      <el-menu-item index="/ban-records">
+        <el-icon><Document /></el-icon>
+        <span>操作日志</span>
+      </el-menu-item>
     </el-menu>
   </div>
 </template>
