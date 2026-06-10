@@ -5,7 +5,8 @@ import util from '../../utils/util'
 Page({
   data: {
     loading: false,
-    canIGetUserProfile: false
+    canIGetUserProfile: false,
+    needPhone: false
   },
 
   onLoad() {
@@ -77,11 +78,10 @@ Page({
         return
       }
 
-      // Need to bind phone number
-      await this.bindPhoneNumber()
-
+      // Need to bind phone number - show phone button
       this.setData({
-        loading: false
+        loading: false,
+        needPhone: true
       })
     } catch (error) {
       util.hideLoading()

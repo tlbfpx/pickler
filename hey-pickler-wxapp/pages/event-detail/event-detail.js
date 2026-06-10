@@ -87,13 +87,16 @@ Page({
   // Check if user is registered
   async checkRegistration() {
     try {
-      const res = await request.get(`/user/events?event_id=${this.data.eventId}`)
+      const res = await request.get('/user/events', { page: 1, size: 100 })
 
-      if (res.code === 0 && res.data.list && res.data.list.length > 0) {
-        this.setData({
-          isRegistered: true,
-          registration: res.data.list[0]
-        })
+      if (res.code === 0 && res.data.list) {
+        const registration = res.data.list.find(r => r.id == this.data.eventId)
+        if (registration) {
+          this.setData({
+            isRegistered: true,
+            registration
+          })
+        }
       }
     } catch (error) {
       console.error('Check registration failed:', error)
@@ -155,12 +158,12 @@ Page({
           registration: res.data,
           event: {
             ...this.data.event,
-            current_participants: this.data.event.current_participants + 1
+            currentParticipants: this.data.event.currentParticipants + 1
           }
         })
 
         // Check if event is now full
-        if (this.data.event.current_participants >= this.data.event.max_participants) {
+        if (this.data.event.currentParticipants >= this.data.event.maxParticipants) {
           this.setData({
             isRegistrationOpen: false,
             event: {
@@ -182,7 +185,7 @@ Page({
   async handleCancel() {
     // Check if can cancel
     const now = new Date()
-    const deadline = new Date(this.data.event.registration_deadline)
+    const deadline = new Date(this.data.event.registrationDeadline)
 
     if (now >= deadline) {
       util.showError('报名截止后无法取消，请联系管理员')
@@ -213,7 +216,7 @@ Page({
           registration: null,
           event: {
             ...this.data.event,
-            current_participants: this.data.event.current_participants - 1
+            currentParticipants: this.data.event.currentParticipants - 1
           }
         })
       } else {
@@ -239,7 +242,7 @@ Page({
     return {
       title: event.title,
       path: `/pages/event-detail/event-detail?id=${event.id}`,
-      imageUrl: event.banner_url
+      imageUrl: event.bannerUrl
     }
   }
 })

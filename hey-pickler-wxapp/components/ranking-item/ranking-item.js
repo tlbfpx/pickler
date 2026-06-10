@@ -19,38 +19,55 @@ Component({
     }
   },
 
-  computed: {
-    rankDisplay() {
-      if (this.data.rank <= 3) {
-        const icons = ['🥇', '🥈', '🥉']
-        return icons[this.data.rank - 1]
+  data: {
+    rankDisplay: '',
+    rankClass: 'rank-normal',
+    changeIcon: '-',
+    changeClass: 'change-same',
+    changeValue: 0
+  },
+
+  observers: {
+    'rank, user': function (rank, user) {
+      var rankDisplay = ''
+      if (rank <= 3) {
+        var icons = ['🥇', '🥈', '🥉']
+        rankDisplay = icons[rank - 1] || rank
+      } else {
+        rankDisplay = rank
       }
-      return this.data.rank
-    },
 
-    rankClass() {
-      if (this.data.rank <= 3) return 'rank-top'
-      if (this.data.rank <= 10) return 'rank-high'
-      return 'rank-normal'
-    },
+      var rankClass = 'rank-normal'
+      if (rank <= 3) rankClass = 'rank-top'
+      else if (rank <= 10) rankClass = 'rank-high'
 
-    changeIcon() {
-      const change = this.data.user?.change || 0
-      if (change > 0) return '↑'
-      if (change < 0) return '↓'
-      return '-'
-    },
+      var changeIcon = '-'
+      var changeClass = 'change-same'
+      var changeValue = 0
+      if (user) {
+        var change = user.change || 0
+        changeValue = Math.abs(change)
+        if (change > 0) {
+          changeIcon = '↑'
+          changeClass = 'change-up'
+        } else if (change < 0) {
+          changeIcon = '↓'
+          changeClass = 'change-down'
+        }
+      }
 
-    changeClass() {
-      const change = this.data.user?.change || 0
-      if (change > 0) return 'change-up'
-      if (change < 0) return 'change-down'
-      return 'change-same'
+      this.setData({
+        rankDisplay: rankDisplay,
+        rankClass: rankClass,
+        changeIcon: changeIcon,
+        changeClass: changeClass,
+        changeValue: changeValue
+      })
     }
   },
 
   methods: {
-    handleTap() {
+    handleTap: function () {
       this.triggerEvent('tap', {
         user: this.data.user,
         rank: this.data.rank

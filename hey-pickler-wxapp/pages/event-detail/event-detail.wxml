@@ -1,7 +1,9 @@
+<wxs src="../../utils/util.wxs" module="util" />
+
 <!-- Event detail page -->
 <view class="page" wx:if="{{!loading}}">
   <!-- Event banner -->
-  <image class="event-banner" src="{{event.banner_url || '/images/default-event.png'}}" mode="aspectFill"></image>
+  <image class="event-banner" src="{{event.bannerUrl || '/images/default-event.png'}}" mode="aspectFill"></image>
 
   <!-- Event header -->
   <view class="event-header">
@@ -22,7 +24,7 @@
       <text class="info-icon">📅</text>
       <view class="info-content">
         <text class="info-label">比赛时间</text>
-        <text class="info-value">{{util.formatDate(event.event_time, 'YYYY-MM-DD HH:mm')}}</text>
+        <text class="info-value">{{util.formatDate(event.eventTime, 'YYYY-MM-DD HH:mm')}}</text>
       </view>
     </view>
 
@@ -38,7 +40,7 @@
       <text class="info-icon">👥</text>
       <view class="info-content">
         <text class="info-label">报名人数</text>
-        <text class="info-value">{{event.current_participants}}/{{event.max_participants}}</text>
+        <text class="info-value">{{event.currentParticipants}}/{{event.maxParticipants}}</text>
       </view>
     </view>
 
@@ -54,7 +56,7 @@
       <text class="info-icon">⏰</text>
       <view class="info-content">
         <text class="info-label">报名截止</text>
-        <text class="info-value">{{util.formatDate(event.registration_deadline, 'YYYY-MM-DD HH:mm')}}</text>
+        <text class="info-value">{{util.formatDate(event.registrationDeadline, 'YYYY-MM-DD HH:mm')}}</text>
       </view>
     </view>
   </view>
@@ -78,18 +80,10 @@
   </view>
 
   <!-- Registration status -->
-  <view class="status-card" wx:if="{{isRegistered && registration}}">
+  <view class="status-card" wx:if="{{isRegistered}}">
     <view class="status-header">
       <text class="status-icon">✅</text>
       <text class="status-text">您已报名</text>
-    </view>
-    <view class="status-info">
-      <text class="status-label">报名时间：</text>
-      <text class="status-value">{{util.formatDate(registration.created_at)}}</text>
-    </view>
-    <view class="status-info" wx:if="{{registration.match_type}}">
-      <text class="status-label">比赛类型：</text>
-      <text class="status-value">{{registration.match_type === 'SINGLES' ? '单打' : registration.match_type === 'DOUBLES' ? '双打' : '混合双打'}}</text>
     </view>
   </view>
 

@@ -15,45 +15,46 @@ Component({
     }
   },
 
-  computed: {
-    tierClass() {
-      const tierMap = {
+  data: {
+    tierClass: 'tier-shining',
+    tierName: '闪耀',
+    typeName: '明星',
+    sizeClass: 'tier-medium'
+  },
+
+  observers: {
+    'tier, type, size': function (tier, type, size) {
+      var tierClassMap = {
         LEGEND: 'tier-legend',
         SUPER: 'tier-super',
         SHINING: 'tier-shining'
       }
-      return tierMap[this.data.tier] || 'tier-shining'
-    },
-
-    tierName() {
-      const tierMap = {
+      var tierNameMap = {
         LEGEND: '传奇',
         SUPER: '超级',
         SHINING: '闪耀'
       }
-      return tierMap[this.data.tier] || '未知'
-    },
-
-    typeName() {
-      const typeMap = {
+      var typeNameMap = {
         STAR: '明星',
         PARTY: '派对'
       }
-      return typeMap[this.data.type] || ''
-    },
-
-    sizeClass() {
-      const sizeMap = {
+      var sizeClassMap = {
         small: 'tier-small',
         medium: 'tier-medium',
         large: 'tier-large'
       }
-      return sizeMap[this.data.size] || 'tier-medium'
+
+      this.setData({
+        tierClass: tierClassMap[tier] || 'tier-shining',
+        tierName: tierNameMap[tier] || '未知',
+        typeName: typeNameMap[type] || '',
+        sizeClass: sizeClassMap[size] || 'tier-medium'
+      })
     }
   },
 
   methods: {
-    handleTap() {
+    handleTap: function () {
       this.triggerEvent('tap', {
         tier: this.data.tier,
         type: this.data.type
