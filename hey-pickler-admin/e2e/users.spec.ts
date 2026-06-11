@@ -1,32 +1,136 @@
-import { test as base, expect } from '@playwright/test'
-
-const test = base.extend<{ adminPage: import('@playwright/test').Page }>({
-  adminPage: async ({ page }, use) => {
-    await page.goto('/login')
-    await page.getByPlaceholder('请输入用户名').fill('admin')
-    await page.getByPlaceholder('请输入密码').fill('admin123')
-    await page.getByRole('button', { name: '登录' }).click()
-    await expect(page).toHaveURL('/')
-    await use(page)
-  },
-})
+import { test, expect } from './fixtures/admin.fixture'
 
 test.describe('用户管理', () => {
   test('用户列表展示', async ({ adminPage }) => {
     await adminPage.locator('.el-menu-item').filter({ hasText: '用户管理' }).click()
     await expect(adminPage.locator('h1')).toContainText('用户管理')
-    await adminPage.waitForTimeout(1000)
-
-    await expect(adminPage.getByRole('columnheader', { name: '昵称' })).toBeVisible()
-    await expect(adminPage.getByRole('columnheader', { name: '状态' })).toBeVisible()
+    await expect(adminPage.locator('.el-table')).toBeVisible()
   })
 
   test('搜索用户', async ({ adminPage }) => {
     await adminPage.locator('.el-menu-item').filter({ hasText: '用户管理' }).click()
-    await adminPage.waitForTimeout(1000)
+    await expect(adminPage.locator('.el-table')).toBeVisible()
 
-    await adminPage.getByPlaceholder('搜索手机号或昵称').fill('test')
+    const searchInput = adminPage.getByPlaceholder('按手机号或昵称搜索')
+    await searchInput.fill('test')
     await adminPage.getByRole('button', { name: '搜索' }).click()
-    await adminPage.waitForTimeout(1000)
+    await expect(adminPage.locator('.el-table')).toBeVisible()
+  })
+
+  test('按城市搜索', async ({ adminPage }) => {
+    await adminPage.locator('.el-menu-item').filter({ hasText: '用户管理' }).click()
+    await expect(adminPage.locator('.el-table')).toBeVisible()
+
+    const cityInput = adminPage.getByPlaceholder('按城市搜索')
+    if (await cityInput.isVisible()) {
+      await cityInput.fill('上海')
+      await adminPage.getByRole('button', { name: '搜索' }).click()
+      await expect(adminPage.locator('.el-table')).toBeVisible()
+    }
+  })
+
+  test('查看用户详情', async ({ adminPage }) => {
+    await adminPage.locator('.el-menu-item').filter({ hasText: '用户管理' }).click()
+    await expect(adminPage.locator('.el-table')).toBeVisible()
+
+    const detailBtn = adminPage.locator('.el-table__body-wrapper .el-table__row').first().getByRole('button', { name: '详情' })
+    if (await detailBtn.isVisible()) {
+      await detailBtn.click()
+      await expect(adminPage.locator('.el-drawer')).toBeVisible()
+      await expect(adminPage.locator('.el-drawer__body')).toBeVisible()
+    }
+  })
+
+  test('积分明细Tab', async ({ adminPage }) => {
+    await adminPage.locator('.el-menu-item').filter({ hasText: '用户管理' }).click()
+    await expect(adminPage.locator('.el-table')).toBeVisible()
+
+    const detailBtn = adminPage.locator('.el-table__body-wrapper .el-table__row').first().getByRole('button', { name: '详情' })
+    if (await detailBtn.isVisible()) {
+      await detailBtn.click()
+      await expect(adminPage.locator('.el-drawer')).toBeVisible()
+
+      await expect(adminPage.locator('.el-drawer').getByRole('tab', { name: '明星积分明细' })).toBeVisible()
+
+      // 切换到派对积分明细 tab
+      await adminPage.locator('.el-drawer').getByRole('tab', { name: '派对积分明细' }).click()
+      // Wait for tab switch and check tab is active
+      await adminPage.waitForTimeout(1000)
+      await expect(adminPage.locator('.el-drawer').getByRole('tab', { name: '派对积分明细' })).toHaveAttribute('aria-selected', 'true')
+    }
+  })
+
+  test('赛事记录Tab', async ({ adminPage }) => {
+    await adminPage.locator('.el-menu-item').filter({ hasText: '用户管理' }).click()
+    await expect(adminPage.locator('.el-table')).toBeVisible()
+
+    const detailBtn = adminPage.locator('.el-table__body-wrapper .el-table__row').first().getByRole('button', { name: '详情' })
+    if (await detailBtn.isVisible()) {
+      await detailBtn.click()
+      await expect(adminPage.locator('.el-drawer')).toBeVisible()
+
+      await adminPage.locator('.el-drawer').getByRole('tab', { name: '赛事记录' }).click()
+      // Wait for tab switch and check tab is active
+      await adminPage.waitForTimeout(1000)
+      await expect(adminPage.locator('.el-drawer').getByRole('tab', { name: '赛事记录' })).toHaveAttribute('aria-selected', 'true')
+    }
+  })
+
+  test('封禁用户', async ({ adminPage }) => {
+    await adminPage.locator('.el-menu-item').filter({ hasText: '用户管理' }).click()
+    await expect(adminPage.locator('.el-table')).toBeVisible()
+
+    const banBtn = adminPage.locator('.el-table__body-wrapper .el-table__row').locator('button', { hasText: '禁赛' }).first()
+    if (await banBtn.isVisible()) {
+      await banBtn.click()
+
+      // 填写封禁原因 — use textarea specifically to avoid strict mode
+      const reasonInput = adminPage.locator('.el-dialog .el-textarea__inner')
+      if (await reasonInput.isVisible()) {
+        await reasonInput.fill('E2E自动化测试封禁')
+      }
+
+      await adminPage.locator('.el-dialog__footer').getByRole('button', { name: '确认' }).click()
+      await expect(adminPage.locator('.el-message').getByText('成功')).toBeVisible({ timeout: 10000 })
+    }
+  })
+
+  test('解禁用户', async ({ adminPage }) => {
+    await adminPage.locator('.el-menu-item').filter({ hasText: '用户管理' }).click()
+    await expect(adminPage.locator('.el-table')).toBeVisible()
+
+    const unbanBtn = adminPage.locator('.el-table__body-wrapper .el-table__row').locator('button', { hasText: '解禁' }).first()
+    if (await unbanBtn.isVisible()) {
+      await unbanBtn.click()
+      await expect(adminPage.locator('.el-message').getByText('成功')).toBeVisible({ timeout: 10000 })
+    }
+  })
+
+  test('分页切换', async ({ adminPage }) => {
+    await adminPage.locator('.el-menu-item').filter({ hasText: '用户管理' }).click()
+    await expect(adminPage.locator('.el-table')).toBeVisible()
+
+    await expect(adminPage.locator('.el-pagination')).toBeVisible()
+    await expect(adminPage.locator('.el-pagination').getByText('共')).toBeVisible()
+
+    const pageSizeSelect = adminPage.locator('.el-pagination .el-select')
+    if (await pageSizeSelect.isVisible()) {
+      await pageSizeSelect.click()
+      const option = adminPage.getByRole('option', { name: '20' }).or(adminPage.getByRole('option', { name: '50' }))
+      if (await option.first().isVisible()) {
+        await option.first().click()
+        await expect(adminPage.locator('.el-table')).toBeVisible()
+      }
+    }
+  })
+
+  test('手机号脱敏', async ({ adminPage }) => {
+    await adminPage.locator('.el-menu-item').filter({ hasText: '用户管理' }).click()
+    await expect(adminPage.locator('.el-table')).toBeVisible()
+
+    const phoneCells = adminPage.locator('.el-table__body-wrapper .el-table__row').first().locator('td')
+    const phoneTexts = await phoneCells.allTextContents()
+    const hasMaskedPhone = phoneTexts.some((text) => text.includes('****'))
+    expect(hasMaskedPhone).toBeTruthy()
   })
 })

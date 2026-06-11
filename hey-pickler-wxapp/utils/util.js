@@ -132,10 +132,10 @@ function formatPoints(points) {
 function isRegistrationOpen(event) {
   if (!event) return false
   if (event.status !== 'OPEN') return false
-  if (event.current_participants >= event.max_participants) return false
+  if (event.currentParticipants >= event.maxParticipants) return false
 
   const now = new Date()
-  const deadline = new Date(event.registration_deadline)
+  const deadline = new Date(event.registrationDeadline)
   return now < deadline
 }
 

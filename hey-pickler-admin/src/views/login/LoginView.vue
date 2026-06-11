@@ -75,9 +75,6 @@ const handleLogin = async () => {
     const res = await login(formData)
     if (res.code === 0) {
       authStore.setToken(res.data.token)
-      // Note: LoginResponse only returns { token, role }, not full admin object
-      // We'll need to fetch admin info separately or adjust the response
-      localStorage.setItem('admin_token', res.data.token)
       localStorage.setItem('admin_role', res.data.role)
       ElMessage.success('登录成功！')
       router.push('/')

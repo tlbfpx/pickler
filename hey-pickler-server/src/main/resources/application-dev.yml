@@ -28,12 +28,23 @@ mybatis-plus:
       logic-not-delete-value: "NULL"
 
 hey-pickler:
+  rate-limit:
+    login: 200
+    admin: 600
+    admin-anon: 200
+    default: 600
+  scheduler:
+    status-transition-enabled: true
   jwt:
-    secret: ${JWT_SECRET:HeyPickler2026SecretKeyForDevOnlyDoNotUseInProd!!}
+    secret: ${JWT_SECRET:HeyPickler2026DevSecretK3y!MustChangeInProd!!}
     app-expiration: ${JWT_APP_EXPIRATION:604800000}
     admin-expiration: ${JWT_ADMIN_EXPIRATION:86400000}
+  cors:
+    admin-origins: ${CORS_ADMIN_ORIGINS:http://localhost:5173,http://localhost:3000}
+    app-origins: ${CORS_APP_ORIGINS:}
   aes:
     key: ${AES_KEY:PicklerDevAesKey16}
   wechat:
     appid: ${WX_APPID:your-appid}
     secret: ${WX_SECRET:your-secret}
+    dev-mode: ${WX_DEV_MODE:true}

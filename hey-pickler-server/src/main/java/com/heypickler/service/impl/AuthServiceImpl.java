@@ -19,6 +19,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -41,28 +43,22 @@ public class AuthServiceImpl implements AuthService {
     @Value("${hey-pickler.wechat.secret}")
     private String appSecret;
 
+    @Value("${hey-pickler.wechat.dev-mode:false}")
+    private boolean devMode;
+
     @Override
     public Map<String, Object> appLogin(String code) {
-        String url = String.format(
-                "https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code",
-                appId, appSecret, code);
+        String openid;
+        String sessionKey;
 
-        String body = restTemplate.getForObject(url, String.class);
-        Map<String, Object> result;
-        try {
-            result = new com.fasterxml.jackson.databind.ObjectMapper().readValue(body, Map.class);
-        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-            throw new BizException(ErrorCode.PARAM_ERROR, "微信登录失败: 响应解析错误");
+        if (devMode) {
+            // Dev mode: use code as openid directly, skip WeChat API call
+            openid = "dev_" + code;
+            sessionKey = "dev_session_" + code;
+        } else {
+            openid = callWxJsCode2Session(code);
+            sessionKey = (String) redisTemplate.opsForValue().get(RedisKey.wxSession(openid));
         }
-
-        if (result == null || result.containsKey("errcode")) {
-            throw new BizException(ErrorCode.PARAM_ERROR, "微信登录失败");
-        }
-
-        String openid = (String) result.get("openid");
-        String sessionKey = (String) result.get("session_key");
-
-        redisTemplate.opsForValue().set(RedisKey.wxSession(openid), sessionKey, 30, TimeUnit.MINUTES);
 
         User user = userMapper.selectOne(
                 new LambdaQueryWrapper<User>().eq(User::getOpenid, openid));
@@ -71,7 +67,6 @@ public class AuthServiceImpl implements AuthService {
         if (user == null) {
             user = new User();
             user.setOpenid(openid);
-            user.setUnionId((String) result.get("unionid"));
             user.setStatus("NORMAL");
             user.setStarPoints(0);
             user.setPartyPoints(0);
@@ -89,8 +84,51 @@ public class AuthServiceImpl implements AuthService {
             throw new BizException(ErrorCode.USER_BANNED);
         }
 
+        redisTemplate.opsForValue().set(RedisKey.wxSession(openid), sessionKey, 30, TimeUnit.MINUTES);
+
         String token = jwtUtil.generateAppToken(user.getId());
-        return Map.of("token", token, "needBindPhone", needBindPhone);
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("token", token);
+        result.put("needBindPhone", needBindPhone);
+        result.put("user", buildUserInfo(user));
+        return result;
+    }
+
+    private Map<String, Object> buildUserInfo(User user) {
+        Map<String, Object> info = new java.util.HashMap<>();
+        info.put("id", user.getId());
+        info.put("nickname", user.getNickname());
+        info.put("avatar_url", user.getAvatarUrl());
+        info.put("phone", user.getPhone());
+        info.put("city", user.getCity());
+        info.put("star_points", user.getStarPoints());
+        info.put("party_points", user.getPartyPoints());
+        info.put("star_tier", user.getStarTier());
+        info.put("party_tier", user.getPartyTier());
+        info.put("status", user.getStatus());
+        return info;
+    }
+
+    private String callWxJsCode2Session(String code) {
+        String url = String.format(
+                "https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code",
+                URLEncoder.encode(appId, StandardCharsets.UTF_8),
+                URLEncoder.encode(appSecret, StandardCharsets.UTF_8),
+                URLEncoder.encode(code, StandardCharsets.UTF_8));
+
+        String body = restTemplate.getForObject(url, String.class);
+        Map<String, Object> result;
+        try {
+            result = new com.fasterxml.jackson.databind.ObjectMapper().readValue(body, Map.class);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "微信登录失败: 响应解析错误");
+        }
+
+        if (result == null || result.containsKey("errcode")) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "微信登录失败");
+        }
+
+        return (String) result.get("openid");
     }
 
     @Override

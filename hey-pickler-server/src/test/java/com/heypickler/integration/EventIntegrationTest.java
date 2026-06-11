@@ -39,7 +39,7 @@ class EventIntegrationTest extends IntegrationTestConfig {
 
     @Test
     void createEvent_ShouldReturnEventId() {
-        Long eventId = createTestEvent("Create Test Event", "UPCOMING");
+        Long eventId = createTestEvent("Create Test Event", "DRAFT");
         assertNotNull(eventId);
         assertTrue(eventId > 0);
         deleteEvent(eventId);
@@ -49,8 +49,8 @@ class EventIntegrationTest extends IntegrationTestConfig {
     void listEvents_AdminPaginated() {
         HttpHeaders headers = adminAuthHeaders();
 
-        Long e1 = createTestEvent("List Test 1", "UPCOMING");
-        Long e2 = createTestEvent("List Test 2", "UPCOMING");
+        Long e1 = createTestEvent("List Test 1", "DRAFT");
+        Long e2 = createTestEvent("List Test 2", "DRAFT");
 
         HttpEntity<Void> req = new HttpEntity<>(headers);
         ResponseEntity<Map> resp = restTemplate.exchange(
@@ -67,7 +67,7 @@ class EventIntegrationTest extends IntegrationTestConfig {
 
     @Test
     void listEvents_AppWithAuth() {
-        createTestEvent("App List Test", "UPCOMING");
+        createTestEvent("App List Test", "DRAFT");
 
         HttpHeaders userHeaders = appAuthHeaders(9000L);
         HttpEntity<Void> req = new HttpEntity<>(userHeaders);
@@ -79,7 +79,7 @@ class EventIntegrationTest extends IntegrationTestConfig {
 
     @Test
     void getEventDetail_AppWithUserToken() {
-        Long eventId = createTestEvent("Detail Test Event", "UPCOMING");
+        Long eventId = createTestEvent("Detail Test Event", "DRAFT");
 
         HttpHeaders userHeaders = appAuthHeaders(9001L);
         HttpEntity<Void> req = new HttpEntity<>(userHeaders);
@@ -96,7 +96,7 @@ class EventIntegrationTest extends IntegrationTestConfig {
 
     @Test
     void updateEvent_ShouldModifyFields() {
-        Long eventId = createTestEvent("Before Update", "UPCOMING");
+        Long eventId = createTestEvent("Before Update", "DRAFT");
         HttpHeaders headers = adminAuthHeaders();
 
         Map<String, Object> updateBody = Map.of(
@@ -159,7 +159,7 @@ class EventIntegrationTest extends IntegrationTestConfig {
 
     @Test
     void deleteEvent_AdminCanDelete() {
-        Long eventId = createTestEvent("Delete Test Event", "UPCOMING");
+        Long eventId = createTestEvent("Delete Test Event", "DRAFT");
         HttpHeaders headers = adminAuthHeaders();
 
         HttpEntity<Void> req = new HttpEntity<>(headers);

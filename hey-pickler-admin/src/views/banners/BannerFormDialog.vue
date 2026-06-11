@@ -75,7 +75,6 @@ const formData = reactive<FormData>({
 
 const rules: FormRules = {
   imageUrl: [{ required: true, message: '请输入图片地址', trigger: 'blur' }],
-  linkUrl: [{ required: false, message: '请输入跳转链接', trigger: 'blur' }],
   sortOrder: [{ required: true, message: '请输入排序', trigger: 'blur' }],
   status: [{ required: true, message: '请选择状态', trigger: 'change' }]
 }

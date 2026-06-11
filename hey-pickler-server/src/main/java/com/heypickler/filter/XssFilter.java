@@ -51,7 +51,9 @@ public class XssFilter implements Filter {
         @Override
         public String getHeader(String name) {
             String value = super.getHeader(name);
-            return value != null ? sanitize(value) : null;
+            if (value == null) return null;
+            if ("Authorization".equalsIgnoreCase(name)) return value;
+            return sanitize(value);
         }
     }
 

@@ -3,7 +3,7 @@
   <view class="rank-number {{rankClass}}">{{rankDisplay}}</view>
 
   <view class="user-info">
-    <image class="user-avatar" src="{{user.avatar_url || '/images/default-avatar.png'}}" mode="aspectFill"></image>
+    <image class="user-avatar" src="{{user.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"></image>
     <view class="user-details">
       <view class="user-name">{{user.nickname}}</view>
       <view class="user-city">{{user.city}}</view>
@@ -13,8 +13,8 @@
   <view class="ranking-stats">
     <tier-badge
       wx:if="{{showTier}}"
-      tier="{{user.tier}}"
-      type="{{user.type}}"
+      tier="{{user.tier || 'SHINING'}}"
+      type="{{user.type || 'STAR'}}"
       size="small">
     </tier-badge>
 
@@ -22,7 +22,7 @@
 
     <view wx:if="{{showChange}}" class="rank-change {{changeClass}}">
       <text class="change-icon">{{changeIcon}}</text>
-      <text class="change-value">{{Math.abs(user.change || 0)}}</text>
+      <text class="change-value">{{changeValue}}</text>
     </view>
   </view>
 </view>

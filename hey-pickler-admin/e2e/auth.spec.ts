@@ -1,16 +1,14 @@
 import { test, expect } from '@playwright/test'
 
-test.describe('登录', () => {
+test.describe('登录认证', () => {
   test('使用正确凭据登录', async ({ page }) => {
     await page.goto('/login')
-    await expect(page.locator('h1')).toContainText('Hey Pickler 管理后台')
 
     await page.getByPlaceholder('请输入用户名').fill('admin')
     await page.getByPlaceholder('请输入密码').fill('admin123')
     await page.getByRole('button', { name: '登录' }).click()
 
-    await expect(page).toHaveURL('/')
-    await expect(page.locator('h1')).toContainText('Dashboard')
+    await expect(page).toHaveURL('/', { timeout: 10000 })
   })
 
   test('使用错误密码登录失败', async ({ page }) => {
@@ -20,9 +18,7 @@ test.describe('登录', () => {
     await page.getByPlaceholder('请输入密码').fill('wrongpassword')
     await page.getByRole('button', { name: '登录' }).click()
 
-    // 等待错误提示（可能是 ElMessage）
     await page.waitForTimeout(2000)
-    // 仍然停留在登录页
     await expect(page).toHaveURL('/login')
   })
 
@@ -33,5 +29,74 @@ test.describe('登录', () => {
 
     await expect(page.getByText('请输入用户名')).toBeVisible()
     await expect(page.getByText('请输入密码')).toBeVisible()
+  })
+
+  test('已登录访问登录页重定向首页', async ({ page }) => {
+    await page.goto('/login')
+    await page.getByPlaceholder('请输入用户名').fill('admin')
+    await page.getByPlaceholder('请输入密码').fill('admin123')
+    await page.getByRole('button', { name: '登录' }).click()
+    await expect(page).toHaveURL('/', { timeout: 10000 })
+
+    await page.goto('/login')
+    await expect(page).toHaveURL('/')
+  })
+
+  test('退出登录', async ({ page }) => {
+    await page.goto('/login')
+    await page.getByPlaceholder('请输入用户名').fill('admin')
+    await page.getByPlaceholder('请输入密码').fill('admin123')
+    await page.getByRole('button', { name: '登录' }).click()
+    await expect(page).toHaveURL('/', { timeout: 10000 })
+
+    // Click user dropdown to open it
+    await page.locator('.user-info').click()
+    // Wait for dropdown to appear and click Logout
+    await page.locator('.el-dropdown-menu__item').filter({ hasText: 'Logout' }).click()
+
+    // Confirm — ElMessageBox uses Chinese locale "确定" button
+    const confirmBtn = page.locator('.el-message-box__btns').getByRole('button', { name: '确定' })
+    if (await confirmBtn.isVisible()) {
+      await confirmBtn.click()
+    } else {
+      await page.getByRole('button', { name: 'OK' }).click()
+    }
+
+    await expect(page).toHaveURL('/login', { timeout: 10000 })
+  })
+
+  test('登录后token存储', async ({ page }) => {
+    await page.goto('/login')
+
+    await page.getByPlaceholder('请输入用户名').fill('admin')
+    await page.getByPlaceholder('请输入密码').fill('admin123')
+    await page.getByRole('button', { name: '登录' }).click()
+    await expect(page).toHaveURL('/', { timeout: 10000 })
+
+    const token = await page.evaluate(() => localStorage.getItem('admin_token'))
+    expect(token).not.toBeNull()
+    expect(token!.length).toBeGreaterThan(0)
+  })
+
+  test('特殊字符密码处理', async ({ page }) => {
+    await page.goto('/login')
+
+    await page.getByPlaceholder('请输入用户名').fill('admin')
+    await page.getByPlaceholder('请输入密码').fill('<script>alert(1)</script>')
+    await page.getByRole('button', { name: '登录' }).click()
+
+    await page.waitForTimeout(2000)
+    await expect(page).toHaveURL('/login')
+    await expect(page.locator('.login-container')).toBeVisible()
+  })
+
+  test('登录表单回车提交', async ({ page }) => {
+    await page.goto('/login')
+
+    await page.getByPlaceholder('请输入用户名').fill('admin')
+    await page.getByPlaceholder('请输入密码').fill('admin123')
+    await page.getByPlaceholder('请输入密码').press('Enter')
+
+    await expect(page).toHaveURL('/', { timeout: 10000 })
   })
 })

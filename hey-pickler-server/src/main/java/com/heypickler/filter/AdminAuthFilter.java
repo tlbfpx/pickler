@@ -79,7 +79,7 @@ public class AdminAuthFilter extends OncePerRequestFilter {
 
     private void writeError(HttpServletResponse response, int code, String message) throws IOException {
         response.setContentType("application/json;charset=UTF-8");
-        response.setStatus(HttpServletResponse.SC_OK);
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         objectMapper.writeValue(response.getOutputStream(), Result.fail(code, message));
     }
 }

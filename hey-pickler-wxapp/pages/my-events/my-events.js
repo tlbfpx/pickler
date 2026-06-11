@@ -9,7 +9,6 @@ Page({
     tabs: ['全部', '明星赛事', '派对活动'],
     currentTab: 0,
     events: [],
-    registrations: [],
     loading: false,
     hasMore: true,
     page: 1,
@@ -26,7 +25,6 @@ Page({
   },
 
   onShow() {
-    // Refresh when page shows
     if (this.data.events.length > 0) {
       this.loadMyEvents(true)
     }
@@ -55,7 +53,6 @@ Page({
       currentTab: index,
       type,
       events: [],
-      registrations: [],
       page: 1,
       hasMore: true
     })
@@ -67,7 +64,6 @@ Page({
   async loadMyEvents(refresh = false) {
     if (this.data.loading) return
 
-    // Check login status
     if (!auth.isLoggedIn()) {
       wx.showModal({
         title: '提示',
@@ -103,17 +99,13 @@ Page({
       const res = await request.get('/user/events', params)
 
       if (res.code === 0) {
-        const newRegistrations = res.data.list || []
-        const registrations = refresh ? newRegistrations : [...this.data.registrations, ...newRegistrations]
-
-        // Extract events from registrations
-        const events = registrations.map(reg => reg.event).filter(e => e)
+        const newEvents = res.data.list || []
+        const events = refresh ? newEvents : [...this.data.events, ...newEvents]
 
         this.setData({
-          registrations,
           events,
           page: page + 1,
-          hasMore: newRegistrations.length >= this.data.size,
+          hasMore: newEvents.length >= this.data.size,
           loading: false
         })
       } else {
@@ -131,33 +123,9 @@ Page({
 
   // Navigate to event detail
   navigateToDetail(e) {
-    const { event } = e.detail
+    const id = e.currentTarget.dataset.id
     wx.navigateTo({
-      url: `/pages/event-detail/event-detail?id=${event.id}`
+      url: `/pages/event-detail/event-detail?id=${id}`
     })
-  },
-
-  // Get registration status text
-  getRegistrationStatus(registration) {
-    if (!registration) return ''
-
-    const statusMap = {
-      REGISTERED: '已报名',
-      CHECKED_IN: '已签到',
-      WITHDRAWN: '已取消'
-    }
-    return statusMap[registration.status] || registration.status
-  },
-
-  // Get registration status color
-  getRegistrationStatusColor(registration) {
-    if (!registration) return '#999'
-
-    const colorMap = {
-      REGISTERED: '#4CAF50',
-      CHECKED_IN: '#2196F3',
-      WITHDRAWN: '#999'
-    }
-    return colorMap[registration.status] || '#999'
   }
 })

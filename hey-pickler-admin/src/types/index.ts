@@ -22,6 +22,7 @@ export interface Event {
   title: string
   bannerUrl: string | null
   eventTime: string | null
+  registrationDeadline: string | null
   location: string | null
   maxParticipants: number | null
   currentParticipants: number
@@ -32,11 +33,16 @@ export interface Event {
 export interface CreateEventRequest {
   type: 'STAR' | 'PARTY'
   title: string
-  bannerUrl: string
-  eventTime: string
+  description?: string
+  bannerUrl?: string
+  rules?: string
   location: string
+  eventTime: string
+  registrationDeadline: string
   maxParticipants: number
   fee: number
+  prizes?: string
+  status?: 'DRAFT' | 'OPEN' | 'FULL' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 }
 
 export interface UpdateEventRequest extends CreateEventRequest {
@@ -84,6 +90,8 @@ export interface PointEntryRecord {
 }
 
 export interface EnterPointsRequest {
+  eventId?: number | null
+  type?: string
   records: PointEntryRecord[]
 }
 
@@ -114,6 +122,19 @@ export interface UpdateAdminRequest {
 export interface BanRequest {
   reason: string
   days: number
+}
+
+export interface BanRecordItem {
+  id: number
+  userId: number
+  userNickname: string | null
+  userPhone: string | null
+  operatorId: number
+  operatorName: string | null
+  action: 'BAN' | 'UNBAN'
+  reason: string | null
+  banUntil: string | null
+  createdAt: string
 }
 
 // ==================== Auth Types ====================

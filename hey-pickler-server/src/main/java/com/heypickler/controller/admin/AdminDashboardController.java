@@ -1,5 +1,7 @@
 package com.heypickler.controller.admin;
 
+import com.heypickler.common.annotation.RequireRole;
+import com.heypickler.common.enums.UserRole;
 import com.heypickler.common.result.Result;
 import com.heypickler.mapper.EventMapper;
 import com.heypickler.mapper.RegistrationMapper;
@@ -25,6 +27,7 @@ public class AdminDashboardController {
 
     @GetMapping
     @Operation(summary = "控制台统计数据")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
     public Result<Map<String, Object>> getStats() {
         long totalUsers = userMapper.selectCount(null);
         long activeEvents = eventMapper.selectCount(

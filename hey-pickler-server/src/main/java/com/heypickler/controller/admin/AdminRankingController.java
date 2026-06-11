@@ -31,6 +31,7 @@ public class AdminRankingController {
 
     @GetMapping("/{type}")
     @Operation(summary = "获取排名列表")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
     public Result<PageResult<RankingVO>> getRankings(@PathVariable String type) {
         RankingQuery query = new RankingQuery();
         query.setType(type.toUpperCase());
@@ -55,7 +56,7 @@ public class AdminRankingController {
             HttpServletRequest request,
             @Valid @RequestBody PointEntryRequest req) {
         Long adminId = (Long) request.getAttribute("adminId");
-        rankingService.enterPoints(null, req, adminId);
+        rankingService.enterPoints(req.getEventId(), req, adminId);
         return Result.ok();
     }
 }

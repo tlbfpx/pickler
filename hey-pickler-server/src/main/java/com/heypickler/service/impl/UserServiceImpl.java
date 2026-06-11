@@ -70,31 +70,31 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public PageResult<MyEventVO> getMyEvents(Long userId, String type, int page, int size) {
-        // Query registrations first
+        // Query all registrations for the user
         LambdaQueryWrapper<Registration> regWrapper = new LambdaQueryWrapper<>();
         regWrapper.eq(Registration::getUserId, userId);
 
-        Page<Registration> regPage = new Page<>(page, size);
-        Page<Registration> registrationPage = registrationMapper.selectPage(regPage, regWrapper);
-
-        if (registrationPage.getRecords().isEmpty()) {
+        List<Registration> allRegs = registrationMapper.selectList(regWrapper);
+        if (allRegs.isEmpty()) {
             return PageResult.of(0L, page, size, Collections.emptyList());
         }
 
         // Batch query events
-        List<Long> eventIds = registrationPage.getRecords().stream()
+        List<Long> eventIds = allRegs.stream()
                 .map(Registration::getEventId)
+                .distinct()
                 .collect(Collectors.toList());
 
         List<Event> events = eventMapper.selectBatchIds(eventIds);
         Map<Long, Event> eventMap = events.stream()
                 .collect(Collectors.toMap(Event::getId, e -> e));
 
-        // Build VOs
-        List<MyEventVO> vos = registrationPage.getRecords().stream()
+        // Filter by type if specified
+        List<MyEventVO> allVos = allRegs.stream()
                 .map(reg -> {
                     Event event = eventMap.get(reg.getEventId());
                     if (event == null) return null;
+                    if (StringUtils.hasText(type) && !type.equals(event.getType())) return null;
 
                     MyEventVO vo = new MyEventVO();
                     vo.setId(event.getId());
@@ -110,7 +110,13 @@ public class UserServiceImpl implements UserService {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
-        return PageResult.of(registrationPage.getTotal(), page, size, vos);
+        // Manual pagination
+        long total = allVos.size();
+        int from = Math.min((page - 1) * size, allVos.size());
+        int to = Math.min(from + size, allVos.size());
+        List<MyEventVO> pageVos = allVos.subList(from, to);
+
+        return PageResult.of(total, page, size, pageVos);
     }
 
     @Override
@@ -172,6 +178,10 @@ public class UserServiceImpl implements UserService {
             wrapper.and(w -> w.like(User::getNickname, request.getKeyword())
                     .or()
                     .like(User::getPhone, request.getKeyword()));
+        }
+
+        if (StringUtils.hasText(request.getCity())) {
+            wrapper.eq(User::getCity, request.getCity());
         }
 
         if (StringUtils.hasText(request.getStatus())) {

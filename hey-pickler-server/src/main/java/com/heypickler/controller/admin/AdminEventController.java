@@ -9,6 +9,7 @@ import com.heypickler.dto.admin.EventUpdateRequest;
 import com.heypickler.dto.admin.PointEntryRequest;
 import com.heypickler.service.EventService;
 import com.heypickler.service.RankingService;
+import com.heypickler.vo.EventParticipantVO;
 import com.heypickler.vo.EventVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,6 +18,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -30,6 +32,7 @@ public class AdminEventController {
 
     @GetMapping
     @Operation(summary = "赛事列表（管理后台）")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
     public Result<PageResult<EventVO>> listEvents(
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String status,
@@ -65,6 +68,24 @@ public class AdminEventController {
     public Result<Void> deleteEvent(@PathVariable Long id) {
         eventService.deleteEvent(id);
         return Result.ok();
+    }
+
+    @PatchMapping("/{id}/status")
+    @Operation(summary = "变更赛事状态")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
+    public Result<Void> changeStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        String targetStatus = body.get("status");
+        EventUpdateRequest req = new EventUpdateRequest();
+        req.setStatus(targetStatus);
+        eventService.updateEvent(id, req);
+        return Result.ok();
+    }
+
+    @GetMapping("/{id}/participants")
+    @Operation(summary = "获取赛事参赛者列表")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
+    public Result<List<EventParticipantVO>> getParticipants(@PathVariable Long id) {
+        return Result.ok(eventService.getParticipants(id));
     }
 
     @PostMapping("/{id}/points")

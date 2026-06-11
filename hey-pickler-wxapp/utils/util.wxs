@@ -1,0 +1,95 @@
+/** WXS util module - for use in WXML templates */
+
+function formatDate(date, format) {
+  if (!date) return ''
+  var d = getDate(date)
+  if (isNaN(d.getTime())) return ''
+
+  var format = format || 'YYYY-MM-DD HH:mm:ss'
+  var year = d.getFullYear()
+  var month = padZero(d.getMonth() + 1)
+  var day = padZero(d.getDate())
+  var hours = padZero(d.getHours())
+  var minutes = padZero(d.getMinutes())
+  var seconds = padZero(d.getSeconds())
+
+  return format
+    .replace('YYYY', year)
+    .replace('MM', month)
+    .replace('DD', day)
+    .replace('HH', hours)
+    .replace('mm', minutes)
+    .replace('ss', seconds)
+}
+
+function padZero(n) {
+  n = n.toString()
+  return n.length < 2 ? '0' + n : n
+}
+
+function formatEventStatus(status) {
+  var map = {
+    DRAFT: '草稿',
+    OPEN: '报名中',
+    FULL: '已满员',
+    IN_PROGRESS: '进行中',
+    COMPLETED: '已结束',
+    CANCELLED: '已取消'
+  }
+  return map[status] || status || ''
+}
+
+function getEventStatusColor(status) {
+  var map = {
+    DRAFT: '#999',
+    OPEN: '#4CAF50',
+    FULL: '#FF9800',
+    IN_PROGRESS: '#2196F3',
+    COMPLETED: '#666',
+    CANCELLED: '#f44336'
+  }
+  return map[status] || '#999'
+}
+
+function formatTier(tier, type) {
+  var tierMap = {
+    LEGEND: '传奇',
+    SUPER: '超级',
+    SHINING: '闪耀'
+  }
+  var typeSuffix = type === 'STAR' ? '明星' : '派对'
+  return tierMap[tier] ? tierMap[tier] + typeSuffix : '未知'
+}
+
+function formatMatchType(matchType) {
+  var map = {
+    SINGLES: '单打',
+    DOUBLES: '双打',
+    MIXED: '混合双打'
+  }
+  return map[matchType] || matchType || ''
+}
+
+function formatPoints(points) {
+  if (points === null || points === undefined) return '0'
+  return points.toString()
+}
+
+function isRegistrationOpen(event) {
+  if (!event) return false
+  if (event.status !== 'OPEN') return false
+  if (event.currentParticipants >= event.maxParticipants) return false
+  var now = getDate()
+  var deadline = getDate(event.registrationDeadline)
+  return now.getTime() < deadline.getTime()
+}
+
+module.exports = {
+  formatDate: formatDate,
+  formatEventStatus: formatEventStatus,
+  getEventStatusColor: getEventStatusColor,
+  formatTier: formatTier,
+  formatMatchType: formatMatchType,
+  formatPoints: formatPoints,
+  isRegistrationOpen: isRegistrationOpen
+}

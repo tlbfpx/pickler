@@ -8,7 +8,7 @@
         <el-input
           v-model="searchKeyword"
           placeholder="按手机号或昵称搜索"
-          style="width: 300px"
+          style="width: 250px"
           clearable
           @clear="handleSearch"
           @keyup.enter="handleSearch"
@@ -17,12 +17,24 @@
             <el-icon><Search /></el-icon>
           </template>
         </el-input>
+        <el-input
+          v-model="searchCity"
+          placeholder="按城市搜索"
+          style="width: 160px"
+          clearable
+          @clear="handleSearch"
+          @keyup.enter="handleSearch"
+        />
         <el-button type="primary" @click="handleSearch">搜索</el-button>
       </div>
 
       <el-table v-loading="loading" :data="userList" style="width: 100%; margin-top: 16px">
         <el-table-column prop="id" label="ID" width="60" />
-        <el-table-column prop="phone" label="手机号" width="130" />
+        <el-table-column label="手机号" width="130">
+          <template #default="{ row }">
+            {{ maskPhone(row.phone) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="nickname" label="昵称" width="120" />
         <el-table-column label="城市" width="80">
           <template #default="{ row }">
@@ -51,8 +63,11 @@
             {{ formatDate(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
+            <el-button type="primary" size="small" @click="handleDetail(row)">
+              详情
+            </el-button>
             <el-button
               v-if="row.status !== 'BANNED'"
               type="warning"
@@ -83,6 +98,7 @@
     </div>
 
     <BanDialog v-model="banDialogVisible" :user="selectedUser" @success="fetchUsers" />
+    <UserDetailDrawer v-model="detailVisible" :user-id="detailUserId" />
   </div>
 </template>
 
@@ -90,13 +106,15 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getUserList, unbanUser } from '@/api/users'
+import type { User } from '@/api/users'
 import { formatDate } from '@/utils'
 import Pagination from '@/components/common/Pagination.vue'
 import BanDialog from './BanDialog.vue'
-import type { User } from '@/types'
+import UserDetailDrawer from './UserDetailDrawer.vue'
 
 const loading = ref(false)
 const searchKeyword = ref('')
+const searchCity = ref('')
 const userList = ref<User[]>([])
 
 const pagination = reactive({
@@ -107,6 +125,8 @@ const pagination = reactive({
 
 const banDialogVisible = ref(false)
 const selectedUser = ref<User | null>(null)
+const detailVisible = ref(false)
+const detailUserId = ref<number | null>(null)
 
 const fetchUsers = async () => {
   loading.value = true
@@ -114,7 +134,8 @@ const fetchUsers = async () => {
     const res = await getUserList({
       page: pagination.page,
       size: pagination.size,
-      keyword: searchKeyword.value
+      keyword: searchKeyword.value,
+      city: searchCity.value
     })
     if (res.code === 0) {
       userList.value = res.data.list || []
@@ -134,6 +155,11 @@ const handleSearch = () => {
   fetchUsers()
 }
 
+const handleDetail = (user: User) => {
+  detailUserId.value = user.id
+  detailVisible.value = true
+}
+
 const handleBan = (user: User) => {
   selectedUser.value = user
   banDialogVisible.value = true
@@ -151,6 +177,11 @@ const handleUnban = async (user: User) => {
   } catch (error) {
     ElMessage.error('解禁用户失败')
   }
+}
+
+const maskPhone = (phone: string) => {
+  if (!phone || phone.length < 7) return phone || '-'
+  return phone.slice(0, 3) + '****' + phone.slice(-4)
 }
 
 onMounted(() => {

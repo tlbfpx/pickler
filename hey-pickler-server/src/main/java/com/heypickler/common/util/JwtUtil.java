@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -23,12 +24,17 @@ public class JwtUtil {
     @Value("${hey-pickler.jwt.admin-expiration}")
     private long adminExpiration;
 
-    private volatile SecretKey cachedKey;
+    private SecretKey cachedKey;
+
+    @PostConstruct
+    void init() {
+        if (secret == null || secret.length() < 32) {
+            throw new IllegalStateException("JWT_SECRET must be at least 32 characters");
+        }
+        cachedKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    }
 
     private SecretKey getKey() {
-        if (cachedKey == null) {
-            cachedKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        }
         return cachedKey;
     }
 

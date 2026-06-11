@@ -1,5 +1,6 @@
 package com.heypickler.dto.admin;
 
+import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -18,5 +19,6 @@ public class EventUpdateRequest {
     private Integer maxParticipants;
     private BigDecimal fee;
     private String prizes;
+    @Pattern(regexp = "^(DRAFT|OPEN|FULL|IN_PROGRESS|COMPLETED|CANCELLED)?$", message = "无效的赛事状态")
     private String status;
 }

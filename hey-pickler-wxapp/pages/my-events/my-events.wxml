@@ -1,3 +1,27 @@
+<wxs src="../../utils/util.wxs" module="util" />
+
+<wxs module="helpers">
+function getRegistrationStatus(status) {
+  if (!status) return ''
+  var map = {
+    REGISTERED: '已报名',
+    CHECKED_IN: '已签到',
+    WITHDRAWN: '已取消'
+  }
+  return map[status] || status || ''
+}
+
+function getRegistrationStatusColor(status) {
+  if (!status) return '#999'
+  var map = {
+    REGISTERED: '#4CAF50',
+    CHECKED_IN: '#2196F3',
+    WITHDRAWN: '#999'
+  }
+  return map[status] || '#999'
+}
+</wxs>
+
 <!-- My events page -->
 <view class="page">
   <!-- Tabs -->
@@ -16,50 +40,38 @@
   <view class="event-list">
     <view
       class="event-item"
-      wx:for="{{registrations}}"
+      wx:for="{{events}}"
       wx:key="id"
       bindtap="navigateToDetail"
-      data-event="{{item.event}}">
+      data-id="{{item.id}}">
 
       <!-- Event banner -->
-      <image class="event-banner" src="{{item.event.banner_url || '/images/default-event.png'}}" mode="aspectFill"></image>
+      <image class="event-banner" src="{{item.bannerUrl || '/images/default-event.png'}}" mode="aspectFill"></image>
 
       <!-- Event type badge -->
-      <view class="event-type-badge {{item.event.type === 'STAR' ? 'type-star' : 'type-party'}}">
-        {{item.event.type === 'STAR' ? '明星赛事' : '派对活动'}}
+      <view class="event-type-badge {{item.type === 'STAR' ? 'type-star' : 'type-party'}}">
+        {{item.type === 'STAR' ? '明星赛事' : '派对活动'}}
       </view>
 
       <!-- Registration status badge -->
-      <view class="status-badge" style="background-color: {{getRegistrationStatusColor(item)}}">
-        {{getRegistrationStatus(item)}}
+      <view class="status-badge" style="background-color: {{helpers.getRegistrationStatusColor(item.registrationStatus)}}">
+        {{helpers.getRegistrationStatus(item.registrationStatus)}}
       </view>
 
       <!-- Event info -->
       <view class="event-info">
-        <view class="event-title">{{item.event.title}}</view>
+        <view class="event-title">{{item.title}}</view>
 
         <view class="event-meta">
           <view class="meta-item">
             <text class="meta-icon">📅</text>
-            <text class="meta-text">{{util.formatDate(item.event.event_time, 'MM-DD HH:mm')}}</text>
+            <text class="meta-text">{{util.formatDate(item.eventTime, 'MM-DD HH:mm')}}</text>
           </view>
 
           <view class="meta-item">
             <text class="meta-icon">📍</text>
-            <text class="meta-text">{{item.event.location}}</text>
+            <text class="meta-text">{{item.location}}</text>
           </view>
-        </view>
-
-        <!-- Registration time -->
-        <view class="registration-time">
-          <text class="time-label">报名时间：</text>
-          <text class="time-value">{{util.formatDate(item.created_at)}}</text>
-        </view>
-
-        <!-- Match type -->
-        <view class="match-type" wx:if="{{item.match_type}}">
-          <text class="type-icon">🎾</text>
-          <text class="type-text">{{item.match_type === 'SINGLES' ? '单打' : item.match_type === 'DOUBLES' ? '双打' : '混合双打'}}</text>
         </view>
       </view>
     </view>
@@ -70,12 +82,12 @@
     </view>
 
     <!-- No more data -->
-    <view wx:if="{{!hasMore && registrations.length > 0}}" class="no-more">
+    <view wx:if="{{!hasMore && events.length > 0}}" class="no-more">
       <text>没有更多了</text>
     </view>
 
     <!-- Empty state -->
-    <view wx:if="{{registrations.length === 0 && !loading}}" class="empty">
+    <view wx:if="{{events.length === 0 && !loading}}" class="empty">
       <text class="empty-icon">📋</text>
       <text>暂无报名记录</text>
       <text class="empty-hint">快去参加赛事活动吧</text>

@@ -9,20 +9,23 @@ import java.util.List;
 @Data
 public class PointEntryRequest {
 
-    @NotEmpty(message = "Records cannot be empty")
-    @Valid
-    private List<PointRecordItem> records;
+    private Long eventId;
 
     private String type;
 
+    @NotEmpty(message = "积分记录不能为空")
+    @Valid
+    private List<PointRecordItem> records;
+
     @Data
     public static class PointRecordItem {
-        @jakarta.validation.constraints.NotNull(message = "User ID cannot be null")
+        @jakarta.validation.constraints.NotNull(message = "用户ID不能为空")
         private Long userId;
 
-        @jakarta.validation.constraints.NotNull(message = "Points cannot be null")
+        @jakarta.validation.constraints.NotNull(message = "积分不能为空")
         private Integer points;
 
+        @jakarta.validation.constraints.NotBlank(message = "原因不能为空")
         private String reason;
     }
 }
