@@ -11,6 +11,7 @@ import com.heypickler.service.EventService;
 import com.heypickler.service.RankingService;
 import com.heypickler.vo.EventParticipantVO;
 import com.heypickler.vo.EventVO;
+import com.heypickler.vo.RegistrationVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -34,11 +35,15 @@ public class AdminEventController {
     @Operation(summary = "赛事列表（管理后台）")
     @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
     public Result<PageResult<EventVO>> listEvents(
+            @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) String startTime,
+            @RequestParam(required = false) String endTime,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return Result.ok(eventService.adminListEvents(type, status, page, size));
+        return Result.ok(eventService.adminListEvents(type, status, keyword, location, startTime, endTime, page, size));
     }
 
     @PostMapping
@@ -97,6 +102,30 @@ public class AdminEventController {
             @Valid @RequestBody PointEntryRequest req) {
         Long adminId = (Long) request.getAttribute("adminId");
         rankingService.enterPoints(id, req, adminId);
+        return Result.ok();
+    }
+
+    @GetMapping("/{eventId}/registrations")
+    @Operation(summary = "获取赛事报名列表（分页）")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
+    public Result<PageResult<RegistrationVO>> getRegistrations(
+            @PathVariable Long eventId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String matchType,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return Result.ok(eventService.getRegistrations(eventId, status, matchType, page, size));
+    }
+
+    @PatchMapping("/{eventId}/registrations/{registrationId}/status")
+    @Operation(summary = "修改报名状态（签到/取消）")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
+    public Result<Void> updateRegistrationStatus(
+            @PathVariable Long eventId,
+            @PathVariable Long registrationId,
+            @RequestBody Map<String, String> body) {
+        String status = body.get("status");
+        eventService.updateRegistrationStatus(eventId, registrationId, status);
         return Result.ok();
     }
 }

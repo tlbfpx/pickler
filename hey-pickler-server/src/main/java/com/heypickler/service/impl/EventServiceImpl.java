@@ -20,6 +20,7 @@ import com.heypickler.service.EventService;
 import com.heypickler.vo.EventDetailVO;
 import com.heypickler.vo.EventParticipantVO;
 import com.heypickler.vo.EventVO;
+import com.heypickler.vo.RegistrationVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -192,14 +193,26 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    public PageResult<EventVO> adminListEvents(String type, String status, int page, int size) {
+    public PageResult<EventVO> adminListEvents(String type, String status, String keyword, String location, String startTime, String endTime, int page, int size) {
         LambdaQueryWrapper<Event> wrapper = new LambdaQueryWrapper<>();
 
+        if (keyword != null && !keyword.isEmpty()) {
+            wrapper.like(Event::getTitle, keyword);
+        }
         if (type != null && !type.isEmpty()) {
             wrapper.eq(Event::getType, type);
         }
         if (status != null && !status.isEmpty()) {
             wrapper.eq(Event::getStatus, status);
+        }
+        if (location != null && !location.isEmpty()) {
+            wrapper.like(Event::getLocation, location);
+        }
+        if (startTime != null && !startTime.isEmpty()) {
+            wrapper.ge(Event::getEventTime, startTime);
+        }
+        if (endTime != null && !endTime.isEmpty()) {
+            wrapper.le(Event::getEventTime, endTime);
         }
 
         wrapper.orderByDesc(Event::getEventTime);
@@ -297,6 +310,123 @@ public class EventServiceImpl implements EventService {
             }
             return vo;
         }).collect(Collectors.toList());
+    }
+
+    @Override
+    public PageResult<RegistrationVO> getRegistrations(Long eventId, String status, String matchType, int page, int size) {
+        Event event = eventMapper.selectById(eventId);
+        if (event == null || event.getDeletedAt() != null) {
+            throw new BizException(ErrorCode.NOT_FOUND);
+        }
+
+        LambdaQueryWrapper<Registration> wrapper = new LambdaQueryWrapper<Registration>()
+                .eq(Registration::getEventId, eventId)
+                .ne(Registration::getStatus, "WITHDRAWN");
+
+        if (status != null && !status.isEmpty()) {
+            wrapper.eq(Registration::getStatus, status);
+        }
+        if (matchType != null && !matchType.isEmpty()) {
+            wrapper.eq(Registration::getMatchType, matchType);
+        }
+
+        wrapper.orderByDesc(Registration::getCreatedAt);
+
+        Page<Registration> regPage = registrationMapper.selectPage(new Page<>(page, size), wrapper);
+
+        if (regPage.getRecords().isEmpty()) {
+            return PageResult.of(0, page, size, Collections.emptyList());
+        }
+
+        // Batch load user data
+        Set<Long> userIds = new HashSet<>();
+        for (Registration reg : regPage.getRecords()) {
+            userIds.add(reg.getUserId());
+            if (reg.getPartnerId() != null) {
+                userIds.add(reg.getPartnerId());
+            }
+        }
+        Map<Long, User> userMap = userMapper.selectBatchIds(userIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+
+        List<RegistrationVO> voList = regPage.getRecords().stream().map(reg -> {
+            RegistrationVO vo = new RegistrationVO();
+            vo.setId(reg.getId());
+            vo.setUserId(reg.getUserId());
+            vo.setMatchType(reg.getMatchType());
+            vo.setPartnerId(reg.getPartnerId());
+            vo.setStatus(reg.getStatus());
+            vo.setCreatedAt(reg.getCreatedAt());
+
+            User user = userMap.get(reg.getUserId());
+            if (user != null) {
+                vo.setNickname(user.getNickname());
+                vo.setAvatarUrl(user.getAvatarUrl());
+                vo.setCity(user.getCity());
+            }
+
+            if (reg.getPartnerId() != null) {
+                User partner = userMap.get(reg.getPartnerId());
+                if (partner != null) {
+                    vo.setPartnerNickname(partner.getNickname());
+                }
+            }
+
+            return vo;
+        }).collect(Collectors.toList());
+
+        return PageResult.of(regPage.getTotal(), (int) regPage.getCurrent(), size, voList);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateRegistrationStatus(Long eventId, Long registrationId, String status) {
+        Event event = eventMapper.selectById(eventId);
+        if (event == null || event.getDeletedAt() != null) {
+            throw new BizException(ErrorCode.NOT_FOUND);
+        }
+
+        Registration registration = registrationMapper.selectById(registrationId);
+        if (registration == null || !registration.getEventId().equals(eventId)) {
+            throw new BizException(ErrorCode.NOT_FOUND, "报名记录不存在");
+        }
+
+        String oldStatus = registration.getStatus();
+
+        if ("CHECKED_IN".equals(status)) {
+            if (!"REGISTERED".equals(oldStatus)) {
+                throw new BizException(ErrorCode.PARAM_ERROR, "只有已报名状态可以签到");
+            }
+            registration.setStatus("CHECKED_IN");
+            registrationMapper.updateById(registration);
+        } else if ("WITHDRAWN".equals(status)) {
+            if ("WITHDRAWN".equals(oldStatus)) {
+                throw new BizException(ErrorCode.PARAM_ERROR, "该报名已取消");
+            }
+            registration.setStatus("WITHDRAWN");
+            registrationMapper.updateById(registration);
+
+            // Decrease participant count
+            eventMapper.update(null,
+                    new LambdaUpdateWrapper<Event>()
+                            .eq(Event::getId, eventId)
+                            .gt(Event::getCurrentParticipants, 0)
+                            .setSql("current_participants = current_participants - 1"));
+
+            // Auto transition: FULL → OPEN
+            if ("FULL".equals(event.getStatus()) && event.getMaxParticipants() != null) {
+                Event updated = eventMapper.selectById(eventId);
+                if (updated.getCurrentParticipants() < event.getMaxParticipants()) {
+                    eventMapper.update(null,
+                            new LambdaUpdateWrapper<Event>()
+                                    .eq(Event::getId, eventId)
+                                    .eq(Event::getStatus, "FULL")
+                                    .set(Event::getStatus, "OPEN"));
+                }
+            }
+        } else {
+            throw new BizException(ErrorCode.PARAM_ERROR, "不支持的状态变更");
+        }
     }
 
     private EventVO convertToVO(Event event) {

@@ -18,21 +18,30 @@ App({
     this.checkUpdate()
   },
 
-  // 获取用户信息
+  // 获取用户信息 — app.js 用 this 而非 getApp()
   async getUserInfo() {
     if (!this.globalData.token) return
 
     try {
-      const res = await wx.request({
-        url: `${this.globalData.baseUrl}/user/profile`,
-        method: 'GET',
-        header: {
-          'Authorization': `Bearer ${this.globalData.token}`
-        }
+      const res = await new Promise((resolve, reject) => {
+        wx.request({
+          url: `${this.globalData.baseUrl}/user/profile`,
+          method: 'GET',
+          header: {
+            'Authorization': `Bearer ${this.globalData.token}`
+          },
+          success: resolve,
+          fail: reject
+        })
       })
 
-      if (res.data.code === 0) {
+      if (res.statusCode === 200 && res.data.code === 0) {
         this.globalData.userInfo = res.data.data
+      } else if (res.statusCode === 401 || res.statusCode === 403) {
+        // Token 无效或被封禁，清除并跳转登录
+        this.globalData.token = null
+        this.globalData.userInfo = null
+        wx.removeStorageSync('token')
       }
     } catch (error) {
       console.error('获取用户信息失败', error)

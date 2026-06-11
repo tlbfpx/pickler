@@ -1,8 +1,12 @@
 // Request utility with JWT interceptors
-const app = getApp()
+
+function getAppInstance() {
+  return getApp()
+}
 
 function request(options) {
   return new Promise((resolve, reject) => {
+    const app = getAppInstance()
     const header = {
       'Content-Type': 'application/json',
       ...options.header
@@ -23,6 +27,13 @@ function request(options) {
         if (res.statusCode === 401) {
           handleUnauthorized()
           reject({ code: 401, message: '未授权，请重新登录' })
+          return
+        }
+
+        // Handle 403 Forbidden (banned user or invalid token)
+        if (res.statusCode === 403) {
+          redirectToLogin()
+          reject({ code: 403, message: res.data?.message || '账号异常，请重新登录' })
           return
         }
 
@@ -60,6 +71,7 @@ function handleUnauthorized() {
 
 // Refresh token
 function refreshToken() {
+  const app = getAppInstance()
   return new Promise((resolve, reject) => {
     wx.request({
       url: `${app.globalData.baseUrl}/auth/refresh`,
@@ -85,6 +97,7 @@ function refreshToken() {
 
 // Redirect to login page
 function redirectToLogin() {
+  const app = getAppInstance()
   // Clear token
   wx.removeStorageSync('token')
   app.globalData.token = null

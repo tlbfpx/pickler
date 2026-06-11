@@ -19,7 +19,7 @@ Page({
     if (id) {
       this.setData({
         eventId: id,
-        action
+        action: action || null
       })
       this.loadEventDetail()
     } else {
@@ -134,6 +134,22 @@ Page({
       return
     }
 
+    // Select match type
+    const matchType = await new Promise((resolve) => {
+      wx.showActionSheet({
+        itemList: ['单打', '双打', '混双'],
+        success: (res) => {
+          const types = ['SINGLES', 'DOUBLES', 'MIXED']
+          resolve(types[res.tapIndex])
+        },
+        fail: () => {
+          resolve(null)
+        }
+      })
+    })
+
+    if (!matchType) return
+
     // Confirm registration
     const confirmed = await util.showConfirm({
       title: '确认报名',
@@ -145,7 +161,9 @@ Page({
     util.showLoading('报名中...')
 
     try {
-      const res = await request.post(`/events/${this.data.eventId}/register`)
+      const res = await request.post(`/events/${this.data.eventId}/register`, {
+        matchType
+      })
 
       util.hideLoading()
 

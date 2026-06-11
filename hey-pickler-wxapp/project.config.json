@@ -43,7 +43,7 @@
   },
   "compileType": "miniprogram",
   "libVersion": "2.19.4",
-  "appid": "touristappid",
+  "appid": "wxaf1e29137ceba679",
   "projectname": "hey-pickler-wxapp",
   "debugOptions": {
     "hidedInDevtools": []
@@ -73,5 +73,6 @@
     "miniprogram": {
       "list": []
     }
-  }
+  },
+  "simulatorPluginLibVersion": {}
 }

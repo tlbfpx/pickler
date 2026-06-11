@@ -9,6 +9,15 @@
     </div>
     <div class="card">
       <div class="filter-bar">
+        <el-input
+          v-model="filterKeyword"
+          placeholder="搜索赛事标题"
+          clearable
+          style="width: 220px"
+          :prefix-icon="Search"
+          @keyup.enter="handleFilter"
+          @clear="handleFilter"
+        />
         <el-select
           v-model="filterType"
           placeholder="按类型筛选"
@@ -33,6 +42,8 @@
           <el-option label="已结束" value="COMPLETED" />
           <el-option label="已取消" value="CANCELLED" />
         </el-select>
+        <el-button type="primary" @click="handleFilter">查询</el-button>
+        <el-button @click="handleReset">重置</el-button>
       </div>
 
       <el-table v-loading="loading" :data="eventList" style="width: 100%; margin-top: 16px">
@@ -92,8 +103,11 @@
             ¥{{ row.fee }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column label="操作" width="210" fixed="right">
           <template #default="{ row }">
+            <el-button type="success" size="small" @click="handleViewRegistrations(row)">
+              报名
+            </el-button>
             <el-button type="primary" size="small" @click="handleEdit(row)">
               编辑
             </el-button>
@@ -118,19 +132,28 @@
       :event="selectedEvent"
       @success="fetchEvents"
     />
+
+    <RegistrationDrawer
+      v-model="regDrawerVisible"
+      :event="selectedEventForReg"
+      @changed="fetchEvents"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search } from '@element-plus/icons-vue'
 import { getEventList, deleteEvent, changeEventStatus } from '@/api/events'
 import { formatDate, formatEventType, formatEventStatus, getEventTypeColor, getEventStatusColor } from '@/utils'
 import Pagination from '@/components/common/Pagination.vue'
 import EventFormDialog from './EventFormDialog.vue'
+import RegistrationDrawer from './RegistrationDrawer.vue'
 import type { Event } from '@/types'
 
 const loading = ref(false)
+const filterKeyword = ref('')
 const filterType = ref('')
 const filterStatus = ref('')
 const eventList = ref<Event[]>([])
@@ -144,12 +167,16 @@ const pagination = reactive({
 const formDialogVisible = ref(false)
 const selectedEvent = ref<Event | null>(null)
 
+const regDrawerVisible = ref(false)
+const selectedEventForReg = ref<Event | null>(null)
+
 const fetchEvents = async () => {
   loading.value = true
   try {
     const res = await getEventList({
       page: pagination.page,
       size: pagination.size,
+      keyword: filterKeyword.value || undefined,
       type: filterType.value,
       status: filterStatus.value
     })
@@ -171,6 +198,14 @@ const handleFilter = () => {
   fetchEvents()
 }
 
+const handleReset = () => {
+  filterKeyword.value = ''
+  filterType.value = ''
+  filterStatus.value = ''
+  pagination.page = 1
+  fetchEvents()
+}
+
 const handleCreate = () => {
   selectedEvent.value = null
   formDialogVisible.value = true
@@ -179,6 +214,11 @@ const handleCreate = () => {
 const handleEdit = (event: Event) => {
   selectedEvent.value = event
   formDialogVisible.value = true
+}
+
+const handleViewRegistrations = (event: Event) => {
+  selectedEventForReg.value = event
+  regDrawerVisible.value = true
 }
 
 const handleDelete = async (event: Event) => {

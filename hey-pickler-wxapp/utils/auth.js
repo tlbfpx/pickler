@@ -1,5 +1,4 @@
 // Auth utility for login flow and token management
-const app = getApp()
 
 /**
  * WeChat login flow
@@ -9,6 +8,7 @@ const app = getApp()
  * 4. Store token in storage and app.globalData
  */
 function login() {
+  const app = getApp()
   return new Promise((resolve, reject) => {
     wx.login({
       success: (res) => {
@@ -59,6 +59,7 @@ function login() {
  * @param {string} iv - Initialization vector
  */
 function bindPhone(encryptedData, iv) {
+  const app = getApp()
   return new Promise((resolve, reject) => {
     if (!app.globalData.token) {
       reject(new Error('请先登录'))
@@ -94,6 +95,7 @@ function bindPhone(encryptedData, iv) {
  * Logout - Clear token and user info
  */
 function logout() {
+  const app = getApp()
   wx.removeStorageSync('token')
   app.globalData.token = null
   app.globalData.userInfo = null
@@ -107,20 +109,21 @@ function logout() {
  * Check if user is logged in
  */
 function isLoggedIn() {
-  return !!app.globalData.token
+  return !!getApp().globalData.token
 }
 
 /**
  * Get current user info
  */
 function getUserInfo() {
-  return app.globalData.userInfo
+  return getApp().globalData.userInfo
 }
 
 /**
  * Update user info in globalData
  */
 function updateUserInfo(userInfo) {
+  const app = getApp()
   app.globalData.userInfo = {
     ...app.globalData.userInfo,
     ...userInfo

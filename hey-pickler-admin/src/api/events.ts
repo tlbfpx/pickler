@@ -1,5 +1,5 @@
 import request from './request'
-import type { Event, CreateEventRequest, UpdateEventRequest, ApiResponse, PageParams } from '@/types'
+import type { Event, CreateEventRequest, UpdateEventRequest, Registration, ApiResponse, PageParams } from '@/types'
 
 export interface EventParticipant {
   userId: number
@@ -32,4 +32,16 @@ export const deleteEvent = (id: number) => {
 
 export const changeEventStatus = (id: number, status: string) => {
   return request.patch<any, ApiResponse<void>>(`/events/${id}/status`, { status })
+}
+
+export const getEventRegistrations = (eventId: number, params: PageParams) => {
+  return request.get<any, ApiResponse<import('@/types').PageResult<Registration>>>(
+    `/events/${eventId}/registrations`, { params }
+  )
+}
+
+export const updateRegistrationStatus = (eventId: number, registrationId: number, status: string) => {
+  return request.patch<any, ApiResponse<void>>(
+    `/events/${eventId}/registrations/${registrationId}/status`, { status }
+  )
 }

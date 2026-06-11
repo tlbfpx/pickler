@@ -49,6 +49,21 @@ export interface UpdateEventRequest extends CreateEventRequest {
   id: number
 }
 
+// ==================== Registration Types ====================
+
+export interface Registration {
+  id: number
+  userId: number
+  nickname: string | null
+  avatarUrl: string | null
+  city: string | null
+  matchType: string
+  partnerId: number | null
+  partnerNickname: string | null
+  status: string
+  createdAt: string
+}
+
 // ==================== Banner Types ====================
 
 export interface Banner {
@@ -178,6 +193,9 @@ export interface PageParams {
   keyword?: string
   type?: string
   status?: string
+  location?: string
+  startTime?: string
+  endTime?: string
 }
 
 // ==================== File Upload ====================

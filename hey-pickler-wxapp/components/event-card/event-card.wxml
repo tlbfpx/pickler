@@ -44,7 +44,7 @@
     <button
       wx:if="{{isOpen}}"
       class="register-btn"
-      bindtap="handleRegister">
+      catchtap="handleRegister">
       立即报名
     </button>
     <button wx:else class="register-btn disabled" disabled>

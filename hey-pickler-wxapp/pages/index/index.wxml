@@ -31,7 +31,7 @@
       wx:for="{{events}}"
       wx:key="id"
       event="{{item}}"
-      bind:tap="navigateToDetail"
+      bind:navigate="navigateToDetail"
       bind:register="handleRegister">
     </event-card>
 

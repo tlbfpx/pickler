@@ -1,5 +1,5 @@
 // Event card component
-var util = require('../../utils/util')
+import util from '../../utils/util'
 
 Component({
   properties: {
@@ -80,13 +80,12 @@ Component({
 
   methods: {
     handleTap: function () {
-      this.triggerEvent('tap', {
+      this.triggerEvent('navigate', {
         event: this.data.event
       })
     },
 
-    handleRegister: function (e) {
-      e.stopPropagation()
+    handleRegister: function () {
       this.triggerEvent('register', {
         event: this.data.event
       })

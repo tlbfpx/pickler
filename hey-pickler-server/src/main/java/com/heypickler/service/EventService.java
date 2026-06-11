@@ -7,6 +7,7 @@ import com.heypickler.dto.app.RegisterRequest;
 import com.heypickler.vo.EventDetailVO;
 import com.heypickler.vo.EventParticipantVO;
 import com.heypickler.vo.EventVO;
+import com.heypickler.vo.RegistrationVO;
 
 import java.util.List;
 
@@ -19,7 +20,7 @@ public interface EventService {
 
     void cancelRegistration(Long userId, Long eventId);
 
-    PageResult<EventVO> adminListEvents(String type, String status, int page, int size);
+    PageResult<EventVO> adminListEvents(String type, String status, String keyword, String location, String startTime, String endTime, int page, int size);
 
     Long createEvent(EventCreateRequest request, Long adminId);
 
@@ -28,4 +29,8 @@ public interface EventService {
     void deleteEvent(Long eventId);
 
     List<EventParticipantVO> getParticipants(Long eventId);
+
+    PageResult<RegistrationVO> getRegistrations(Long eventId, String status, String matchType, int page, int size);
+
+    void updateRegistrationStatus(Long eventId, Long registrationId, String status);
 }

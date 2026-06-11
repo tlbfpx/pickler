@@ -9,6 +9,33 @@
     </div>
     <div class="card">
       <div class="filter-bar">
+        <el-input
+          v-model="filterKeyword"
+          placeholder="搜索活动标题"
+          clearable
+          style="width: 200px"
+          :prefix-icon="Search"
+          @keyup.enter="handleFilter"
+          @clear="handleFilter"
+        />
+        <el-input
+          v-model="filterLocation"
+          placeholder="搜索地点"
+          clearable
+          style="width: 160px"
+          @keyup.enter="handleFilter"
+          @clear="handleFilter"
+        />
+        <el-date-picker
+          v-model="filterDateRange"
+          type="daterange"
+          range-separator="至"
+          start-placeholder="开始日期"
+          end-placeholder="结束日期"
+          value-format="YYYY-MM-DD"
+          style="width: 260px"
+          @change="handleFilter"
+        />
         <el-select
           v-model="filterStatus"
           placeholder="按状态筛选"
@@ -23,6 +50,8 @@
           <el-option label="已结束" value="COMPLETED" />
           <el-option label="已取消" value="CANCELLED" />
         </el-select>
+        <el-button type="primary" @click="handleFilter">查询</el-button>
+        <el-button @click="handleReset">重置</el-button>
       </div>
 
       <el-table v-loading="loading" :data="activityList" style="width: 100%; margin-top: 16px">
@@ -112,6 +141,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search } from '@element-plus/icons-vue'
 import { getEventList, deleteEvent, changeEventStatus } from '@/api/events'
 import { formatDate, formatEventStatus, getEventStatusColor } from '@/utils'
 import Pagination from '@/components/common/Pagination.vue'
@@ -119,6 +149,9 @@ import ActivityFormDialog from './ActivityFormDialog.vue'
 import type { Event } from '@/types'
 
 const loading = ref(false)
+const filterKeyword = ref('')
+const filterLocation = ref('')
+const filterDateRange = ref<string[]>([])
 const filterStatus = ref('')
 const activityList = ref<Event[]>([])
 
@@ -138,6 +171,10 @@ const fetchActivities = async () => {
       page: pagination.page,
       size: pagination.size,
       type: 'PARTY',
+      keyword: filterKeyword.value || undefined,
+      location: filterLocation.value || undefined,
+      startTime: filterDateRange.value?.[0] || undefined,
+      endTime: filterDateRange.value?.[1] || undefined,
       status: filterStatus.value
     })
     if (res.code === 0) {
@@ -154,6 +191,15 @@ const fetchActivities = async () => {
 }
 
 const handleFilter = () => {
+  pagination.page = 1
+  fetchActivities()
+}
+
+const handleReset = () => {
+  filterKeyword.value = ''
+  filterLocation.value = ''
+  filterDateRange.value = []
+  filterStatus.value = ''
   pagination.page = 1
   fetchActivities()
 }
