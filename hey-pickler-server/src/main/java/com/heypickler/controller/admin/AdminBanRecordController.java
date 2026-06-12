@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.heypickler.common.annotation.RequireRole;
 import com.heypickler.common.enums.UserRole;
+import com.heypickler.common.exception.BizException;
+import com.heypickler.common.exception.ErrorCode;
 import com.heypickler.common.result.PageResult;
 import com.heypickler.common.result.Result;
 import com.heypickler.entity.AdminUser;
@@ -96,6 +98,18 @@ public class AdminBanRecordController {
         }).toList();
 
         return Result.ok(PageResult.of(recordPage.getTotal(), page, size, vos));
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "删除操作日志")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
+    public Result<Void> delete(@PathVariable Long id) {
+        BanRecord record = banRecordMapper.selectById(id);
+        if (record == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "记录不存在");
+        }
+        banRecordMapper.deleteById(id);
+        return Result.ok();
     }
 
     private String safeDecrypt(String value) {

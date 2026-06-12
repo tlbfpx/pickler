@@ -157,7 +157,7 @@ async function fetchRegistrations() {
       pagination.total = res.data.total
     }
   } catch {
-    ElMessage.error('获取报名列表失败')
+    
   }
   loading.value = false
 }

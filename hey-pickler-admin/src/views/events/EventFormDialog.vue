@@ -193,8 +193,8 @@ const handleConfirm = async () => {
     } else {
       ElMessage.error(res.message || '操作失败')
     }
-  } catch (error) {
-    ElMessage.error('操作失败')
+  } catch {
+    
   } finally {
     loading.value = false
   }

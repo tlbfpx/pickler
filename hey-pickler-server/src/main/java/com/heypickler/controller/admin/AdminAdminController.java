@@ -79,4 +79,13 @@ public class AdminAdminController {
         adminUserService.resetPassword(id, body.getNewPassword());
         return Result.ok();
     }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "删除管理员")
+    @RequireRole(UserRole.SUPER_ADMIN)
+    public Result<Void> delete(@PathVariable Long id, HttpServletRequest request) {
+        Long currentAdminId = (Long) request.getAttribute("adminId");
+        adminUserService.deleteAdminUser(id, currentAdminId);
+        return Result.ok();
+    }
 }

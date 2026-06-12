@@ -11,7 +11,7 @@
     >
       <el-menu-item index="/">
         <el-icon><DataBoard /></el-icon>
-        <span>控制台</span>
+        <span>首页</span>
       </el-menu-item>
       <el-menu-item index="/users">
         <el-icon><User /></el-icon>

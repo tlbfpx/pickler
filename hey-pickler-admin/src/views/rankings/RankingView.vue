@@ -125,8 +125,8 @@ const fetchRankings = async () => {
     } else {
       ElMessage.error(partyRes.message || '获取派对排名失败')
     }
-  } catch (error) {
-    ElMessage.error('获取排名失败')
+  } catch {
+    
   } finally {
     loading.value = false
   }
@@ -149,8 +149,8 @@ const handleRefresh = async (type: 'STAR' | 'PARTY') => {
     } else {
       ElMessage.error(res.message || '刷新排名失败')
     }
-  } catch (error) {
-    ElMessage.error('刷新排名失败')
+  } catch {
+    
   }
 }
 

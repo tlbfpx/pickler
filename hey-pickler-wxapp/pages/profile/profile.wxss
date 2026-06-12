@@ -1,138 +1,251 @@
 /* Profile page styles */
-.user-header {
-  padding: 60rpx 40rpx;
-  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+
+/* ===== Header ===== */
+.profile-header {
+  position: relative;
+  padding-bottom: 20rpx;
+  overflow: hidden;
+}
+
+.header-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 80rpx;
+  background: linear-gradient(160deg, #2E7D32 0%, #43A047 40%, #66BB6A 100%);
+}
+
+.header-content {
+  position: relative;
   display: flex;
   align-items: center;
+  padding: 80rpx 40rpx 36rpx;
+}
+
+.user-name:active {
+  opacity: 0.7;
+}
+
+.user-location:active {
+  opacity: 0.7;
 }
 
 .user-avatar {
-  width: 120rpx;
-  height: 120rpx;
+  width: 128rpx;
+  height: 128rpx;
   border-radius: 50%;
-  border: 4rpx solid white;
-  margin-right: 24rpx;
-  background-color: white;
+  border: 6rpx solid rgba(255, 255, 255, 0.6);
+  margin-right: 28rpx;
+  background-color: rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
 }
 
-.user-info {
+.user-meta {
   flex: 1;
 }
 
 .user-name {
-  font-size: 36rpx;
-  font-weight: 600;
+  font-size: 40rpx;
+  font-weight: 700;
   color: white;
   margin-bottom: 8rpx;
 }
 
-.user-city {
-  font-size: 28rpx;
-  color: rgba(255, 255, 255, 0.9);
+.user-location {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.85);
   display: flex;
   align-items: center;
 }
 
-.edit-icon {
-  font-size: 24rpx;
-  margin-left: 8rpx;
+.location-icon {
+  font-size: 22rpx;
+  margin-right: 4rpx;
 }
 
-.points-card {
-  margin: 20rpx;
-  padding: 32rpx;
-  border-radius: 16rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
+/* ===== Stats row ===== */
+.stats-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: 0 32rpx;
+  padding: 36rpx 24rpx;
+  background: white;
+  border-radius: 20rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.08);
 }
 
-.star-card {
-  background: linear-gradient(135deg, #FFF3E0, #FFE0B2);
+.stat-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.party-card {
-  background: linear-gradient(135deg, #E3F2FD, #BBDEFB);
+.stat-value {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #333;
+  line-height: 1.2;
 }
 
-.points-header {
+.stat-label {
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 6rpx;
+}
+
+.stat-divider {
+  width: 2rpx;
+  height: 56rpx;
+  background: #f0f0f0;
+}
+
+/* ===== Tier cards ===== */
+.tier-section {
+  padding: 24rpx 32rpx 0;
+}
+
+.tier-card {
+  margin-bottom: 20rpx;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16rpx;
+  padding: 28rpx 32rpx;
+  background: white;
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
 }
 
-.points-title {
-  font-size: 32rpx;
+.tier-card:active {
+  background: #fafafa;
+}
+
+.tier-card-left {
+  display: flex;
+  align-items: center;
+}
+
+.tier-icon-wrap {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 18rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 24rpx;
+}
+
+.star-icon {
+  background: linear-gradient(135deg, #FFF3E0, #FFE0B2);
+}
+
+.party-icon {
+  background: linear-gradient(135deg, #E3F2FD, #BBDEFB);
+}
+
+.tier-icon-text {
+  font-size: 36rpx;
+}
+
+.tier-card-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.tier-card-label {
+  font-size: 30rpx;
   font-weight: 600;
   color: #333;
 }
 
-.points-value {
-  font-size: 64rpx;
-  font-weight: 700;
-  color: #4CAF50;
-  margin-bottom: 24rpx;
+.tier-card-points {
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 4rpx;
 }
 
-.points-actions {
-  display: flex;
-  gap: 16rpx;
-}
-
-.points-btn {
-  flex: 1;
-  height: 64rpx;
-  line-height: 64rpx;
-  background-color: white;
-  border: none;
-  border-radius: 32rpx;
-  font-size: 28rpx;
-  color: #333;
-  font-weight: 500;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
-}
-
-.points-btn:active {
-  background-color: #f5f5f5;
-}
-
-.info-list {
-  margin: 20rpx;
-  background-color: white;
-  border-radius: 16rpx;
-  overflow: hidden;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
-}
-
-.info-item {
+.tier-card-right {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 32rpx;
+}
+
+.tier-arrow {
+  font-size: 36rpx;
+  color: #ccc;
+  margin-left: 8rpx;
+}
+
+/* ===== Menu section ===== */
+.menu-section {
+  padding: 24rpx 32rpx 0;
+}
+
+.section-title {
+  font-size: 26rpx;
+  color: #999;
+  margin-bottom: 16rpx;
+  padding-left: 8rpx;
+}
+
+.menu-group {
+  background: white;
+  border-radius: 20rpx;
+  overflow: hidden;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 28rpx 32rpx;
   border-bottom: 1rpx solid #f5f5f5;
 }
 
-.info-item:last-child {
+.menu-item:last-child {
   border-bottom: none;
 }
 
-.info-label {
+.menu-item:active {
+  background: #fafafa;
+}
+
+.menu-icon-wrap {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 24rpx;
+  flex-shrink: 0;
+}
+
+.menu-icon {
   font-size: 32rpx;
+}
+
+.menu-label {
+  flex: 1;
+  font-size: 30rpx;
   color: #333;
 }
 
-.info-value {
-  display: flex;
-  align-items: center;
-}
-
-.value-text {
-  font-size: 28rpx;
-  color: #666;
+.menu-value {
+  font-size: 26rpx;
+  color: #999;
   margin-right: 8rpx;
 }
 
+.menu-arrow {
+  font-size: 36rpx;
+  color: #ccc;
+}
+
+/* ===== Logout ===== */
 .logout-section {
-  padding: 40rpx 20rpx;
+  padding: 48rpx 32rpx 80rpx;
 }
 
 .logout-btn {
@@ -140,17 +253,18 @@
   height: 88rpx;
   line-height: 88rpx;
   background-color: white;
-  border: 2rpx solid #f44336;
+  border: 2rpx solid #eee;
   border-radius: 44rpx;
-  font-size: 32rpx;
-  color: #f44336;
-  font-weight: 600;
+  font-size: 30rpx;
+  color: #999;
+  font-weight: 500;
 }
 
 .logout-btn:active {
-  background-color: #ffebee;
+  background-color: #fafafa;
 }
 
+/* ===== Loading ===== */
 .loading-container {
   min-height: 100vh;
   display: flex;
@@ -163,7 +277,7 @@
   color: #999;
 }
 
-/* Modal styles */
+/* ===== Modal ===== */
 .modal-mask {
   position: fixed;
   top: 0;
@@ -180,8 +294,8 @@
 .modal-content {
   width: 560rpx;
   background-color: white;
-  border-radius: 16rpx;
-  padding: 40rpx;
+  border-radius: 24rpx;
+  padding: 48rpx 40rpx;
   display: flex;
   flex-direction: column;
 }
@@ -196,17 +310,15 @@
 
 .modal-desc {
   font-size: 28rpx;
-  color: #666;
+  color: #999;
   text-align: center;
-  margin-bottom: 32rpx;
+  margin-bottom: 40rpx;
 }
 
 .modal-btn {
   width: 100%;
   height: 88rpx;
   line-height: 88rpx;
-  background: linear-gradient(135deg, #4CAF50, #45a049);
-  color: white;
   border: none;
   border-radius: 44rpx;
   font-size: 32rpx;
@@ -214,12 +326,47 @@
   margin-bottom: 16rpx;
 }
 
+.modal-btn.primary {
+  background: linear-gradient(135deg, #4CAF50, #43A047);
+  color: white;
+}
+
 .modal-btn.secondary {
   background: white;
-  color: #666;
-  border: 2rpx solid #e0e0e0;
+  color: #999;
+  border: 2rpx solid #eee;
 }
 
 .modal-btn:active {
-  opacity: 0.8;
+  opacity: 0.85;
+}
+
+/* ===== Edit input ===== */
+.edit-input {
+  width: 100%;
+  height: 80rpx;
+  border: 2rpx solid #e0e0e0;
+  border-radius: 12rpx;
+  padding: 0 20rpx;
+  font-size: 30rpx;
+  color: #333;
+  margin-bottom: 32rpx;
+  box-sizing: border-box;
+}
+
+.edit-input:focus {
+  border-color: #4CAF50;
+}
+
+.edit-actions {
+  display: flex;
+}
+
+.edit-actions .modal-btn {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.edit-actions .modal-btn:first-child {
+  margin-right: 20rpx;
 }

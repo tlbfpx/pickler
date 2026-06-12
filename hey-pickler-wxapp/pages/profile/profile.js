@@ -8,6 +8,10 @@ Page({
     userInfo: null,
     loading: true,
     showPhoneModal: false,
+    showEditModal: false,
+    editField: '',
+    editTitle: '',
+    editValue: '',
     phone: ''
   },
 
@@ -58,48 +62,67 @@ Page({
   },
 
   // Navigate to my events
-  navigateToMyEvents(type) {
+  navigateToMyEvents(e) {
+    const type = e.currentTarget.dataset.type
     wx.navigateTo({
       url: `/pages/my-events/my-events?type=${type || 'ALL'}`
     })
   },
 
   // Navigate to ranking
-  navigateToRanking(type) {
-    wx.navigateTo({
-      url: `/pages/ranking/ranking?type=${type || 'STAR'}`
+  navigateToRanking() {
+    wx.switchTab({
+      url: '/pages/ranking/ranking'
     })
   },
 
   // Edit nickname
   handleEditNickname() {
-    const userInfo = this.data.userInfo
-    wx.showModal({
-      title: '修改昵称',
-      editable: true,
-      placeholderText: userInfo.nickname,
-      success: async (res) => {
-        if (res.confirm && res.content) {
-          await this.updateProfile({ nickname: res.content })
-        }
-      }
+    this.setData({
+      showEditModal: true,
+      editField: 'nickname',
+      editTitle: '修改昵称',
+      editValue: this.data.userInfo.nickname || ''
     })
   },
 
   // Edit city
   handleEditCity() {
-    const userInfo = this.data.userInfo
-    wx.showModal({
-      title: '修改城市',
-      editable: true,
-      placeholderText: userInfo.city,
-      success: async (res) => {
-        if (res.confirm && res.content) {
-          await this.updateProfile({ city: res.content })
-        }
-      }
+    this.setData({
+      showEditModal: true,
+      editField: 'city',
+      editTitle: '修改城市',
+      editValue: this.data.userInfo.city || ''
     })
   },
+
+  // Handle input change
+  onEditInput(e) {
+    this.setData({
+      editValue: e.detail.value
+    })
+  },
+
+  // Confirm edit
+  async confirmEdit() {
+    const value = (this.data.editValue || '').trim()
+    if (!value) {
+      util.showError('内容不能为空')
+      return
+    }
+
+    const field = this.data.editField
+    this.setData({ showEditModal: false })
+    await this.updateProfile({ [field]: value })
+  },
+
+  // Cancel edit
+  cancelEdit() {
+    this.setData({ showEditModal: false })
+  },
+
+  // Prevent modal propagation
+  stopPropagation() {},
 
   // Bind phone
   handleBindPhone() {

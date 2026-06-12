@@ -107,6 +107,22 @@ public class AdminUserServiceImpl implements AdminUserService {
         redisTemplate.delete(RedisKey.adminSession(String.valueOf(id)));
     }
 
+    @Override
+    public void deleteAdminUser(Long id, Long currentAdminId) {
+        if (id.equals(currentAdminId)) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "不能删除自己");
+        }
+        AdminUser admin = adminUserMapper.selectById(id);
+        if (admin == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "管理员不存在");
+        }
+        if ("SUPER_ADMIN".equals(admin.getRole())) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "超级管理员不能被删除");
+        }
+        adminUserMapper.deleteById(id);
+        redisTemplate.delete(RedisKey.adminSession(String.valueOf(id)));
+    }
+
     private AdminUserVO toVO(AdminUser entity) {
         AdminUserVO vo = new AdminUserVO();
         BeanUtils.copyProperties(entity, vo);

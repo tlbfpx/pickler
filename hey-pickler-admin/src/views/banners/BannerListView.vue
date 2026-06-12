@@ -73,8 +73,8 @@ const fetchBanners = async () => {
     } else {
       ElMessage.error(res.message || '获取Banner列表失败')
     }
-  } catch (error) {
-    ElMessage.error('获取Banner列表失败')
+  } catch {
+    
   } finally {
     loading.value = false
   }
@@ -106,7 +106,7 @@ const handleDelete = async (banner: Banner) => {
     }
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error('删除Banner失败')
+      
     }
   }
 }

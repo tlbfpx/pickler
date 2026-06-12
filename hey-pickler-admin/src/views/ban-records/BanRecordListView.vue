@@ -52,6 +52,11 @@
             {{ formatDate(row.createdAt) }}
           </template>
         </el-table-column>
+        <el-table-column label="操作" width="80" fixed="right">
+          <template #default="{ row }">
+            <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+          </template>
+        </el-table-column>
       </el-table>
 
       <Pagination
@@ -67,8 +72,8 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { getBanRecords } from '@/api/ban-records'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { getBanRecords, deleteBanRecord } from '@/api/ban-records'
 import { formatDate } from '@/utils'
 import Pagination from '@/components/common/Pagination.vue'
 import type { BanRecordItem } from '@/types'
@@ -97,8 +102,8 @@ const fetchRecords = async () => {
     } else {
       ElMessage.error(res.message || '获取操作日志失败')
     }
-  } catch (error) {
-    ElMessage.error('获取操作日志失败')
+  } catch {
+    
   } finally {
     loading.value = false
   }
@@ -112,6 +117,25 @@ const handleFilter = () => {
 const maskPhone = (phone: string) => {
   if (!phone || phone.length < 7) return phone || '-'
   return phone.slice(0, 3) + '****' + phone.slice(-4)
+}
+
+const handleDelete = async (row: BanRecordItem) => {
+  try {
+    await ElMessageBox.confirm('确定删除该操作日志？', '删除确认', {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消'
+    })
+    const res = await deleteBanRecord(row.id)
+    if (res.code === 0) {
+      ElMessage.success('删除成功')
+      fetchRecords()
+    } else {
+      ElMessage.error(res.message || '删除失败')
+    }
+  } catch {
+    
+  }
 }
 
 onMounted(() => {

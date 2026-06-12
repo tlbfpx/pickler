@@ -168,8 +168,38 @@ export interface LoginResponse {
 
 export interface DashboardStats {
   totalUsers: number
-  activeEvents: number
-  recentRegistrations: number
+  bannedUsers: number
+  newUsersWeek: number
+  totalEvents: number
+  openEvents: number
+  inProgressEvents: number
+  totalRegistrations: number
+  recentRegistrationsCount: number
+  totalRevenue: number
+  weeklyRevenue: number
+  starTierDistribution: Record<string, number>
+  partyTierDistribution: Record<string, number>
+  eventTypes: Record<string, number>
+  dailyNewUsers: Array<{ date: string; count: number }>
+  dailyRegistrations: Array<{ date: string; count: number }>
+  recentRegistrations: Array<{
+    id: number
+    nickname: string | null
+    eventTitle: string
+    matchType: string
+    status: string
+    createdAt: string
+  }>
+  upcomingEvents: Array<{
+    id: number
+    title: string
+    type: string
+    eventTime: string | null
+    location: string | null
+    currentParticipants: number
+    maxParticipants: number | null
+    status: string
+  }>
 }
 
 // ==================== Common Types ====================

@@ -10,4 +10,5 @@ public interface AdminUserService {
     Long createAdminUser(AdminUserCreateRequest request);
     void updateAdminUser(Long id, String role, String status);
     void resetPassword(Long id, String newPassword);
+    void deleteAdminUser(Long id, Long currentAdminId);
 }

@@ -15,4 +15,5 @@ public class UserProfileVO {
     private Integer partyPoints;
     private String starTier;
     private String partyTier;
+    private Integer totalEvents;
 }

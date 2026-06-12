@@ -134,33 +134,24 @@ public class RankingServiceImpl implements RankingService {
                 .eq(Ranking::getType, type));
 
         List<Ranking> toInsert = new ArrayList<>();
-        Map<String, List<User>> tierGroups = users.stream()
-                .collect(Collectors.groupingBy(u -> {
-                    int points = "STAR".equals(type) ? u.getStarPoints() : u.getPartyPoints();
-                    return calculateTier(points, type);
-                }));
+        int globalRank = 1;
+        for (User user : users) {
+            int points = "STAR".equals(type) ? user.getStarPoints() : user.getPartyPoints();
+            String tier = calculateTier(points, type);
 
-        for (Map.Entry<String, List<User>> entry : tierGroups.entrySet()) {
-            String tier = entry.getKey();
-            List<User> tierUsers = entry.getValue();
-            int rank = 1;
-            for (User user : tierUsers) {
-                int points = "STAR".equals(type) ? user.getStarPoints() : user.getPartyPoints();
+            Ranking existing = existingRankingMap.get(user.getId());
+            int change = existing != null ? existing.getRank() - globalRank : 0;
 
-                Ranking existing = existingRankingMap.get(user.getId());
-                int change = existing != null ? existing.getRank() - rank : 0;
-
-                Ranking ranking = new Ranking();
-                ranking.setUserId(user.getId());
-                ranking.setType(type);
-                ranking.setTier(tier);
-                ranking.setRank(rank);
-                ranking.setPoints(points);
-                ranking.setChange(change);
-                ranking.setSeason(CURRENT_SEASON);
-                toInsert.add(ranking);
-                rank++;
-            }
+            Ranking ranking = new Ranking();
+            ranking.setUserId(user.getId());
+            ranking.setType(type);
+            ranking.setTier(tier);
+            ranking.setRank(globalRank);
+            ranking.setPoints(points);
+            ranking.setChange(change);
+            ranking.setSeason(CURRENT_SEASON);
+            toInsert.add(ranking);
+            globalRank++;
         }
 
         // Batch insert
@@ -196,7 +187,7 @@ public class RankingServiceImpl implements RankingService {
         LambdaQueryWrapper<Ranking> queryWrapper = new LambdaQueryWrapper<Ranking>()
                 .eq(Ranking::getType, query.getType())
                 .eq(query.getTier() != null, Ranking::getTier, query.getTier())
-                .orderByAsc(Ranking::getRank);
+                .orderByDesc(Ranking::getPoints);
 
         List<Ranking> rankings = rankingMapper.selectList(queryWrapper);
 

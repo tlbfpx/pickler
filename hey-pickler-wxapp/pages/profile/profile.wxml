@@ -1,72 +1,119 @@
 <!-- Profile page -->
 <view class="page" wx:if="{{!loading && userInfo}}">
-  <!-- User header -->
-  <view class="user-header">
-    <image class="user-avatar" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"></image>
 
-    <view class="user-info">
-      <view class="user-name">{{userInfo.nickname || '未设置昵称'}}</view>
-      <view class="user-city" bindtap="handleEditCity">
-        <text>{{userInfo.city || '未设置城市'}}</text>
-        <text class="edit-icon">✏️</text>
+  <!-- Header -->
+  <view class="profile-header">
+    <view class="header-bg"></view>
+    <view class="header-content">
+      <image class="user-avatar" src="{{userInfo.avatarUrl || '/images/default-avatar.png'}}" mode="aspectFill"></image>
+      <view class="user-meta">
+        <view class="user-name">{{userInfo.nickname || '未设置昵称'}}</view>
+        <view class="user-location">
+          <text class="location-icon">📍</text>
+          <text>{{userInfo.city || '未设置城市'}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Stats row -->
+    <view class="stats-row">
+      <view class="stat-item" bindtap="navigateToMyEvents" data-type="ALL">
+        <text class="stat-value">{{userInfo.totalEvents || 0}}</text>
+        <text class="stat-label">参赛数</text>
+      </view>
+      <view class="stat-divider"></view>
+      <view class="stat-item" bindtap="navigateToRanking">
+        <text class="stat-value">{{userInfo.starPoints || 0}}</text>
+        <text class="stat-label">明星积分</text>
+      </view>
+      <view class="stat-divider"></view>
+      <view class="stat-item" bindtap="navigateToRanking">
+        <text class="stat-value">{{userInfo.partyPoints || 0}}</text>
+        <text class="stat-label">派对积分</text>
       </view>
     </view>
   </view>
 
-  <!-- Star points card -->
-  <view class="points-card star-card">
-    <view class="points-header">
-      <text class="points-title">明星积分</text>
-      <tier-badge tier="{{userInfo.starTier || 'SHINING'}}" type="STAR" size="medium"></tier-badge>
-    </view>
-    <view class="points-value">{{userInfo.starPoints || 0}}</view>
-    <view class="points-actions">
-      <button class="points-btn" bindtap="navigateToMyEvents" data-type="STAR">我的赛事</button>
-      <button class="points-btn" bindtap="navigateToRanking" data-type="STAR">明星排名</button>
-    </view>
-  </view>
-
-  <!-- Party points card -->
-  <view class="points-card party-card">
-    <view class="points-header">
-      <text class="points-title">派对积分</text>
-      <tier-badge tier="{{userInfo.partyTier || 'SHINING'}}" type="PARTY" size="medium"></tier-badge>
-    </view>
-    <view class="points-value">{{userInfo.partyPoints || 0}}</view>
-    <view class="points-actions">
-      <button class="points-btn" bindtap="navigateToMyEvents" data-type="PARTY">我的活动</button>
-      <button class="points-btn" bindtap="navigateToRanking" data-type="PARTY">派对排名</button>
-    </view>
-  </view>
-
-  <!-- User info list -->
-  <view class="info-list">
-    <view class="info-item" bindtap="handleEditNickname">
-      <text class="info-label">昵称</text>
-      <view class="info-value">
-        <text class="value-text">{{userInfo.nickname || '未设置'}}</text>
-        <text class="edit-icon">✏️</text>
+  <!-- Tier cards -->
+  <view class="tier-section">
+    <view class="tier-card" bindtap="navigateToRanking">
+      <view class="tier-card-left">
+        <view class="tier-icon-wrap star-icon">
+          <text class="tier-icon-text">★</text>
+        </view>
+        <view class="tier-card-info">
+          <text class="tier-card-label">明星段位</text>
+          <text class="tier-card-points">{{userInfo.starPoints || 0}} 分</text>
+        </view>
+      </view>
+      <view class="tier-card-right">
+        <tier-badge tier="{{userInfo.starTier || 'SHINING'}}" type="STAR" size="medium"></tier-badge>
+        <text class="tier-arrow">›</text>
       </view>
     </view>
 
-    <view class="info-item" bindtap="handleEditCity">
-      <text class="info-label">城市</text>
-      <view class="info-value">
-        <text class="value-text">{{userInfo.city || '未设置'}}</text>
-        <text class="edit-icon">✏️</text>
+    <view class="tier-card" bindtap="navigateToRanking">
+      <view class="tier-card-left">
+        <view class="tier-icon-wrap party-icon">
+          <text class="tier-icon-text">🎉</text>
+        </view>
+        <view class="tier-card-info">
+          <text class="tier-card-label">派对段位</text>
+          <text class="tier-card-points">{{userInfo.partyPoints || 0}} 分</text>
+        </view>
       </view>
-    </view>
-
-    <view class="info-item" bindtap="handleBindPhone">
-      <text class="info-label">手机号</text>
-      <view class="info-value">
-        <text class="value-text">{{userInfo.phone || '未绑定'}}</text>
-        <text class="edit-icon">{{userInfo.phone ? '' : '➕'}}</text>
+      <view class="tier-card-right">
+        <tier-badge tier="{{userInfo.partyTier || 'SHINING'}}" type="PARTY" size="medium"></tier-badge>
+        <text class="tier-arrow">›</text>
       </view>
     </view>
   </view>
 
-  <!-- Logout button -->
+  <!-- My events entry -->
+  <view class="menu-section">
+    <view class="menu-group">
+      <view class="menu-item" bindtap="navigateToMyEvents" data-type="ALL">
+        <view class="menu-icon-wrap" style="background: linear-gradient(135deg, #FF9800, #F57C00);">
+          <text class="menu-icon">🏆</text>
+        </view>
+        <text class="menu-label">我的赛事</text>
+        <text class="menu-arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Settings: personal info editing -->
+  <view class="menu-section">
+    <view class="section-title">设置</view>
+    <view class="menu-group">
+      <view class="menu-item" bindtap="handleEditNickname">
+        <view class="menu-icon-wrap" style="background: linear-gradient(135deg, #607D8B, #455A64);">
+          <text class="menu-icon">👤</text>
+        </view>
+        <text class="menu-label">昵称</text>
+        <text class="menu-value">{{userInfo.nickname || '未设置'}}</text>
+        <text class="menu-arrow">›</text>
+      </view>
+      <view class="menu-item" bindtap="handleEditCity">
+        <view class="menu-icon-wrap" style="background: linear-gradient(135deg, #009688, #00796B);">
+          <text class="menu-icon">📍</text>
+        </view>
+        <text class="menu-label">城市</text>
+        <text class="menu-value">{{userInfo.city || '未设置'}}</text>
+        <text class="menu-arrow">›</text>
+      </view>
+      <view class="menu-item" bindtap="handleBindPhone">
+        <view class="menu-icon-wrap" style="background: linear-gradient(135deg, #2196F3, #1976D2);">
+          <text class="menu-icon">📱</text>
+        </view>
+        <text class="menu-label">手机号</text>
+        <text class="menu-value">{{userInfo.phone || '未绑定'}}</text>
+        <text class="menu-arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Logout -->
   <view class="logout-section">
     <button class="logout-btn" bindtap="handleLogout">退出登录</button>
   </view>
@@ -83,11 +130,30 @@
     <view class="modal-title">绑定手机号</view>
     <view class="modal-desc">绑定手机号后可以更安全地使用小程序</view>
     <button
-      class="modal-btn"
+      class="modal-btn primary"
       open-type="getPhoneNumber"
       bindgetphonenumber="getPhoneNumber">
       授权手机号
     </button>
     <button class="modal-btn secondary" bindtap="closePhoneModal">取消</button>
+  </view>
+</view>
+
+<!-- Edit modal -->
+<view wx:if="{{showEditModal}}" class="modal-mask" bindtap="cancelEdit">
+  <view class="modal-content" catchtap="stopPropagation">
+    <view class="modal-title">{{editTitle}}</view>
+    <input
+      class="edit-input"
+      type="text"
+      value="{{editValue}}"
+      placeholder="请输入"
+      maxlength="20"
+      focus="{{showEditModal}}"
+      bindinput="onEditInput" />
+    <view class="edit-actions">
+      <button class="modal-btn secondary" bindtap="cancelEdit">取消</button>
+      <button class="modal-btn primary" bindtap="confirmEdit">保存</button>
+    </view>
   </view>
 </view>

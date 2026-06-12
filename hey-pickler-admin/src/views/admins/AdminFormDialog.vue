@@ -25,6 +25,9 @@
           placeholder="请输入密码"
           show-password
         />
+        <div v-if="!admin" class="form-tip">
+          密码至少8位，须包含字母和数字
+        </div>
         <div v-if="admin" class="form-tip">
           留空则保持当前密码不变
         </div>
@@ -74,9 +77,13 @@ const rules: FormRules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   password: [
     {
-      validator: (rule, value, callback) => {
+      validator: (rule: any, value: string, callback: any) => {
         if (!props.admin && !value) {
           callback(new Error('请输入密码'))
+        } else if (!props.admin && value.length < 8) {
+          callback(new Error('密码至少8位'))
+        } else if (!props.admin && !(/(?=.*[a-zA-Z])(?=.*\d)/.test(value))) {
+          callback(new Error('密码须包含字母和数字'))
         } else {
           callback()
         }
@@ -136,8 +143,8 @@ const handleConfirm = async () => {
     } else {
       ElMessage.error(res.message || '操作失败')
     }
-  } catch (error) {
-    ElMessage.error('操作失败')
+  } catch {
+    
   } finally {
     loading.value = false
   }

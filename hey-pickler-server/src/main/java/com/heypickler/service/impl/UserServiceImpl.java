@@ -49,6 +49,8 @@ public class UserServiceImpl implements UserService {
         vo.setPartyPoints(user.getPartyPoints());
         vo.setStarTier(user.getStarTier());
         vo.setPartyTier(user.getPartyTier());
+        vo.setTotalEvents(Math.toIntExact(registrationMapper.selectCount(
+                new LambdaQueryWrapper<Registration>().eq(Registration::getUserId, userId))));
         return vo;
     }
 

@@ -82,9 +82,9 @@ const rules: FormRules = {
 watch(() => props.banner, (val) => {
   if (val) {
     formData.imageUrl = val.imageUrl
-    formData.linkUrl = val.linkUrl
-    formData.sortOrder = val.order
-    formData.status = val.isActive ? 'ACTIVE' : 'INACTIVE'
+    formData.linkUrl = val.linkUrl || ''
+    formData.sortOrder = val.sortOrder
+    formData.status = val.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE'
   } else {
     formRef.value?.resetFields()
   }
@@ -122,8 +122,8 @@ const handleConfirm = async () => {
     } else {
       ElMessage.error(res.message || '操作失败')
     }
-  } catch (error) {
-    ElMessage.error('操作失败')
+  } catch {
+    
   } finally {
     loading.value = false
   }

@@ -109,8 +109,11 @@
             {{ row.fee ? '¥' + row.fee : '免费' }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column label="操作" width="210" fixed="right">
           <template #default="{ row }">
+            <el-button type="success" size="small" @click="handleViewRegistrations(row)">
+              报名
+            </el-button>
             <el-button type="primary" size="small" @click="handleEdit(row)">
               编辑
             </el-button>
@@ -135,6 +138,12 @@
       :event="selectedActivity"
       @success="fetchActivities"
     />
+
+    <RegistrationDrawer
+      v-model="regDrawerVisible"
+      :event="selectedActivityForReg"
+      @changed="fetchActivities"
+    />
   </div>
 </template>
 
@@ -146,6 +155,7 @@ import { getEventList, deleteEvent, changeEventStatus } from '@/api/events'
 import { formatDate, formatEventStatus, getEventStatusColor } from '@/utils'
 import Pagination from '@/components/common/Pagination.vue'
 import ActivityFormDialog from './ActivityFormDialog.vue'
+import RegistrationDrawer from '../events/RegistrationDrawer.vue'
 import type { Event } from '@/types'
 
 const loading = ref(false)
@@ -163,6 +173,9 @@ const pagination = reactive({
 
 const formDialogVisible = ref(false)
 const selectedActivity = ref<Event | null>(null)
+
+const regDrawerVisible = ref(false)
+const selectedActivityForReg = ref<Event | null>(null)
 
 const fetchActivities = async () => {
   loading.value = true
@@ -183,8 +196,8 @@ const fetchActivities = async () => {
     } else {
       ElMessage.error(res.message || '获取活动列表失败')
     }
-  } catch (error) {
-    ElMessage.error('获取活动列表失败')
+  } catch {
+    
   } finally {
     loading.value = false
   }
@@ -214,6 +227,11 @@ const handleEdit = (activity: Event) => {
   formDialogVisible.value = true
 }
 
+const handleViewRegistrations = (activity: Event) => {
+  selectedActivityForReg.value = activity
+  regDrawerVisible.value = true
+}
+
 const handleDelete = async (activity: Event) => {
   try {
     await ElMessageBox.confirm(
@@ -230,7 +248,7 @@ const handleDelete = async (activity: Event) => {
     }
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error('删除活动失败')
+      
     }
   }
 }
@@ -262,7 +280,7 @@ const handleChangeStatus = async (activity: Event, targetStatus: string) => {
       ElMessage.error(res.message || '状态变更失败')
     }
   } catch {
-    ElMessage.error('状态变更失败')
+    
   }
 }
 

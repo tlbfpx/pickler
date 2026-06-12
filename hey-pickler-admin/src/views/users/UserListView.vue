@@ -143,8 +143,8 @@ const fetchUsers = async () => {
     } else {
       ElMessage.error(res.message || '获取用户列表失败')
     }
-  } catch (error) {
-    ElMessage.error('获取用户列表失败')
+  } catch {
+    
   } finally {
     loading.value = false
   }
@@ -174,8 +174,8 @@ const handleUnban = async (user: User) => {
     } else {
       ElMessage.error(res.message || '解禁用户失败')
     }
-  } catch (error) {
-    ElMessage.error('解禁用户失败')
+  } catch {
+    
   }
 }
 

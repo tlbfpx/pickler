@@ -392,8 +392,8 @@ const handleConfirm = async () => {
     } else {
       ElMessage.error(res.message || '积分录入失败')
     }
-  } catch (error) {
-    ElMessage.error('积分录入失败')
+  } catch {
+    
   } finally {
     loading.value = false
   }

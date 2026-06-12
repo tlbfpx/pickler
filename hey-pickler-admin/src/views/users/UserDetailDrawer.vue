@@ -237,7 +237,7 @@ async function loadPoints(type: string, page: number) {
         else { partyPoints.value.push(...list) }
       }
     }
-  } catch { ElMessage.error('获取积分明细失败') }
+  } catch {  }
   pointsLoading.value = false
 }
 
@@ -256,7 +256,7 @@ async function loadEvents(type: string, page: number) {
         else { partyEvents.value.push(...list) }
       }
     }
-  } catch { ElMessage.error('获取参赛记录失败') }
+  } catch {  }
   eventsLoading.value = false
 }
 

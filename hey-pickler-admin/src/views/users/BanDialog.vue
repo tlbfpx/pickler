@@ -97,8 +97,8 @@ const handleConfirm = async () => {
     } else {
       ElMessage.error(res.message || '禁赛用户失败')
     }
-  } catch (error) {
-    ElMessage.error('禁赛用户失败')
+  } catch {
+    
   } finally {
     loading.value = false
   }

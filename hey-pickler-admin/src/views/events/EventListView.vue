@@ -186,8 +186,8 @@ const fetchEvents = async () => {
     } else {
       ElMessage.error(res.message || '获取赛事列表失败')
     }
-  } catch (error) {
-    ElMessage.error('获取赛事列表失败')
+  } catch {
+    
   } finally {
     loading.value = false
   }
@@ -237,7 +237,7 @@ const handleDelete = async (event: Event) => {
     }
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error('删除赛事失败')
+      
     }
   }
 }
@@ -269,7 +269,7 @@ const handleChangeStatus = async (event: Event, targetStatus: string) => {
       ElMessage.error(res.message || '状态变更失败')
     }
   } catch {
-    ElMessage.error('状态变更失败')
+    
   }
 }
 

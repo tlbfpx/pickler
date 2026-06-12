@@ -13,8 +13,6 @@ export const updateAdmin = (id: number, data: UpdateAdminRequest) => {
   return request.put<any, ApiResponse<void>>(`/admin-users/${id}`, data)
 }
 
-// NOTE: Backend does not have a DELETE endpoint for admin users
-// Soft delete can be done by updating status to DISABLED
-// export const deleteAdmin = (id: number) => {
-//   return request.delete<any, ApiResponse<void>>(`/admin-users/${id}`)
-// }
+export const deleteAdmin = (id: number) => {
+  return request.delete<any, ApiResponse<void>>(`/admin-users/${id}`)
+}

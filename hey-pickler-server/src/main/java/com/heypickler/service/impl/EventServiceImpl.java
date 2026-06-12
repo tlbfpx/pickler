@@ -264,14 +264,10 @@ public class EventServiceImpl implements EventService {
     @Override
     public void deleteEvent(Long eventId) {
         Event event = eventMapper.selectById(eventId);
-        if (event == null || event.getDeletedAt() != null) {
+        if (event == null) {
             throw new BizException(ErrorCode.NOT_FOUND);
         }
-
-        Event updateEvent = new Event();
-        updateEvent.setId(eventId);
-        updateEvent.setDeletedAt(LocalDateTime.now());
-        eventMapper.updateById(updateEvent);
+        eventMapper.deleteById(eventId);
     }
 
     @Override

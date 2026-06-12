@@ -32,7 +32,7 @@
         "selectedIconPath": "images/ranking-active.png"
       },
       {
-        "pagePath": "pages/my-events/my-events",
+        "pagePath": "pages/profile/profile",
         "text": "我的",
         "iconPath": "images/me.png",
         "selectedIconPath": "images/me-active.png"
