@@ -6,9 +6,19 @@ import {
   loginUser,
   createEvent,
   setEventStatus,
+  cleanupE2EData,
 } from './fixtures/flow.fixture'
 import type { APIRequestContext } from '@playwright/test'
 import { execSync } from 'child_process'
+
+// 文件级清理：删历史残留测试数据
+test.beforeAll(() => {
+  cleanupE2EData()
+})
+
+test.afterAll(() => {
+  cleanupE2EData()
+})
 
 /**
  * 并发测试会短时间内发起大量 login（最多 50+ 次），触发 RateLimitFilter 的

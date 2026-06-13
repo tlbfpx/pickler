@@ -7,8 +7,18 @@ import {
   createEvent,
   setEventStatus,
   registerForEvent,
+  cleanupE2EData,
 } from './fixtures/flow.fixture'
 import type { APIRequestContext } from '@playwright/test'
+
+// 全文件级清理：跑完一堆历史残留后，确保 DB 干净，断言才稳
+test.beforeAll(() => {
+  cleanupE2EData()
+})
+
+test.afterAll(() => {
+  cleanupE2EData()
+})
 
 /**
  * STAR 赛事全流程：管理员创建 → 用户报名 → 状态推进到 COMPLETED → 录入积分 →

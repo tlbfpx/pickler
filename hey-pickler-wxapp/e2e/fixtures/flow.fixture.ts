@@ -1,4 +1,6 @@
 import { test as base, expect, APIRequestContext } from '@playwright/test'
+import { execSync } from 'child_process'
+import { resolve } from 'path'
 
 export { expect }
 
@@ -7,6 +9,31 @@ const ADMIN_BASE = '/api/admin'
 
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin'
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123'
+
+/**
+ * 清掉所有 E2E 测试残留数据（dev_e2e_* 用户 + E2E-* 赛事及其关联记录）。
+ *
+ * 为啥需要：每次跑 E2E 都会创建用户/赛事，跑久了 DB 里堆上千个测试用户，
+ * 它们带积分、在排名榜里，会让后续测试的预期越来越脆。
+ *
+ * 用法：在测试文件的 beforeAll 里调用一次。
+ *  - 找不到 mysql 或 sql 文件时静默跳过（不阻塞测试）
+ *  - 默认走 monorepo 根目录的 scripts/cleanup-e2e-data.sql
+ */
+export function cleanupE2EData(): void {
+  const scriptPath = resolve(__dirname, '../../../scripts/cleanup-e2e-data.sql')
+  const dbUrl = process.env.DATABASE_URL || 'mysql://root:root@localhost/hey_pickler'
+  try {
+    execSync(`mysql -u root -proot hey_pickler < ${scriptPath}`, {
+      stdio: 'ignore',
+    })
+  } catch (e) {
+    // 静默：mysql 不在 PATH / DB 凭据不对 / sql 文件不存在时直接跳过
+    // 测试仍可运行，只是不保证 DB 干净
+    void dbUrl
+    void e
+  }
+}
 
 /** Result of an API call: HTTP status + decoded JSON body. */
 export type ApiResult<T = any> = { status: number; body: T }

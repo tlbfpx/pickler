@@ -7,8 +7,17 @@ import {
   createEvent,
   setEventStatus,
   registerForEvent,
+  cleanupE2EData,
 } from './fixtures/flow.fixture'
 import type { APIRequestContext } from '@playwright/test'
+
+test.beforeAll(() => {
+  cleanupE2EData()
+})
+
+test.afterAll(() => {
+  cleanupE2EData()
+})
 
 /**
  * PARTY 活动全流程。重点在：
