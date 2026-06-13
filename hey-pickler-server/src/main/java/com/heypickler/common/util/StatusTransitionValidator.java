@@ -7,8 +7,8 @@ public class StatusTransitionValidator {
 
     private static final Map<String, Set<String>> ALLOWED_TRANSITIONS = Map.of(
             "DRAFT", Set.of("OPEN", "CANCELLED"),
-            "OPEN", Set.of("FULL", "CANCELLED"),
-            "FULL", Set.of("OPEN", "CANCELLED"),
+            "OPEN", Set.of("FULL", "IN_PROGRESS", "CANCELLED"),
+            "FULL", Set.of("OPEN", "IN_PROGRESS", "CANCELLED"),
             "IN_PROGRESS", Set.of("COMPLETED", "CANCELLED"),
             "COMPLETED", Set.<String>of(),
             "CANCELLED", Set.<String>of()
