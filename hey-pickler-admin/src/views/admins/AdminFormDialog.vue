@@ -11,37 +11,68 @@
       :rules="rules"
       label-position="top"
     >
-      <el-form-item label="用户名" prop="username">
+      <el-form-item
+        label="用户名"
+        prop="username"
+      >
         <el-input
           v-model="formData.username"
           placeholder="请输入用户名"
           :disabled="!!admin"
         />
       </el-form-item>
-      <el-form-item label="密码" prop="password">
+      <el-form-item
+        label="密码"
+        prop="password"
+      >
         <el-input
           v-model="formData.password"
           type="password"
           placeholder="请输入密码"
           show-password
         />
-        <div v-if="!admin" class="form-tip">
+        <div
+          v-if="!admin"
+          class="form-tip"
+        >
           密码至少8位，须包含字母和数字
         </div>
-        <div v-if="admin" class="form-tip">
+        <div
+          v-if="admin"
+          class="form-tip"
+        >
           留空则保持当前密码不变
         </div>
       </el-form-item>
-      <el-form-item label="角色" prop="role">
-        <el-select v-model="formData.role" placeholder="请选择角色" style="width: 100%">
-          <el-option label="超级管理员" value="SUPER_ADMIN" />
-          <el-option label="管理员" value="ADMIN" />
+      <el-form-item
+        label="角色"
+        prop="role"
+      >
+        <el-select
+          v-model="formData.role"
+          placeholder="请选择角色"
+          style="width: 100%"
+        >
+          <el-option
+            label="超级管理员"
+            value="SUPER_ADMIN"
+          />
+          <el-option
+            label="管理员"
+            value="ADMIN"
+          />
         </el-select>
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="$emit('update:modelValue', false)">取消</el-button>
-      <el-button type="primary" :loading="loading" @click="handleConfirm">
+      <el-button @click="$emit('update:modelValue', false)">
+        取消
+      </el-button>
+      <el-button
+        type="primary"
+        :loading="loading"
+        @click="handleConfirm"
+      >
         {{ admin ? '更新' : '新建' }}
       </el-button>
     </template>

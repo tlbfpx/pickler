@@ -5,16 +5,28 @@
     size="680px"
     destroy-on-close
   >
-    <div v-loading="loading" class="detail-content">
+    <div
+      v-loading="loading"
+      class="detail-content"
+    >
       <!-- 基本信息 -->
       <div class="section">
-        <div class="section-title">基本信息</div>
+        <div class="section-title">
+          基本信息
+        </div>
         <div class="info-grid">
           <div class="info-row">
-            <el-avatar :src="user?.avatarUrl || undefined" :size="56" />
+            <el-avatar
+              :src="user?.avatarUrl || undefined"
+              :size="56"
+            />
             <div class="info-main">
-              <div class="info-name">{{ user?.nickname || '-' }}</div>
-              <div class="info-sub">ID: {{ user?.id }} · {{ user?.city || '未设置城市' }}</div>
+              <div class="info-name">
+                {{ user?.nickname || '-' }}
+              </div>
+              <div class="info-sub">
+                ID: {{ user?.id }} · {{ user?.city || '未设置城市' }}
+              </div>
             </div>
           </div>
           <div class="info-items">
@@ -24,7 +36,10 @@
             </div>
             <div class="info-item">
               <span class="label">状态</span>
-              <el-tag :type="user?.status === 'BANNED' ? 'danger' : 'success'" size="small">
+              <el-tag
+                :type="user?.status === 'BANNED' ? 'danger' : 'success'"
+                size="small"
+              >
                 {{ user?.status === 'BANNED' ? '禁赛' : '正常' }}
               </el-tag>
             </div>
@@ -38,22 +53,38 @@
 
       <!-- 积分概览 -->
       <div class="section">
-        <div class="section-title">积分概览</div>
+        <div class="section-title">
+          积分概览
+        </div>
         <div class="points-overview">
           <div class="points-card star">
-            <div class="points-label">明星积分</div>
-            <div class="points-value">{{ user?.starPoints ?? 0 }}</div>
+            <div class="points-label">
+              明星积分
+            </div>
+            <div class="points-value">
+              {{ user?.starPoints ?? 0 }}
+            </div>
             <div class="points-tier">
-              <span class="tier-badge" :style="{ backgroundColor: getTierColor(user?.starTier) }">
+              <span
+                class="tier-badge"
+                :style="{ backgroundColor: getTierColor(user?.starTier) }"
+              >
                 {{ formatTier(user?.starTier) }}
               </span>
             </div>
           </div>
           <div class="points-card party">
-            <div class="points-label">派对积分</div>
-            <div class="points-value">{{ user?.partyPoints ?? 0 }}</div>
+            <div class="points-label">
+              派对积分
+            </div>
+            <div class="points-value">
+              {{ user?.partyPoints ?? 0 }}
+            </div>
             <div class="points-tier">
-              <span class="tier-badge" :style="{ backgroundColor: getTierColor(user?.partyTier) }">
+              <span
+                class="tier-badge"
+                :style="{ backgroundColor: getTierColor(user?.partyTier) }"
+              >
                 {{ formatTier(user?.partyTier) }}
               </span>
             </div>
@@ -64,97 +95,253 @@
       <!-- 积分明细 Tabs -->
       <div class="section">
         <el-tabs v-model="activeTab">
-          <el-tab-pane label="明星积分明细" name="star-points">
-            <el-table :data="starPoints" size="small" v-loading="pointsLoading" style="width: 100%">
-              <el-table-column prop="id" label="ID" width="60" />
-              <el-table-column label="赛事" min-width="140" show-overflow-tooltip>
-                <template #default="{ row }">{{ row.eventTitle || '-' }}</template>
+          <el-tab-pane
+            label="明星积分明细"
+            name="star-points"
+          >
+            <el-table
+              v-loading="pointsLoading"
+              :data="starPoints"
+              size="small"
+              style="width: 100%"
+            >
+              <el-table-column
+                prop="id"
+                label="ID"
+                width="60"
+              />
+              <el-table-column
+                label="赛事"
+                min-width="140"
+                show-overflow-tooltip
+              >
+                <template #default="{ row }">
+                  {{ row.eventTitle || '-' }}
+                </template>
               </el-table-column>
-              <el-table-column label="积分" width="80">
+              <el-table-column
+                label="积分"
+                width="80"
+              >
                 <template #default="{ row }">
                   <span :class="row.points > 0 ? 'text-green' : 'text-red'">
                     {{ row.points > 0 ? '+' : '' }}{{ row.points }}
                   </span>
                 </template>
               </el-table-column>
-              <el-table-column prop="reason" label="原因" min-width="120" show-overflow-tooltip />
-              <el-table-column label="时间" width="150">
-                <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
+              <el-table-column
+                prop="reason"
+                label="原因"
+                min-width="120"
+                show-overflow-tooltip
+              />
+              <el-table-column
+                label="时间"
+                width="150"
+              >
+                <template #default="{ row }">
+                  {{ formatDate(row.createdAt) }}
+                </template>
               </el-table-column>
             </el-table>
-            <div class="load-more" v-if="starPointsTotal > starPoints.length">
-              <el-button link type="primary" @click="loadMorePoints('STAR')">
+            <div
+              v-if="starPointsTotal > starPoints.length"
+              class="load-more"
+            >
+              <el-button
+                link
+                type="primary"
+                @click="loadMorePoints('STAR')"
+              >
                 加载更多 ({{ starPoints.length }}/{{ starPointsTotal }})
               </el-button>
             </div>
           </el-tab-pane>
 
-          <el-tab-pane label="派对积分明细" name="party-points">
-            <el-table :data="partyPoints" size="small" v-loading="pointsLoading" style="width: 100%">
-              <el-table-column prop="id" label="ID" width="60" />
-              <el-table-column label="赛事" min-width="140" show-overflow-tooltip>
-                <template #default="{ row }">{{ row.eventTitle || '-' }}</template>
+          <el-tab-pane
+            label="派对积分明细"
+            name="party-points"
+          >
+            <el-table
+              v-loading="pointsLoading"
+              :data="partyPoints"
+              size="small"
+              style="width: 100%"
+            >
+              <el-table-column
+                prop="id"
+                label="ID"
+                width="60"
+              />
+              <el-table-column
+                label="赛事"
+                min-width="140"
+                show-overflow-tooltip
+              >
+                <template #default="{ row }">
+                  {{ row.eventTitle || '-' }}
+                </template>
               </el-table-column>
-              <el-table-column label="积分" width="80">
+              <el-table-column
+                label="积分"
+                width="80"
+              >
                 <template #default="{ row }">
                   <span :class="row.points > 0 ? 'text-green' : 'text-red'">
                     {{ row.points > 0 ? '+' : '' }}{{ row.points }}
                   </span>
                 </template>
               </el-table-column>
-              <el-table-column prop="reason" label="原因" min-width="120" show-overflow-tooltip />
-              <el-table-column label="时间" width="150">
-                <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
+              <el-table-column
+                prop="reason"
+                label="原因"
+                min-width="120"
+                show-overflow-tooltip
+              />
+              <el-table-column
+                label="时间"
+                width="150"
+              >
+                <template #default="{ row }">
+                  {{ formatDate(row.createdAt) }}
+                </template>
               </el-table-column>
             </el-table>
-            <div class="load-more" v-if="partyPointsTotal > partyPoints.length">
-              <el-button link type="primary" @click="loadMorePoints('PARTY')">
+            <div
+              v-if="partyPointsTotal > partyPoints.length"
+              class="load-more"
+            >
+              <el-button
+                link
+                type="primary"
+                @click="loadMorePoints('PARTY')"
+              >
                 加载更多 ({{ partyPoints.length }}/{{ partyPointsTotal }})
               </el-button>
             </div>
           </el-tab-pane>
 
-          <el-tab-pane label="赛事记录" name="star-events">
-            <el-table :data="starEvents" size="small" v-loading="eventsLoading" style="width: 100%">
-              <el-table-column prop="id" label="ID" width="60" />
-              <el-table-column prop="title" label="赛事名称" min-width="160" show-overflow-tooltip />
-              <el-table-column label="时间" width="150">
-                <template #default="{ row }">{{ formatDate(row.eventTime) }}</template>
-              </el-table-column>
-              <el-table-column prop="location" label="地点" width="120" show-overflow-tooltip />
-              <el-table-column label="报名状态" width="90">
+          <el-tab-pane
+            label="赛事记录"
+            name="star-events"
+          >
+            <el-table
+              v-loading="eventsLoading"
+              :data="starEvents"
+              size="small"
+              style="width: 100%"
+            >
+              <el-table-column
+                prop="id"
+                label="ID"
+                width="60"
+              />
+              <el-table-column
+                prop="title"
+                label="赛事名称"
+                min-width="160"
+                show-overflow-tooltip
+              />
+              <el-table-column
+                label="时间"
+                width="150"
+              >
                 <template #default="{ row }">
-                  <el-tag size="small" :type="regTagType(row.registrationStatus)">
+                  {{ formatDate(row.eventTime) }}
+                </template>
+              </el-table-column>
+              <el-table-column
+                prop="location"
+                label="地点"
+                width="120"
+                show-overflow-tooltip
+              />
+              <el-table-column
+                label="报名状态"
+                width="90"
+              >
+                <template #default="{ row }">
+                  <el-tag
+                    size="small"
+                    :type="regTagType(row.registrationStatus)"
+                  >
                     {{ formatRegStatus(row.registrationStatus) }}
                   </el-tag>
                 </template>
               </el-table-column>
             </el-table>
-            <div class="load-more" v-if="starEventsTotal > starEvents.length">
-              <el-button link type="primary" @click="loadMoreEvents('STAR')">
+            <div
+              v-if="starEventsTotal > starEvents.length"
+              class="load-more"
+            >
+              <el-button
+                link
+                type="primary"
+                @click="loadMoreEvents('STAR')"
+              >
                 加载更多 ({{ starEvents.length }}/{{ starEventsTotal }})
               </el-button>
             </div>
           </el-tab-pane>
 
-          <el-tab-pane label="活动记录" name="party-events">
-            <el-table :data="partyEvents" size="small" v-loading="eventsLoading" style="width: 100%">
-              <el-table-column prop="id" label="ID" width="60" />
-              <el-table-column prop="title" label="活动名称" min-width="160" show-overflow-tooltip />
-              <el-table-column label="时间" width="150">
-                <template #default="{ row }">{{ formatDate(row.eventTime) }}</template>
-              </el-table-column>
-              <el-table-column prop="location" label="地点" width="120" show-overflow-tooltip />
-              <el-table-column label="报名状态" width="90">
+          <el-tab-pane
+            label="活动记录"
+            name="party-events"
+          >
+            <el-table
+              v-loading="eventsLoading"
+              :data="partyEvents"
+              size="small"
+              style="width: 100%"
+            >
+              <el-table-column
+                prop="id"
+                label="ID"
+                width="60"
+              />
+              <el-table-column
+                prop="title"
+                label="活动名称"
+                min-width="160"
+                show-overflow-tooltip
+              />
+              <el-table-column
+                label="时间"
+                width="150"
+              >
                 <template #default="{ row }">
-                  <el-tag size="small" :type="regTagType(row.registrationStatus)">
+                  {{ formatDate(row.eventTime) }}
+                </template>
+              </el-table-column>
+              <el-table-column
+                prop="location"
+                label="地点"
+                width="120"
+                show-overflow-tooltip
+              />
+              <el-table-column
+                label="报名状态"
+                width="90"
+              >
+                <template #default="{ row }">
+                  <el-tag
+                    size="small"
+                    :type="regTagType(row.registrationStatus)"
+                  >
                     {{ formatRegStatus(row.registrationStatus) }}
                   </el-tag>
                 </template>
               </el-table-column>
             </el-table>
-            <div class="load-more" v-if="partyEventsTotal > partyEvents.length">
-              <el-button link type="primary" @click="loadMoreEvents('PARTY')">
+            <div
+              v-if="partyEventsTotal > partyEvents.length"
+              class="load-more"
+            >
+              <el-button
+                link
+                type="primary"
+                @click="loadMoreEvents('PARTY')"
+              >
                 加载更多 ({{ partyEvents.length }}/{{ partyEventsTotal }})
               </el-button>
             </div>

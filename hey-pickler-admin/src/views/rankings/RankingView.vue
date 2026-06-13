@@ -3,36 +3,72 @@
     <div class="page-header">
       <h1>排名管理</h1>
       <div class="header-actions">
-        <el-button type="primary" @click="handleEnterPoints">
+        <el-button
+          type="primary"
+          @click="handleEnterPoints"
+        >
           <el-icon><Plus /></el-icon>
           录入积分
         </el-button>
-        <el-button type="success" @click="handleRefresh('STAR')">
+        <el-button
+          type="success"
+          @click="handleRefresh('STAR')"
+        >
           刷新明星排名
         </el-button>
-        <el-button type="success" @click="handleRefresh('PARTY')">
+        <el-button
+          type="success"
+          @click="handleRefresh('PARTY')"
+        >
           刷新派对排名
         </el-button>
       </div>
     </div>
 
-    <el-tabs v-model="activeTab" @tab-change="handleTabChange">
-      <el-tab-pane label="明星排名" name="STAR">
+    <el-tabs
+      v-model="activeTab"
+      @tab-change="handleTabChange"
+    >
+      <el-tab-pane
+        label="明星排名"
+        name="STAR"
+      >
         <div class="card">
-          <el-table v-loading="loading" :data="starRankings" style="width: 100%">
-            <el-table-column prop="rank" label="排名" width="80" />
-            <el-table-column label="用户" width="250">
+          <el-table
+            v-loading="loading"
+            :data="starRankings"
+            style="width: 100%"
+          >
+            <el-table-column
+              prop="rank"
+              label="排名"
+              width="80"
+            />
+            <el-table-column
+              label="用户"
+              width="250"
+            >
               <template #default="{ row }">
                 <div class="user-cell">
-                  <el-avatar :src="row.avatarUrl || undefined" :size="40" />
+                  <el-avatar
+                    :src="row.avatarUrl || undefined"
+                    :size="40"
+                  />
                   <div class="user-info">
-                    <div class="user-name">{{ row.nickname || '-' }}</div>
-                    <div class="user-id">ID: {{ row.userId }}</div>
+                    <div class="user-name">
+                      {{ row.nickname || '-' }}
+                    </div>
+                    <div class="user-id">
+                      ID: {{ row.userId }}
+                    </div>
                   </div>
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="级别" width="120">
+            <el-table-column
+              label="级别"
+              width="120"
+            >
               <template #default="{ row }">
                 <span
                   class="tier-badge"
@@ -42,8 +78,15 @@
                 </span>
               </template>
             </el-table-column>
-            <el-table-column prop="points" label="积分" width="120" />
-            <el-table-column label="城市" width="100">
+            <el-table-column
+              prop="points"
+              label="积分"
+              width="120"
+            />
+            <el-table-column
+              label="城市"
+              width="100"
+            >
               <template #default="{ row }">
                 {{ row.city || '-' }}
               </template>
@@ -52,22 +95,46 @@
         </div>
       </el-tab-pane>
 
-      <el-tab-pane label="派对排名" name="PARTY">
+      <el-tab-pane
+        label="派对排名"
+        name="PARTY"
+      >
         <div class="card">
-          <el-table v-loading="loading" :data="partyRankings" style="width: 100%">
-            <el-table-column prop="rank" label="排名" width="80" />
-            <el-table-column label="用户" width="250">
+          <el-table
+            v-loading="loading"
+            :data="partyRankings"
+            style="width: 100%"
+          >
+            <el-table-column
+              prop="rank"
+              label="排名"
+              width="80"
+            />
+            <el-table-column
+              label="用户"
+              width="250"
+            >
               <template #default="{ row }">
                 <div class="user-cell">
-                  <el-avatar :src="row.avatarUrl || undefined" :size="40" />
+                  <el-avatar
+                    :src="row.avatarUrl || undefined"
+                    :size="40"
+                  />
                   <div class="user-info">
-                    <div class="user-name">{{ row.nickname || '-' }}</div>
-                    <div class="user-id">ID: {{ row.userId }}</div>
+                    <div class="user-name">
+                      {{ row.nickname || '-' }}
+                    </div>
+                    <div class="user-id">
+                      ID: {{ row.userId }}
+                    </div>
                   </div>
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="级别" width="120">
+            <el-table-column
+              label="级别"
+              width="120"
+            >
               <template #default="{ row }">
                 <span
                   class="tier-badge"
@@ -77,8 +144,15 @@
                 </span>
               </template>
             </el-table-column>
-            <el-table-column prop="points" label="积分" width="120" />
-            <el-table-column label="城市" width="100">
+            <el-table-column
+              prop="points"
+              label="积分"
+              width="120"
+            />
+            <el-table-column
+              label="城市"
+              width="100"
+            >
               <template #default="{ row }">
                 {{ row.city || '-' }}
               </template>
@@ -88,7 +162,10 @@
       </el-tab-pane>
     </el-tabs>
 
-    <PointEntryDialog v-model="pointDialogVisible" @success="fetchRankings" />
+    <PointEntryDialog
+      v-model="pointDialogVisible"
+      @success="fetchRankings"
+    />
   </div>
 </template>
 

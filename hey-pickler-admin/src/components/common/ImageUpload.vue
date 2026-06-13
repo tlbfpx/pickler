@@ -13,9 +13,20 @@
         上传图片
       </el-button>
     </el-upload>
-    <div v-if="modelValue" class="image-preview">
-      <el-image :src="modelValue" fit="contain" :preview-src-list="[modelValue]" />
-      <el-button type="danger" size="small" @click="handleRemove">
+    <div
+      v-if="modelValue"
+      class="image-preview"
+    >
+      <el-image
+        :src="modelValue"
+        fit="contain"
+        :preview-src-list="[modelValue]"
+      />
+      <el-button
+        type="danger"
+        size="small"
+        @click="handleRemove"
+      >
         <el-icon><Delete /></el-icon>
         删除
       </el-button>

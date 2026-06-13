@@ -2,7 +2,10 @@
   <div>
     <div class="page-header">
       <h1>活动管理</h1>
-      <el-button type="primary" @click="handleCreate">
+      <el-button
+        type="primary"
+        @click="handleCreate"
+      >
         <el-icon><Plus /></el-icon>
         新建活动
       </el-button>
@@ -43,34 +46,94 @@
           style="width: 150px"
           @change="handleFilter"
         >
-          <el-option label="草稿" value="DRAFT" />
-          <el-option label="报名中" value="OPEN" />
-          <el-option label="名额已满" value="FULL" />
-          <el-option label="进行中" value="IN_PROGRESS" />
-          <el-option label="已结束" value="COMPLETED" />
-          <el-option label="已取消" value="CANCELLED" />
+          <el-option
+            label="草稿"
+            value="DRAFT"
+          />
+          <el-option
+            label="报名中"
+            value="OPEN"
+          />
+          <el-option
+            label="名额已满"
+            value="FULL"
+          />
+          <el-option
+            label="进行中"
+            value="IN_PROGRESS"
+          />
+          <el-option
+            label="已结束"
+            value="COMPLETED"
+          />
+          <el-option
+            label="已取消"
+            value="CANCELLED"
+          />
         </el-select>
-        <el-button type="primary" @click="handleFilter">查询</el-button>
-        <el-button @click="handleReset">重置</el-button>
+        <el-button
+          type="primary"
+          @click="handleFilter"
+        >
+          查询
+        </el-button>
+        <el-button @click="handleReset">
+          重置
+        </el-button>
       </div>
 
-      <el-table v-loading="loading" :data="activityList" style="width: 100%; margin-top: 16px">
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="location" label="地点" width="150" show-overflow-tooltip />
-        <el-table-column label="活动时间" width="170">
+      <el-table
+        v-loading="loading"
+        :data="activityList"
+        style="width: 100%; margin-top: 16px"
+      >
+        <el-table-column
+          prop="id"
+          label="ID"
+          width="80"
+        />
+        <el-table-column
+          prop="title"
+          label="标题"
+          min-width="200"
+          show-overflow-tooltip
+        />
+        <el-table-column
+          prop="location"
+          label="地点"
+          width="150"
+          show-overflow-tooltip
+        />
+        <el-table-column
+          label="活动时间"
+          width="170"
+        >
           <template #default="{ row }">
             {{ formatDate(row.eventTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="报名截止" width="170">
+        <el-table-column
+          label="报名截止"
+          width="170"
+        >
           <template #default="{ row }">
             {{ formatDate(row.registrationDeadline) }}
           </template>
         </el-table-column>
-        <el-table-column prop="maxParticipants" label="上限" width="70" />
-        <el-table-column prop="currentParticipants" label="已报名" width="70" />
-        <el-table-column label="状态" width="130">
+        <el-table-column
+          prop="maxParticipants"
+          label="上限"
+          width="70"
+        />
+        <el-table-column
+          prop="currentParticipants"
+          label="已报名"
+          width="70"
+        />
+        <el-table-column
+          label="状态"
+          width="130"
+        >
           <template #default="{ row }">
             <el-popover
               placement="bottom"
@@ -94,30 +157,55 @@
                   class="status-option"
                   @click="handleChangeStatus(row, target.value)"
                 >
-                  <span class="status-dot" :style="{ backgroundColor: getEventStatusColor(target.value) }"></span>
+                  <span
+                    class="status-dot"
+                    :style="{ backgroundColor: getEventStatusColor(target.value) }"
+                  />
                   {{ target.label }}
                 </div>
-                <div v-if="getAllowedStatusTransitions(row.status).length === 0" class="status-option disabled">
+                <div
+                  v-if="getAllowedStatusTransitions(row.status).length === 0"
+                  class="status-option disabled"
+                >
                   无可用转换
                 </div>
               </div>
             </el-popover>
           </template>
         </el-table-column>
-        <el-table-column label="费用" width="80">
+        <el-table-column
+          label="费用"
+          width="80"
+        >
           <template #default="{ row }">
             {{ row.fee ? '¥' + row.fee : '免费' }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="210" fixed="right">
+        <el-table-column
+          label="操作"
+          width="210"
+          fixed="right"
+        >
           <template #default="{ row }">
-            <el-button type="success" size="small" @click="handleViewRegistrations(row)">
+            <el-button
+              type="success"
+              size="small"
+              @click="handleViewRegistrations(row)"
+            >
               报名
             </el-button>
-            <el-button type="primary" size="small" @click="handleEdit(row)">
+            <el-button
+              type="primary"
+              size="small"
+              @click="handleEdit(row)"
+            >
               编辑
             </el-button>
-            <el-button type="danger" size="small" @click="handleDelete(row)">
+            <el-button
+              type="danger"
+              size="small"
+              @click="handleDelete(row)"
+            >
               删除
             </el-button>
           </template>

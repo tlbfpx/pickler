@@ -11,10 +11,19 @@
       :rules="rules"
       label-position="top"
     >
-      <el-form-item label="标题" prop="title">
-        <el-input v-model="formData.title" placeholder="请输入活动标题" />
+      <el-form-item
+        label="标题"
+        prop="title"
+      >
+        <el-input
+          v-model="formData.title"
+          placeholder="请输入活动标题"
+        />
       </el-form-item>
-      <el-form-item label="描述" prop="description">
+      <el-form-item
+        label="描述"
+        prop="description"
+      >
         <el-input
           v-model="formData.description"
           type="textarea"
@@ -22,13 +31,22 @@
           placeholder="请输入活动描述"
         />
       </el-form-item>
-      <el-form-item label="地点" prop="location">
-        <el-input v-model="formData.location" placeholder="请输入活动地点" />
+      <el-form-item
+        label="地点"
+        prop="location"
+      >
+        <el-input
+          v-model="formData.location"
+          placeholder="请输入活动地点"
+        />
       </el-form-item>
       <el-form-item label="Banner图">
         <ImageUpload v-model="formData.bannerUrl" />
       </el-form-item>
-      <el-form-item label="活动时间" prop="eventTime">
+      <el-form-item
+        label="活动时间"
+        prop="eventTime"
+      >
         <el-date-picker
           v-model="formData.eventTime"
           type="datetime"
@@ -38,7 +56,10 @@
           style="width: 100%"
         />
       </el-form-item>
-      <el-form-item label="报名截止" prop="registrationDeadline">
+      <el-form-item
+        label="报名截止"
+        prop="registrationDeadline"
+      >
         <el-date-picker
           v-model="formData.registrationDeadline"
           type="datetime"
@@ -48,14 +69,20 @@
           style="width: 100%"
         />
       </el-form-item>
-      <el-form-item label="最大人数" prop="maxParticipants">
+      <el-form-item
+        label="最大人数"
+        prop="maxParticipants"
+      >
         <el-input-number
           v-model="formData.maxParticipants"
           :min="1"
           style="width: 100%"
         />
       </el-form-item>
-      <el-form-item label="费用 (元)" prop="fee">
+      <el-form-item
+        label="费用 (元)"
+        prop="fee"
+      >
         <el-input-number
           v-model="formData.fee"
           :min="0"
@@ -63,17 +90,29 @@
           style="width: 100%"
         />
       </el-form-item>
-      <el-form-item label="报名积分门槛" prop="minPoints">
+      <el-form-item
+        label="报名积分门槛"
+        prop="minPoints"
+      >
         <el-input-number
           v-model="formData.minPoints"
           :min="0"
           :precision="0"
           style="width: 100%"
         />
-        <div class="form-tip">设为 0 表示不限制；活动校验派对积分</div>
+        <div class="form-tip">
+          设为 0 表示不限制；活动校验派对积分
+        </div>
       </el-form-item>
-      <el-form-item v-if="event" label="状态">
-        <el-select v-model="formData.status" placeholder="请选择状态" style="width: 100%">
+      <el-form-item
+        v-if="event"
+        label="状态"
+      >
+        <el-select
+          v-model="formData.status"
+          placeholder="请选择状态"
+          style="width: 100%"
+        >
           <el-option
             v-for="opt in editStatusOptions"
             :key="opt.value"
@@ -84,8 +123,14 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="$emit('update:modelValue', false)">取消</el-button>
-      <el-button type="primary" :loading="loading" @click="handleConfirm">
+      <el-button @click="$emit('update:modelValue', false)">
+        取消
+      </el-button>
+      <el-button
+        type="primary"
+        :loading="loading"
+        @click="handleConfirm"
+      >
         {{ event ? '更新' : '新建' }}
       </el-button>
     </template>

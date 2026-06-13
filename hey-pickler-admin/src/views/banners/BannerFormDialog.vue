@@ -11,29 +11,63 @@
       :rules="rules"
       label-position="top"
     >
-      <el-form-item label="图片地址" prop="imageUrl">
-        <el-input v-model="formData.imageUrl" placeholder="请输入Banner图片地址" />
+      <el-form-item
+        label="图片地址"
+        prop="imageUrl"
+      >
+        <el-input
+          v-model="formData.imageUrl"
+          placeholder="请输入Banner图片地址"
+        />
       </el-form-item>
-      <el-form-item label="跳转链接" prop="linkUrl">
-        <el-input v-model="formData.linkUrl" placeholder="请输入跳转链接" />
+      <el-form-item
+        label="跳转链接"
+        prop="linkUrl"
+      >
+        <el-input
+          v-model="formData.linkUrl"
+          placeholder="请输入跳转链接"
+        />
       </el-form-item>
-      <el-form-item label="排序" prop="sortOrder">
+      <el-form-item
+        label="排序"
+        prop="sortOrder"
+      >
         <el-input-number
           v-model="formData.sortOrder"
           :min="0"
           style="width: 100%"
         />
       </el-form-item>
-      <el-form-item label="状态" prop="status">
-        <el-select v-model="formData.status" placeholder="请选择状态" style="width: 100%">
-          <el-option label="启用" value="ACTIVE" />
-          <el-option label="停用" value="INACTIVE" />
+      <el-form-item
+        label="状态"
+        prop="status"
+      >
+        <el-select
+          v-model="formData.status"
+          placeholder="请选择状态"
+          style="width: 100%"
+        >
+          <el-option
+            label="启用"
+            value="ACTIVE"
+          />
+          <el-option
+            label="停用"
+            value="INACTIVE"
+          />
         </el-select>
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="$emit('update:modelValue', false)">取消</el-button>
-      <el-button type="primary" :loading="loading" @click="handleConfirm">
+      <el-button @click="$emit('update:modelValue', false)">
+        取消
+      </el-button>
+      <el-button
+        type="primary"
+        :loading="loading"
+        @click="handleConfirm"
+      >
         {{ banner ? '更新' : '新建' }}
       </el-button>
     </template>
