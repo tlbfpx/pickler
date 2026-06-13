@@ -29,10 +29,11 @@ mybatis-plus:
 
 hey-pickler:
   rate-limit:
-    login: 200
-    admin: 600
-    admin-anon: 200
-    default: 600
+    # dev 环境放宽到 10x，避免 E2E 并发测试触发限流（生产值在 application-prod.yml）
+    login: 2000
+    admin: 6000
+    admin-anon: 2000
+    default: 6000
   scheduler:
     status-transition-enabled: true
   jwt:

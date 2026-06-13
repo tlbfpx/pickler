@@ -9,7 +9,6 @@ import {
   cleanupE2EData,
 } from './fixtures/flow.fixture'
 import type { APIRequestContext } from '@playwright/test'
-import { execSync } from 'child_process'
 
 // 文件级清理：删历史残留测试数据
 test.beforeAll(() => {
@@ -18,20 +17,6 @@ test.beforeAll(() => {
 
 test.afterAll(() => {
   cleanupE2EData()
-})
-
-/**
- * 并发测试会短时间内发起大量 login（最多 50+ 次），触发 RateLimitFilter 的
- * 200/分钟/IP 限制。每个测试前清掉 redis 限流计数器，保证干净开始。
- *
- * 限流本身是正确的生产设计，本测试目标是报名接口的并发安全，不应被限流干扰。
- */
-test.beforeEach(async () => {
-  try {
-    execSync('redis-cli -h localhost -p 6379 --scan --pattern "heypickler:ratelimit:*" | xargs -r redis-cli -h localhost -p 6379 DEL', { stdio: 'ignore' })
-  } catch {
-    // redis 不可用时静默跳过；测试仍可运行，只是可能因限流失败
-  }
 })
 
 /**
