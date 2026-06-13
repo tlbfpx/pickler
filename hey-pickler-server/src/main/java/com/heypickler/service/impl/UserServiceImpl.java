@@ -278,7 +278,9 @@ public class UserServiceImpl implements UserService {
         vo.setStarTier(user.getStarTier());
         vo.setPartyTier(user.getPartyTier());
         vo.setStatus(user.getStatus());
+        vo.setLastLoginAt(user.getLastLoginAt());
         vo.setCreatedAt(user.getCreatedAt());
+        vo.setUpdatedAt(user.getUpdatedAt());
         return vo;
     }
 

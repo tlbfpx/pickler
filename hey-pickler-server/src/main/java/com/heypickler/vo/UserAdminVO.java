@@ -16,5 +16,7 @@ public class UserAdminVO {
     private String starTier;
     private String partyTier;
     private String status;
+    private LocalDateTime lastLoginAt;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }
