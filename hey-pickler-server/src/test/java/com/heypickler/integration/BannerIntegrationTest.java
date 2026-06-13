@@ -19,7 +19,7 @@ class BannerIntegrationTest extends IntegrationTestConfig {
                 "imageUrl", "https://test.com/banner.jpg",
                 "linkUrl", "https://test.com/link",
                 "sortOrder", 1,
-                "status", "ENABLED"
+                "status", "ACTIVE"
         );
         HttpEntity<Map<String, Object>> createReq = new HttpEntity<>(createBody, headers);
         ResponseEntity<Map> createResp = restTemplate.postForEntity(
@@ -41,12 +41,12 @@ class BannerIntegrationTest extends IntegrationTestConfig {
         List<Map<String, Object>> banners = (List<Map<String, Object>>) resultData(listResp);
         assertFalse(banners.isEmpty());
 
-        // Update to DISABLED
+        // Update to INACTIVE
         Map<String, Object> updateBody = Map.of(
                 "imageUrl", "https://test.com/updated.jpg",
                 "linkUrl", "https://test.com/link",
                 "sortOrder", 99,
-                "status", "DISABLED"
+                "status", "INACTIVE"
         );
         HttpEntity<Map<String, Object>> updateReq = new HttpEntity<>(updateBody, headers);
         ResponseEntity<Map> updateResp = restTemplate.exchange(
@@ -67,7 +67,7 @@ class BannerIntegrationTest extends IntegrationTestConfig {
                 "imageUrl", "https://test.com/updated.jpg",
                 "linkUrl", "https://test.com/link",
                 "sortOrder", 1,
-                "status", "ENABLED"
+                "status", "ACTIVE"
         );
         HttpEntity<Map<String, Object>> enableReq = new HttpEntity<>(enableBody, headers);
         ResponseEntity<Map> enableResp = restTemplate.exchange(
