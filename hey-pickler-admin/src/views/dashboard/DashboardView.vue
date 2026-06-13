@@ -230,8 +230,10 @@ const fetchStats = async () => {
   finally { loading.value = false }
 }
 
-onMounted(() => { fetchStats(); window.addEventListener('resize', () => charts.forEach(c => c.resize())) })
-onBeforeUnmount(() => { charts.forEach(c => c.dispose()) })
+const onResize = () => charts.forEach(c => c.resize())
+
+onMounted(() => { fetchStats(); window.addEventListener('resize', onResize) })
+onBeforeUnmount(() => { window.removeEventListener('resize', onResize); charts.forEach(c => c.dispose()) })
 </script>
 
 <style scoped>

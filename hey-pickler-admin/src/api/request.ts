@@ -31,7 +31,7 @@ request.interceptors.response.use(
   (error: AxiosError) => {
     if (error.response) {
       const status = error.response.status
-      const data = error.response.data as any
+      const data = error.response.data as { message?: string } | undefined
       const msg = data?.message || ''
       switch (status) {
         case 400:

@@ -112,8 +112,8 @@ Page({
     }
 
     const field = this.data.editField
-    this.setData({ showEditModal: false })
     await this.updateProfile({ [field]: value })
+    this.setData({ showEditModal: false })
   },
 
   // Cancel edit

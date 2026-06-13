@@ -8,7 +8,6 @@ import com.heypickler.entity.Event;
 import com.heypickler.entity.Registration;
 import com.heypickler.entity.User;
 import com.heypickler.mapper.EventMapper;
-import com.heypickler.mapper.PointRecordMapper;
 import com.heypickler.mapper.RegistrationMapper;
 import com.heypickler.mapper.UserMapper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,7 +32,6 @@ public class AdminDashboardController {
     private final UserMapper userMapper;
     private final EventMapper eventMapper;
     private final RegistrationMapper registrationMapper;
-    private final PointRecordMapper pointRecordMapper;
 
     @GetMapping
     @Operation(summary = "首页统计数据")
@@ -165,7 +163,7 @@ public class AdminDashboardController {
             item.put("eventTitle", event != null ? event.getTitle() : "未知赛事");
             item.put("matchType", reg.getMatchType());
             item.put("status", reg.getStatus());
-            item.put("createdAt", reg.getCreatedAt().toString());
+            item.put("createdAt", reg.getCreatedAt() != null ? reg.getCreatedAt().toString() : null);
             return item;
         }).collect(Collectors.toList());
         data.put("recentRegistrations", recentRegList);
