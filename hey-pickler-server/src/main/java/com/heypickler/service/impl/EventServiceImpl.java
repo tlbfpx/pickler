@@ -101,6 +101,17 @@ public class EventServiceImpl implements EventService {
             throw new BizException(ErrorCode.REGISTRATION_CLOSED);
         }
 
+        if (event.getMinPoints() != null && event.getMinPoints() > 0) {
+            User user = userMapper.selectById(userId);
+            if (user != null) {
+                int userPoints = "STAR".equals(event.getType()) ? user.getStarPoints() : user.getPartyPoints();
+                if (userPoints < event.getMinPoints()) {
+                    throw new BizException(ErrorCode.INSUFFICIENT_POINTS,
+                            String.format("积分不足，需 %d 分，当前 %d 分", event.getMinPoints(), userPoints));
+                }
+            }
+        }
+
         Registration existingRegistration = registrationMapper.selectOne(
                 new LambdaQueryWrapper<Registration>()
                         .eq(Registration::getUserId, userId)

@@ -1,0 +1,1 @@
+ALTER TABLE event ADD COLUMN min_points INT NOT NULL DEFAULT 0 COMMENT '报名所需积分门槛';

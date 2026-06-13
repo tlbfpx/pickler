@@ -66,6 +66,15 @@
           style="width: 100%"
         />
       </el-form-item>
+      <el-form-item label="报名积分门槛" prop="minPoints">
+        <el-input-number
+          v-model="formData.minPoints"
+          :min="0"
+          :precision="0"
+          style="width: 100%"
+        />
+        <div class="form-tip">设为 0 表示不限制；STAR 赛事校验明星积分，PARTY 活动校验派对积分</div>
+      </el-form-item>
       <el-form-item v-if="event" label="状态">
         <el-select v-model="formData.status" placeholder="请选择状态" style="width: 100%">
           <el-option
@@ -115,6 +124,7 @@ const formData = reactive<CreateEventRequest & { status?: string }>({
   registrationDeadline: '',
   maxParticipants: 50,
   fee: 0,
+  minPoints: 0,
   status: undefined
 })
 
@@ -155,6 +165,7 @@ watch(() => props.event, (val) => {
     formData.registrationDeadline = val.registrationDeadline
     formData.maxParticipants = val.maxParticipants
     formData.fee = val.fee
+    formData.minPoints = val.minPoints ?? 0
     formData.status = val.status
   } else {
     formData.status = undefined

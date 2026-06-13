@@ -52,6 +52,14 @@
       </view>
     </view>
 
+    <view class="info-item" wx:if="{{event.minPoints > 0}}">
+      <text class="info-icon">⭐</text>
+      <view class="info-content">
+        <text class="info-label">积分门槛</text>
+        <text class="info-value">{{event.minPoints}} 分（{{event.type === 'STAR' ? '明星积分' : '派对积分'}}）</text>
+      </view>
+    </view>
+
     <view class="info-item">
       <text class="info-icon">⏰</text>
       <view class="info-content">
@@ -99,10 +107,18 @@
 
     <!-- Register button -->
     <button
-      wx:elif="{{isRegistrationOpen}}"
+      wx:elif="{{isRegistrationOpen && !insufficientPoints}}"
       class="action-btn register-btn"
       bindtap="handleRegister">
       立即报名
+    </button>
+
+    <!-- Insufficient points button -->
+    <button
+      wx:elif="{{isRegistrationOpen && insufficientPoints}}"
+      class="action-btn disabled-btn"
+      disabled>
+      积分不足（差 {{pointsGap}} 分）
     </button>
 
     <!-- Disabled button -->

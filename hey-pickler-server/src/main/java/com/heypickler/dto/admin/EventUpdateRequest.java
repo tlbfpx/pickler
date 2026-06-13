@@ -19,6 +19,7 @@ public class EventUpdateRequest {
     private Integer maxParticipants;
     private BigDecimal fee;
     private String prizes;
+    private Integer minPoints;
     @Pattern(regexp = "^(DRAFT|OPEN|FULL|IN_PROGRESS|COMPLETED|CANCELLED)?$", message = "无效的赛事状态")
     private String status;
 }

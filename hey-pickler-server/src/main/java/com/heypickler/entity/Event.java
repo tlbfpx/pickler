@@ -22,6 +22,7 @@ public class Event {
     private Integer currentParticipants;
     private BigDecimal fee;
     private String prizes;
+    private Integer minPoints;
     private String status;
     private Long createdBy;
     @TableField(fill = FieldFill.INSERT)

@@ -39,5 +39,8 @@ public class EventCreateRequest {
 
     private String prizes;
 
+    @Min(value = 0, message = "报名积分门槛不能为负数")
+    private Integer minPoints = 0;
+
     private String status = "DRAFT";
 }
