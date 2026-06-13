@@ -6,6 +6,7 @@ import com.heypickler.dto.admin.EventUpdateRequest;
 import com.heypickler.dto.app.RegisterRequest;
 import com.heypickler.vo.EventDetailVO;
 import com.heypickler.vo.EventParticipantVO;
+import com.heypickler.vo.EventResultVO;
 import com.heypickler.vo.EventVO;
 import com.heypickler.vo.RegistrationVO;
 
@@ -29,6 +30,8 @@ public interface EventService {
     void deleteEvent(Long eventId);
 
     List<EventParticipantVO> getParticipants(Long eventId);
+
+    List<EventResultVO> getEventResults(Long eventId);
 
     PageResult<RegistrationVO> getRegistrations(Long eventId, String status, String matchType, int page, int size);
 

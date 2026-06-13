@@ -273,11 +273,10 @@ Page({
     }
   },
 
-  // Navigate to ranking
-  navigateToRanking() {
-    const type = this.data.event.type
+  // View event results
+  handleViewResults() {
     wx.navigateTo({
-      url: `/pages/ranking/ranking?type=${type}`
+      url: `/pages/event-results/event-results?id=${this.data.eventId}`
     })
   },
 

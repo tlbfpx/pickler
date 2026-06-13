@@ -5,6 +5,7 @@ import com.heypickler.common.result.Result;
 import com.heypickler.dto.app.RegisterRequest;
 import com.heypickler.service.EventService;
 import com.heypickler.vo.EventDetailVO;
+import com.heypickler.vo.EventResultVO;
 import com.heypickler.vo.EventVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,6 +13,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/app/events")
@@ -59,5 +62,11 @@ public class AppEventController {
         Long userId = (Long) request.getAttribute("userId");
         eventService.cancelRegistration(userId, id);
         return Result.ok();
+    }
+
+    @GetMapping("/{id}/results")
+    @Operation(summary = "赛事成绩榜")
+    public Result<List<EventResultVO>> getResults(@PathVariable Long id) {
+        return Result.ok(eventService.getEventResults(id));
     }
 }

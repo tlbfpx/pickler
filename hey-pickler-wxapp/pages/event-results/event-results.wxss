@@ -1,0 +1,174 @@
+.page {
+  min-height: 100vh;
+  background: #f5f5f5;
+  padding-bottom: 30rpx;
+}
+
+.loading,
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 200rpx 0;
+  color: #999;
+  font-size: 28rpx;
+}
+
+.empty-icon {
+  font-size: 96rpx;
+  margin-bottom: 20rpx;
+}
+
+.podium {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 20rpx;
+  padding: 40rpx 30rpx 30rpx;
+  background: linear-gradient(180deg, #ffd700 0%, #ffb74d 100%);
+}
+
+.podium-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 200rpx;
+  padding: 20rpx 0;
+  border-radius: 16rpx 16rpx 0 0;
+  background: #fff;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+}
+
+.podium-gold {
+  height: 280rpx;
+}
+
+.podium-silver {
+  height: 240rpx;
+}
+
+.podium-bronze {
+  height: 220rpx;
+}
+
+.podium-avatar {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  border: 4rpx solid #ffd700;
+  background: #f0f0f0;
+}
+
+.podium-gold .podium-avatar {
+  border-color: #ffd700;
+}
+
+.podium-silver .podium-avatar {
+  border-color: #c0c0c0;
+}
+
+.podium-bronze .podium-avatar {
+  border-color: #cd7f32;
+}
+
+.podium-rank {
+  position: relative;
+  margin-top: -20rpx;
+  width: 48rpx;
+  height: 48rpx;
+  line-height: 48rpx;
+  text-align: center;
+  background: #333;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 28rpx;
+  font-weight: bold;
+}
+
+.podium-gold .podium-rank {
+  background: linear-gradient(135deg, #ffd700, #ffa500);
+}
+
+.podium-silver .podium-rank {
+  background: linear-gradient(135deg, #c0c0c0, #999);
+}
+
+.podium-bronze .podium-rank {
+  background: linear-gradient(135deg, #cd7f32, #8b4513);
+}
+
+.podium-name {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  color: #333;
+  font-weight: 500;
+  max-width: 180rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.podium-points {
+  margin-top: 4rpx;
+  font-size: 24rpx;
+  color: #666;
+}
+
+.list {
+  margin: 20rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+
+.result-item {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 28rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.result-item:last-child {
+  border-bottom: none;
+}
+
+.rank-num {
+  width: 60rpx;
+  text-align: center;
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #666;
+}
+
+.avatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  margin: 0 20rpx;
+  background: #f0f0f0;
+}
+
+.user-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.nickname {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+.meta {
+  font-size: 22rpx;
+  color: #999;
+}
+
+.points {
+  font-size: 30rpx;
+  color: #ff6b35;
+  font-weight: bold;
+}

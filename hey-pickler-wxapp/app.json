@@ -3,6 +3,7 @@
     "pages/index/index",
     "pages/login/login",
     "pages/event-detail/event-detail",
+    "pages/event-results/event-results",
     "pages/profile/profile",
     "pages/ranking/ranking",
     "pages/my-events/my-events"

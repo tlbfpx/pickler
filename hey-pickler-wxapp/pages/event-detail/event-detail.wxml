@@ -121,19 +121,20 @@
       积分不足（差 {{pointsGap}} 分）
     </button>
 
-    <!-- Disabled button -->
+    <!-- Disabled status button -->
     <button
       wx:else
       class="action-btn disabled-btn"
       disabled>
-      {{event.status === 'FULL' ? '已满员' : event.status === 'COMPLETED' ? '已结束' : '报名已截止'}}
+      {{event.status === 'FULL' ? '已满员' : event.status === 'IN_PROGRESS' ? '进行中' : event.status === 'COMPLETED' ? '已结束' : event.status === 'CANCELLED' ? '已取消' : '报名已截止'}}
     </button>
 
-    <!-- Ranking button -->
+    <!-- View results button (only after event completed) -->
     <button
+      wx:if="{{event.status === 'COMPLETED'}}"
       class="action-btn ranking-btn"
-      bindtap="navigateToRanking">
-      查看排名
+      bindtap="handleViewResults">
+      查看成绩
     </button>
   </view>
 </view>
