@@ -13,6 +13,5 @@ public class EventDetailVO extends EventVO {
     private String rules;
     private String prizes;
     private LocalDateTime registrationDeadline;
-    private Integer minPoints;
     private String myRegistrationStatus;
 }
