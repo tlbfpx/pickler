@@ -142,7 +142,7 @@ class RankingServiceTest {
     @Test
     void testEnterPoints_Success() {
         when(eventMapper.selectById(1L)).thenReturn(testEvent);
-        when(userMapper.selectById(1L)).thenReturn(testUser);
+        when(userMapper.selectBatchIds(anyList())).thenReturn(Collections.singletonList(testUser));
         when(userMapper.updateById(any(User.class))).thenReturn(1);
         when(pointRecordMapper.insert(any(PointRecord.class))).thenReturn(1);
         doNothing().when(eventPublisher).publishEvent(any(com.heypickler.listener.PointChangeListener.PointChangeEvent.class));
@@ -157,7 +157,7 @@ class RankingServiceTest {
                    record.getEventId().equals(1L) &&
                    record.getType().equals("STAR") &&
                    record.getPoints().equals(100) &&
-                   record.getReason().equals("Test reason") &&
+                   record.getReason().equals("[Test Event] Test reason") &&
                    record.getOperatorId().equals(100L);
         }));
 
@@ -175,8 +175,7 @@ class RankingServiceTest {
         user2.setStarTier("SHINING");
 
         when(eventMapper.selectById(1L)).thenReturn(testEvent);
-        when(userMapper.selectById(1L)).thenReturn(testUser);
-        when(userMapper.selectById(2L)).thenReturn(user2);
+        when(userMapper.selectBatchIds(anyList())).thenReturn(Arrays.asList(testUser, user2));
         when(userMapper.updateById(any(User.class))).thenReturn(1);
         when(pointRecordMapper.insert(any(PointRecord.class))).thenReturn(1);
         doNothing().when(eventPublisher).publishEvent(any());
@@ -197,7 +196,7 @@ class RankingServiceTest {
     void testEnterPoints_PartyType() {
         testEvent.setType("PARTY");
         when(eventMapper.selectById(1L)).thenReturn(testEvent);
-        when(userMapper.selectById(1L)).thenReturn(testUser);
+        when(userMapper.selectBatchIds(anyList())).thenReturn(Collections.singletonList(testUser));
         when(userMapper.updateById(any(User.class))).thenReturn(1);
         when(pointRecordMapper.insert(any(PointRecord.class))).thenReturn(1);
         doNothing().when(eventPublisher).publishEvent(any(com.heypickler.listener.PointChangeListener.PointChangeEvent.class));
@@ -221,7 +220,7 @@ class RankingServiceTest {
     void testEnterPoints_NegativePoints_FloorAtZero() {
         testUser.setStarPoints(50);
         when(eventMapper.selectById(1L)).thenReturn(testEvent);
-        when(userMapper.selectById(1L)).thenReturn(testUser);
+        when(userMapper.selectBatchIds(anyList())).thenReturn(Collections.singletonList(testUser));
         when(userMapper.updateById(any(User.class))).thenReturn(1);
         when(pointRecordMapper.insert(any(PointRecord.class))).thenReturn(1);
         doNothing().when(eventPublisher).publishEvent(any(com.heypickler.listener.PointChangeListener.PointChangeEvent.class));
@@ -239,7 +238,7 @@ class RankingServiceTest {
     @Test
     void testEnterPoints_TierUpgrade() {
         when(eventMapper.selectById(1L)).thenReturn(testEvent);
-        when(userMapper.selectById(1L)).thenReturn(testUser);
+        when(userMapper.selectBatchIds(anyList())).thenReturn(Collections.singletonList(testUser));
         when(userMapper.updateById(any(User.class))).thenReturn(1);
         when(pointRecordMapper.insert(any(PointRecord.class))).thenReturn(1);
         doNothing().when(eventPublisher).publishEvent(any(com.heypickler.listener.PointChangeListener.PointChangeEvent.class));
@@ -283,7 +282,7 @@ class RankingServiceTest {
 
         verify(rankingMapper, times(2)).insert(argThat(ranking -> {
             return ranking.getType().equals("STAR") &&
-                   ranking.getSeason().equals("S1");
+                   ranking.getSeason().equals("2026-Q2");
         }));
     }
 
@@ -297,21 +296,25 @@ class RankingServiceTest {
         existingRanking.setId(100L);
         existingRanking.setUserId(1L);
         existingRanking.setType("STAR");
-        existingRanking.setSeason("S1");
+        existingRanking.setSeason("2026-Q2");
         existingRanking.setRank(5);
 
         when(userMapper.selectList(any(LambdaQueryWrapper.class)))
             .thenReturn(Arrays.asList(user1));
-        when(rankingMapper.selectOne(any(LambdaQueryWrapper.class)))
-            .thenReturn(existingRanking);
+        // batchLoadRankings 用 rankingMapper.selectList 查现有 ranking
+        when(rankingMapper.selectList(any(LambdaQueryWrapper.class)))
+            .thenReturn(Arrays.asList(existingRanking));
 
         rankingService.refreshRankings("STAR");
 
-        verify(rankingMapper, never()).insert(any());
-        verify(rankingMapper).updateById(argThat(ranking -> {
-            return ranking.getId().equals(100L) &&
-                   ranking.getChange().equals(4); // 5 - 1 = 4 (improved)
-        }));
+        // 当前实现：delete-all + re-insert，不再 updateById
+        verify(rankingMapper).delete(any(LambdaQueryWrapper.class));
+        verify(rankingMapper).insert(argThat(ranking ->
+            ranking.getUserId().equals(1L) &&
+            ranking.getRank().equals(1) &&
+            ranking.getChange().equals(4) // 5 - 1 = 4 (improved)
+        ));
+        verify(rankingMapper, never()).updateById(any());
     }
 
     @Test
@@ -337,9 +340,10 @@ class RankingServiceTest {
         verify(rankingMapper, times(3)).insert(argThat(ranking -> {
             int points = ranking.getPoints();
             String tier = ranking.getTier();
+            // 当前实现：globalRank 自增（1/2/3），tier 由 points 决定
             if (points >= 1000) return "LEGEND".equals(tier) && ranking.getRank().equals(1);
-            if (points >= 500) return "SUPER".equals(tier) && ranking.getRank().equals(1);
-            return "SHINING".equals(tier) && ranking.getRank().equals(1);
+            if (points >= 500) return "SUPER".equals(tier) && ranking.getRank().equals(2);
+            return "SHINING".equals(tier) && ranking.getRank().equals(3);
         }));
     }
 
@@ -351,6 +355,7 @@ class RankingServiceTest {
 
         rankingService.refreshRankings("STAR");
 
-        verify(redisTemplate, times(4)).delete(contains("ranking:STAR:"));
+        // 当前实现清理 4 个 tier key（LEGEND/SUPER/SHINING/null）+ 1 个 top5 = 5 次
+        verify(redisTemplate, times(5)).delete(contains("ranking:STAR:"));
     }
 }
