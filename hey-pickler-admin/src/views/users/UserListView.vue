@@ -52,10 +52,21 @@
           </template>
         </el-table-column>
         <el-table-column
-          prop="nickname"
-          label="昵称"
-          width="120"
-        />
+          label="用户"
+          width="200"
+        >
+          <template #default="{ row }">
+            <div class="user-cell">
+              <el-avatar
+                :size="32"
+                :src="row.avatarUrl"
+              >
+                {{ row.nickname?.[0] || '?' }}
+              </el-avatar>
+              <span class="user-cell__name">{{ row.nickname || '-' }}</span>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column
           label="城市"
           width="80"
@@ -243,5 +254,15 @@ onMounted(() => {
 .table-header {
   display: flex;
   gap: 12px;
+}
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.user-cell__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>
