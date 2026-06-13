@@ -31,3 +31,4 @@ hey-pickler-wxapp/miniprogram_npm/
 # Misc
 .cache/
 *.tmp
+.vite/
