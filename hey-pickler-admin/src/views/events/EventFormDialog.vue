@@ -11,16 +11,38 @@
       :rules="rules"
       label-position="top"
     >
-      <el-form-item label="赛事类型" prop="type">
-        <el-select v-model="formData.type" placeholder="请选择赛事类型" style="width: 100%">
-          <el-option label="明星赛" value="STAR" />
-          <el-option label="派对赛" value="PARTY" />
+      <el-form-item
+        label="赛事类型"
+        prop="type"
+      >
+        <el-select
+          v-model="formData.type"
+          placeholder="请选择赛事类型"
+          style="width: 100%"
+        >
+          <el-option
+            label="明星赛"
+            value="STAR"
+          />
+          <el-option
+            label="派对赛"
+            value="PARTY"
+          />
         </el-select>
       </el-form-item>
-      <el-form-item label="标题" prop="title">
-        <el-input v-model="formData.title" placeholder="请输入赛事标题" />
+      <el-form-item
+        label="标题"
+        prop="title"
+      >
+        <el-input
+          v-model="formData.title"
+          placeholder="请输入赛事标题"
+        />
       </el-form-item>
-      <el-form-item label="描述" prop="description">
+      <el-form-item
+        label="描述"
+        prop="description"
+      >
         <el-input
           v-model="formData.description"
           type="textarea"
@@ -28,10 +50,19 @@
           placeholder="请输入赛事描述"
         />
       </el-form-item>
-      <el-form-item label="地点" prop="location">
-        <el-input v-model="formData.location" placeholder="请输入比赛地点" />
+      <el-form-item
+        label="地点"
+        prop="location"
+      >
+        <el-input
+          v-model="formData.location"
+          placeholder="请输入比赛地点"
+        />
       </el-form-item>
-      <el-form-item label="比赛时间" prop="eventTime">
+      <el-form-item
+        label="比赛时间"
+        prop="eventTime"
+      >
         <el-date-picker
           v-model="formData.eventTime"
           type="datetime"
@@ -41,7 +72,10 @@
           style="width: 100%"
         />
       </el-form-item>
-      <el-form-item label="报名截止" prop="registrationDeadline">
+      <el-form-item
+        label="报名截止"
+        prop="registrationDeadline"
+      >
         <el-date-picker
           v-model="formData.registrationDeadline"
           type="datetime"
@@ -51,14 +85,20 @@
           style="width: 100%"
         />
       </el-form-item>
-      <el-form-item label="最大人数" prop="maxParticipants">
+      <el-form-item
+        label="最大人数"
+        prop="maxParticipants"
+      >
         <el-input-number
           v-model="formData.maxParticipants"
           :min="1"
           style="width: 100%"
         />
       </el-form-item>
-      <el-form-item label="费用 (元)" prop="fee">
+      <el-form-item
+        label="费用 (元)"
+        prop="fee"
+      >
         <el-input-number
           v-model="formData.fee"
           :min="0"
@@ -66,8 +106,29 @@
           style="width: 100%"
         />
       </el-form-item>
-      <el-form-item v-if="event" label="状态">
-        <el-select v-model="formData.status" placeholder="请选择状态" style="width: 100%">
+      <el-form-item
+        label="报名积分门槛"
+        prop="minPoints"
+      >
+        <el-input-number
+          v-model="formData.minPoints"
+          :min="0"
+          :precision="0"
+          style="width: 100%"
+        />
+        <div class="form-tip">
+          设为 0 表示不限制；STAR 赛事校验明星积分，PARTY 活动校验派对积分
+        </div>
+      </el-form-item>
+      <el-form-item
+        v-if="event"
+        label="状态"
+      >
+        <el-select
+          v-model="formData.status"
+          placeholder="请选择状态"
+          style="width: 100%"
+        >
           <el-option
             v-for="opt in editStatusOptions"
             :key="opt.value"
@@ -78,8 +139,14 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="$emit('update:modelValue', false)">取消</el-button>
-      <el-button type="primary" :loading="loading" @click="handleConfirm">
+      <el-button @click="$emit('update:modelValue', false)">
+        取消
+      </el-button>
+      <el-button
+        type="primary"
+        :loading="loading"
+        @click="handleConfirm"
+      >
         {{ event ? '更新' : '新建' }}
       </el-button>
     </template>
@@ -115,6 +182,7 @@ const formData = reactive<CreateEventRequest & { status?: string }>({
   registrationDeadline: '',
   maxParticipants: 50,
   fee: 0,
+  minPoints: 0,
   status: undefined
 })
 
@@ -155,6 +223,7 @@ watch(() => props.event, (val) => {
     formData.registrationDeadline = val.registrationDeadline
     formData.maxParticipants = val.maxParticipants
     formData.fee = val.fee
+    formData.minPoints = val.minPoints ?? 0
     formData.status = val.status
   } else {
     formData.status = undefined

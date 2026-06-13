@@ -3,7 +3,7 @@ server:
 
 spring:
   datasource:
-    url: jdbc:mysql://localhost:13306/hey_pickler?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://localhost:3306/hey_pickler?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -36,3 +36,9 @@ hey-pickler:
   wechat:
     appid: test-appid
     secret: test-secret
+  rate-limit:
+    # 集成测试高频请求，关闭限流（与 dev/prod 配置隔离）
+    login: 100000
+    admin: 100000
+    admin-anon: 100000
+    default: 100000

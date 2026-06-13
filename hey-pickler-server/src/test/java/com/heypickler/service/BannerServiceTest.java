@@ -43,14 +43,14 @@ class BannerServiceTest {
         banner1.setImageUrl("https://example.com/banner1.jpg");
         banner1.setLinkUrl("https://example.com/link1");
         banner1.setSortOrder(1);
-        banner1.setStatus("ENABLED");
+        banner1.setStatus("ACTIVE");
 
         banner2 = new Banner();
         banner2.setId(2L);
         banner2.setImageUrl("https://example.com/banner2.jpg");
         banner2.setLinkUrl("https://example.com/link2");
         banner2.setSortOrder(2);
-        banner2.setStatus("ENABLED");
+        banner2.setStatus("ACTIVE");
 
         bannerDisabled = new Banner();
         bannerDisabled.setId(3L);
@@ -71,8 +71,8 @@ class BannerServiceTest {
 
         // Then
         assertEquals(2, result.size());
-        assertEquals("ENABLED", result.get(0).getStatus());
-        assertEquals("ENABLED", result.get(1).getStatus());
+        assertEquals("ACTIVE", result.get(0).getStatus());
+        assertEquals("ACTIVE", result.get(1).getStatus());
         verify(bannerMapper).selectList(any(LambdaQueryWrapper.class));
     }
 
@@ -97,7 +97,7 @@ class BannerServiceTest {
         request.setImageUrl("https://example.com/new.jpg");
         request.setLinkUrl("https://example.com/newlink");
         request.setSortOrder(10);
-        request.setStatus("ENABLED");
+        request.setStatus("ACTIVE");
 
         when(bannerMapper.insert(any(Banner.class))).thenAnswer(invocation -> {
             Banner banner = invocation.getArgument(0);
@@ -114,7 +114,7 @@ class BannerServiceTest {
             banner.getImageUrl().equals("https://example.com/new.jpg") &&
             banner.getLinkUrl().equals("https://example.com/newlink") &&
             banner.getSortOrder() == 10 &&
-            banner.getStatus().equals("ENABLED")
+            banner.getStatus().equals("ACTIVE")
         ));
     }
 
@@ -138,7 +138,7 @@ class BannerServiceTest {
         verify(bannerMapper).insert(argThat(banner ->
             banner.getImageUrl().equals("https://example.com/new.jpg") &&
             banner.getSortOrder() == 0 &&
-            banner.getStatus().equals("ENABLED")
+            banner.getStatus().equals("ACTIVE")
         ));
     }
 

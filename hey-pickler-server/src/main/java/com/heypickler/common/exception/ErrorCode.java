@@ -15,6 +15,7 @@ public enum ErrorCode {
     DUPLICATE_REGISTRATION(1004, "重复报名"),
     REGISTRATION_CLOSED(1005, "报名已截止"),
     INVALID_STATUS_TRANSITION(1006, "无效的状态转换"),
+    INSUFFICIENT_POINTS(1007, "积分不足"),
     INTERNAL_ERROR(500, "服务器内部错误");
 
     private final int code;

@@ -2,15 +2,29 @@
   <div>
     <div class="page-header">
       <h1>Banner管理</h1>
-      <el-button type="primary" @click="handleCreate">
+      <el-button
+        type="primary"
+        @click="handleCreate"
+      >
         <el-icon><Plus /></el-icon>
         新建Banner
       </el-button>
     </div>
     <div class="card">
-      <el-table v-loading="loading" :data="bannerList" style="width: 100%">
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column label="图片" width="200">
+      <el-table
+        v-loading="loading"
+        :data="bannerList"
+        style="width: 100%"
+      >
+        <el-table-column
+          prop="id"
+          label="ID"
+          width="80"
+        />
+        <el-table-column
+          label="图片"
+          width="200"
+        >
           <template #default="{ row }">
             <el-image
               :src="row.imageUrl"
@@ -20,21 +34,44 @@
             />
           </template>
         </el-table-column>
-        <el-table-column prop="linkUrl" label="跳转链接" width="250" />
-        <el-table-column prop="sortOrder" label="排序" width="80" />
-        <el-table-column label="状态" width="100">
+        <el-table-column
+          prop="linkUrl"
+          label="跳转链接"
+          width="250"
+        />
+        <el-table-column
+          prop="sortOrder"
+          label="排序"
+          width="80"
+        />
+        <el-table-column
+          label="状态"
+          width="100"
+        >
           <template #default="{ row }">
             <el-tag :type="row.status === 'ACTIVE' ? 'success' : 'info'">
               {{ row.status === 'ACTIVE' ? '启用' : '停用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column
+          label="操作"
+          width="150"
+          fixed="right"
+        >
           <template #default="{ row }">
-            <el-button type="primary" size="small" @click="handleEdit(row)">
+            <el-button
+              type="primary"
+              size="small"
+              @click="handleEdit(row)"
+            >
               编辑
             </el-button>
-            <el-button type="danger" size="small" @click="handleDelete(row)">
+            <el-button
+              type="danger"
+              size="small"
+              @click="handleDelete(row)"
+            >
               删除
             </el-button>
           </template>

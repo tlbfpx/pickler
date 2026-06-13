@@ -8,10 +8,15 @@ import com.heypickler.common.exception.ErrorCode;
 import com.heypickler.dto.admin.EventCreateRequest;
 import com.heypickler.dto.app.RegisterRequest;
 import com.heypickler.entity.Event;
+import com.heypickler.entity.PointRecord;
 import com.heypickler.entity.Registration;
+import com.heypickler.entity.User;
 import com.heypickler.mapper.EventMapper;
+import com.heypickler.mapper.PointRecordMapper;
 import com.heypickler.mapper.RegistrationMapper;
+import com.heypickler.mapper.UserMapper;
 import com.heypickler.service.impl.EventServiceImpl;
+import com.heypickler.vo.EventResultVO;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,6 +28,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -36,6 +44,8 @@ class EventServiceTest {
 
     @Mock private EventMapper eventMapper;
     @Mock private RegistrationMapper registrationMapper;
+    @Mock private UserMapper userMapper;
+    @Mock private PointRecordMapper pointRecordMapper;
 
     @InjectMocks
     private EventServiceImpl eventService;
@@ -210,13 +220,13 @@ class EventServiceTest {
     @Test
     void deleteEvent_softDelete() {
         when(eventMapper.selectById(1L)).thenReturn(testEvent);
-        when(eventMapper.updateById(any(Event.class))).thenReturn(1);
+        when(eventMapper.deleteById(any(java.io.Serializable.class))).thenReturn(1);
 
         eventService.deleteEvent(1L);
 
-        verify(eventMapper).updateById(argThat(event ->
-            event.getId().equals(1L) && event.getDeletedAt() != null
-        ));
+        // Service calls deleteById; MyBatis-Plus rewrites it to UPDATE setting deletedAt
+        // at runtime via global logic-delete config (see application-dev.yml).
+        verify(eventMapper).deleteById((java.io.Serializable) 1L);
     }
 
     @Test
@@ -301,5 +311,119 @@ class EventServiceTest {
         BizException ex = assertThrows(BizException.class,
                 () -> eventService.register(100L, 1L, request));
         assertEquals(ErrorCode.NOT_FOUND.getCode(), ex.getCode());
+    }
+
+    @Test
+    void getEventResults_eventNotFound_shouldThrow() {
+        when(eventMapper.selectById(1L)).thenReturn(null);
+
+        BizException ex = assertThrows(BizException.class,
+                () -> eventService.getEventResults(1L));
+        assertEquals(ErrorCode.NOT_FOUND.getCode(), ex.getCode());
+    }
+
+    @Test
+    void getEventResults_noRegistrations_returnsEmpty() {
+        when(eventMapper.selectById(1L)).thenReturn(testEvent);
+        when(registrationMapper.selectList(any())).thenReturn(Collections.emptyList());
+
+        List<EventResultVO> results = eventService.getEventResults(1L);
+
+        assertTrue(results.isEmpty());
+    }
+
+    @Test
+    void getEventResults_noPoints_returnsAllParticipantsWithZeroPoints() {
+        Registration reg1 = buildRegistration(101L, "SINGLES");
+        Registration reg2 = buildRegistration(102L, "SINGLES");
+
+        when(eventMapper.selectById(1L)).thenReturn(testEvent);
+        when(registrationMapper.selectList(any())).thenReturn(Arrays.asList(reg1, reg2));
+        when(userMapper.selectBatchIds(any())).thenReturn(Collections.emptyList());
+        when(pointRecordMapper.selectList(any())).thenReturn(Collections.emptyList());
+
+        List<EventResultVO> results = eventService.getEventResults(1L);
+
+        assertEquals(2, results.size());
+        results.forEach(r -> {
+            assertEquals(0, r.getPoints());
+            assertNotNull(r.getRank());
+        });
+    }
+
+    @Test
+    void getEventResults_withPoints_sortedByPointsDescAndRanked() {
+        Registration reg1 = buildRegistration(101L, "SINGLES");
+        Registration reg2 = buildRegistration(102L, "SINGLES");
+        Registration reg3 = buildRegistration(103L, "SINGLES");
+
+        PointRecord r1 = buildPointRecord(101L, 100);
+        PointRecord r2 = buildPointRecord(101L, 20);
+        PointRecord r3 = buildPointRecord(103L, 60);
+
+        when(eventMapper.selectById(1L)).thenReturn(testEvent);
+        when(registrationMapper.selectList(any())).thenReturn(Arrays.asList(reg1, reg2, reg3));
+        when(userMapper.selectBatchIds(any())).thenReturn(Collections.emptyList());
+        when(pointRecordMapper.selectList(any())).thenReturn(Arrays.asList(r1, r2, r3));
+
+        List<EventResultVO> results = eventService.getEventResults(1L);
+
+        assertEquals(3, results.size());
+
+        assertEquals(101L, results.get(0).getUserId());
+        assertEquals(120, results.get(0).getPoints());
+        assertEquals(1, results.get(0).getRank());
+
+        assertEquals(103L, results.get(1).getUserId());
+        assertEquals(60, results.get(1).getPoints());
+        assertEquals(2, results.get(1).getRank());
+
+        assertEquals(102L, results.get(2).getUserId());
+        assertEquals(0, results.get(2).getPoints());
+        assertEquals(3, results.get(2).getRank());
+    }
+
+    @Test
+    void getEventResults_tiedPoints_shareRank() {
+        Registration reg1 = buildRegistration(101L, "SINGLES");
+        Registration reg2 = buildRegistration(102L, "SINGLES");
+        Registration reg3 = buildRegistration(103L, "SINGLES");
+
+        PointRecord r1 = buildPointRecord(101L, 50);
+        PointRecord r2 = buildPointRecord(102L, 50);
+        PointRecord r3 = buildPointRecord(103L, 30);
+
+        when(eventMapper.selectById(1L)).thenReturn(testEvent);
+        when(registrationMapper.selectList(any())).thenReturn(Arrays.asList(reg1, reg2, reg3));
+        when(userMapper.selectBatchIds(any())).thenReturn(Collections.emptyList());
+        when(pointRecordMapper.selectList(any())).thenReturn(Arrays.asList(r1, r2, r3));
+
+        List<EventResultVO> results = eventService.getEventResults(1L);
+
+        assertEquals(1, results.get(0).getRank());
+        assertEquals(1, results.get(1).getRank());
+        assertEquals(2, results.get(2).getRank());
+    }
+
+    private Registration buildRegistration(Long userId, String matchType) {
+        Registration reg = new Registration();
+        reg.setId(userId);
+        reg.setUserId(userId);
+        reg.setEventId(1L);
+        reg.setMatchType(matchType);
+        reg.setStatus("REGISTERED");
+        return reg;
+    }
+
+    private PointRecord buildPointRecord(Long userId, int points) {
+        PointRecord record = new PointRecord();
+        record.setId(System.nanoTime());
+        record.setUserId(userId);
+        record.setEventId(1L);
+        record.setType("STAR");
+        record.setPoints(points);
+        record.setReason("test");
+        record.setOperatorId(1L);
+        return record;
     }
 }

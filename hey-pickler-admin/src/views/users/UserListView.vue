@@ -25,47 +25,101 @@
           @clear="handleSearch"
           @keyup.enter="handleSearch"
         />
-        <el-button type="primary" @click="handleSearch">搜索</el-button>
+        <el-button
+          type="primary"
+          @click="handleSearch"
+        >
+          搜索
+        </el-button>
       </div>
 
-      <el-table v-loading="loading" :data="userList" style="width: 100%; margin-top: 16px">
-        <el-table-column prop="id" label="ID" width="60" />
-        <el-table-column label="手机号" width="130">
+      <el-table
+        v-loading="loading"
+        :data="userList"
+        style="width: 100%; margin-top: 16px"
+      >
+        <el-table-column
+          prop="id"
+          label="ID"
+          width="60"
+        />
+        <el-table-column
+          label="手机号"
+          width="130"
+        >
           <template #default="{ row }">
             {{ maskPhone(row.phone) }}
           </template>
         </el-table-column>
-        <el-table-column prop="nickname" label="昵称" width="120" />
-        <el-table-column label="城市" width="80">
+        <el-table-column
+          label="用户"
+          width="200"
+        >
+          <template #default="{ row }">
+            <div class="user-cell">
+              <el-avatar
+                :size="32"
+                :src="row.avatarUrl"
+              >
+                {{ row.nickname?.[0] || '?' }}
+              </el-avatar>
+              <span class="user-cell__name">{{ row.nickname || '-' }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="城市"
+          width="80"
+        >
           <template #default="{ row }">
             {{ row.city || '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="明星" width="120">
+        <el-table-column
+          label="明星"
+          width="120"
+        >
           <template #default="{ row }">
             {{ row.starTier }} / {{ row.starPoints }}分
           </template>
         </el-table-column>
-        <el-table-column label="派对" width="120">
+        <el-table-column
+          label="派对"
+          width="120"
+        >
           <template #default="{ row }">
             {{ row.partyTier }} / {{ row.partyPoints }}分
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="80">
+        <el-table-column
+          label="状态"
+          width="80"
+        >
           <template #default="{ row }">
             <el-tag :type="row.status === 'BANNED' ? 'danger' : 'success'">
               {{ row.status === 'BANNED' ? '禁赛' : '正常' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="注册时间" width="170">
+        <el-table-column
+          label="注册时间"
+          width="170"
+        >
           <template #default="{ row }">
             {{ formatDate(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column
+          label="操作"
+          width="200"
+          fixed="right"
+        >
           <template #default="{ row }">
-            <el-button type="primary" size="small" @click="handleDetail(row)">
+            <el-button
+              type="primary"
+              size="small"
+              @click="handleDetail(row)"
+            >
               详情
             </el-button>
             <el-button
@@ -97,8 +151,15 @@
       />
     </div>
 
-    <BanDialog v-model="banDialogVisible" :user="selectedUser" @success="fetchUsers" />
-    <UserDetailDrawer v-model="detailVisible" :user-id="detailUserId" />
+    <BanDialog
+      v-model="banDialogVisible"
+      :user="selectedUser"
+      @success="fetchUsers"
+    />
+    <UserDetailDrawer
+      v-model="detailVisible"
+      :user-id="detailUserId"
+    />
   </div>
 </template>
 
@@ -193,5 +254,15 @@ onMounted(() => {
 .table-header {
   display: flex;
   gap: 12px;
+}
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.user-cell__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

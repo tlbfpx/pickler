@@ -28,6 +28,7 @@ export interface Event {
   currentParticipants: number
   fee: number
   status: 'DRAFT' | 'OPEN' | 'FULL' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+  minPoints?: number
 }
 
 export interface CreateEventRequest {
@@ -42,6 +43,7 @@ export interface CreateEventRequest {
   maxParticipants: number
   fee: number
   prizes?: string
+  minPoints?: number
   status?: 'DRAFT' | 'OPEN' | 'FULL' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 }
 

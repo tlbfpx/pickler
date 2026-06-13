@@ -2,30 +2,59 @@
   <div>
     <div class="page-header">
       <h1>管理员管理</h1>
-      <el-button type="primary" @click="handleCreate">
+      <el-button
+        type="primary"
+        @click="handleCreate"
+      >
         <el-icon><Plus /></el-icon>
         新建管理员
       </el-button>
     </div>
     <div class="card">
-      <el-table v-loading="loading" :data="adminList" style="width: 100%">
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="username" label="用户名" width="200" />
-        <el-table-column label="角色" width="150">
+      <el-table
+        v-loading="loading"
+        :data="adminList"
+        style="width: 100%"
+      >
+        <el-table-column
+          prop="id"
+          label="ID"
+          width="80"
+        />
+        <el-table-column
+          prop="username"
+          label="用户名"
+          width="200"
+        />
+        <el-table-column
+          label="角色"
+          width="150"
+        >
           <template #default="{ row }">
             <el-tag :type="row.role === 'SUPER_ADMIN' ? 'danger' : 'primary'">
               {{ formatAdminRole(row.role) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="创建时间" width="200">
+        <el-table-column
+          label="创建时间"
+          width="200"
+        >
           <template #default="{ row }">
             {{ formatDate(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column
+          label="操作"
+          width="180"
+          fixed="right"
+        >
           <template #default="{ row }">
-            <el-button type="primary" size="small" @click="handleEdit(row)">
+            <el-button
+              type="primary"
+              size="small"
+              @click="handleEdit(row)"
+            >
               编辑
             </el-button>
             <el-button

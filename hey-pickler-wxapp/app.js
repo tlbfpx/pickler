@@ -18,6 +18,16 @@ App({
     this.checkUpdate()
   },
 
+  // 全局错误捕获
+  onError(err) {
+    console.error('[App.onError]', typeof err, JSON.stringify(err), err)
+  },
+
+  // 未处理的 Promise rejection
+  onUnhandledRejection(res) {
+    console.error('[App.onUnhandledRejection]', typeof res, JSON.stringify(res), res)
+  },
+
   // 获取用户信息 — app.js 用 this 而非 getApp()
   async getUserInfo() {
     if (!this.globalData.token) return

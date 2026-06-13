@@ -209,7 +209,8 @@ class UserServiceTest {
         regPage.setRecords(Arrays.asList(reg));
         regPage.setTotal(1);
 
-        when(registrationMapper.selectPage(any(), any())).thenReturn(regPage);
+        // getMyEvents 用 selectList 拉全部 registration 后内存分页
+        when(registrationMapper.selectList(any())).thenReturn(Arrays.asList(reg));
         when(eventMapper.selectBatchIds(anyList())).thenReturn(Arrays.asList(event));
 
         PageResult<MyEventVO> result = userService.getMyEvents(1L, null, 1, 20);

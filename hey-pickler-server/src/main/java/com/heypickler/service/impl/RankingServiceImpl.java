@@ -159,8 +159,10 @@ public class RankingServiceImpl implements RankingService {
             rankingMapper.insert(ranking);
         }
 
-        // Clear caches after DB is updated
-        for (String tier : Arrays.asList("LEGEND", "SUPER", "SHINING")) {
+        // Clear caches after DB is updated.
+        // NOTE: getRankings 缓存 key 为 ranking:{type}:{tier}，tier=null 时 key 形如
+        // "ranking:STAR:null"，必须一并清理，否则不指定 tier 的查询会读到旧数据。
+        for (String tier : Arrays.asList("LEGEND", "SUPER", "SHINING", null)) {
             redisTemplate.delete(RedisKey.ranking(type, tier));
         }
         redisTemplate.delete(RedisKey.rankingTop5(type));

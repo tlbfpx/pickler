@@ -44,7 +44,7 @@ class AdminUserIntegrationTest extends IntegrationTestConfig {
         assertEquals(createBody.get("username"), adminData.get("username"));
 
         // Update role
-        Map<String, String> updateBody = Map.of("role", "SUPER_ADMIN", "status", "ENABLED");
+        Map<String, String> updateBody = Map.of("role", "SUPER_ADMIN", "status", "ACTIVE");
         HttpEntity<Map<String, String>> updateReq = new HttpEntity<>(updateBody, headers);
         ResponseEntity<Map> updateResp = restTemplate.exchange(
                 "/api/admin/admin-users/" + newAdminId, HttpMethod.PUT, updateReq, Map.class);

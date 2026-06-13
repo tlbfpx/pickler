@@ -11,14 +11,17 @@ import com.heypickler.dto.admin.EventCreateRequest;
 import com.heypickler.dto.admin.EventUpdateRequest;
 import com.heypickler.dto.app.RegisterRequest;
 import com.heypickler.entity.Event;
+import com.heypickler.entity.PointRecord;
 import com.heypickler.entity.Registration;
 import com.heypickler.entity.User;
 import com.heypickler.mapper.EventMapper;
+import com.heypickler.mapper.PointRecordMapper;
 import com.heypickler.mapper.RegistrationMapper;
 import com.heypickler.mapper.UserMapper;
 import com.heypickler.service.EventService;
 import com.heypickler.vo.EventDetailVO;
 import com.heypickler.vo.EventParticipantVO;
+import com.heypickler.vo.EventResultVO;
 import com.heypickler.vo.EventVO;
 import com.heypickler.vo.RegistrationVO;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +40,7 @@ public class EventServiceImpl implements EventService {
     private final EventMapper eventMapper;
     private final RegistrationMapper registrationMapper;
     private final UserMapper userMapper;
+    private final PointRecordMapper pointRecordMapper;
 
     @Override
     public PageResult<EventVO> listEvents(String type, String status, int page, int size) {
@@ -99,6 +103,17 @@ public class EventServiceImpl implements EventService {
 
         if (LocalDateTime.now().isAfter(event.getRegistrationDeadline())) {
             throw new BizException(ErrorCode.REGISTRATION_CLOSED);
+        }
+
+        if (event.getMinPoints() != null && event.getMinPoints() > 0) {
+            User user = userMapper.selectById(userId);
+            if (user != null) {
+                int userPoints = "STAR".equals(event.getType()) ? user.getStarPoints() : user.getPartyPoints();
+                if (userPoints < event.getMinPoints()) {
+                    throw new BizException(ErrorCode.INSUFFICIENT_POINTS,
+                            String.format("积分不足，需 %d 分，当前 %d 分", event.getMinPoints(), userPoints));
+                }
+            }
         }
 
         Registration existingRegistration = registrationMapper.selectOne(
@@ -306,6 +321,67 @@ public class EventServiceImpl implements EventService {
             }
             return vo;
         }).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<EventResultVO> getEventResults(Long eventId) {
+        Event event = eventMapper.selectById(eventId);
+        if (event == null || event.getDeletedAt() != null) {
+            throw new BizException(ErrorCode.NOT_FOUND);
+        }
+
+        List<Registration> registrations = registrationMapper.selectList(
+                new LambdaQueryWrapper<Registration>()
+                        .eq(Registration::getEventId, eventId)
+                        .in(Registration::getStatus, "REGISTERED", "CHECKED_IN"));
+
+        if (registrations.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> userIds = registrations.stream()
+                .map(Registration::getUserId)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, User> userMap = userMapper.selectBatchIds(userIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+
+        List<PointRecord> records = pointRecordMapper.selectList(
+                new LambdaQueryWrapper<PointRecord>()
+                        .eq(PointRecord::getEventId, eventId));
+
+        Map<Long, Integer> pointsByUser = records.stream()
+                .collect(Collectors.groupingBy(
+                        PointRecord::getUserId,
+                        Collectors.summingInt(PointRecord::getPoints)));
+
+        List<EventResultVO> results = registrations.stream().map(reg -> {
+            EventResultVO vo = new EventResultVO();
+            vo.setUserId(reg.getUserId());
+            vo.setMatchType(reg.getMatchType());
+            User user = userMap.get(reg.getUserId());
+            if (user != null) {
+                vo.setNickname(user.getNickname());
+                vo.setAvatarUrl(user.getAvatarUrl());
+                vo.setCity(user.getCity());
+            }
+            vo.setPoints(pointsByUser.getOrDefault(reg.getUserId(), 0));
+            return vo;
+        }).collect(Collectors.toList());
+
+        results.sort(Comparator.comparingInt(EventResultVO::getPoints).reversed());
+
+        int rank = 0;
+        Integer prevPoints = null;
+        for (EventResultVO vo : results) {
+            if (prevPoints == null || !prevPoints.equals(vo.getPoints())) {
+                rank++;
+                prevPoints = vo.getPoints();
+            }
+            vo.setRank(rank);
+        }
+
+        return results;
     }
 
     @Override

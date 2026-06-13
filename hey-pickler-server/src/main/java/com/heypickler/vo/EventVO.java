@@ -18,4 +18,5 @@ public class EventVO {
     private Integer maxParticipants;
     private BigDecimal fee;
     private LocalDateTime registrationDeadline;
+    private Integer minPoints;
 }

@@ -11,7 +11,9 @@ Page({
     isRegistered: false,
     registration: null,
     action: null, // 'register' from navigation
-    isRegistrationOpen: false
+    isRegistrationOpen: false,
+    insufficientPoints: false,
+    pointsGap: 0
   },
 
   onLoad(options) {
@@ -64,6 +66,7 @@ Page({
         // Check if user is registered
         if (auth.isLoggedIn()) {
           await this.checkRegistration()
+          await this.checkPointsEligibility(event)
         }
 
         // Handle action from navigation
@@ -100,6 +103,30 @@ Page({
       }
     } catch (error) {
       console.error('Check registration failed:', error)
+    }
+  },
+
+  // Check if user has enough points to register
+  async checkPointsEligibility(event) {
+    const minPoints = event.minPoints || 0
+    if (minPoints <= 0) {
+      this.setData({ insufficientPoints: false, pointsGap: 0 })
+      return
+    }
+    try {
+      const res = await request.get('/user/profile')
+      if (res.code === 0 && res.data) {
+        const userPoints = event.type === 'STAR'
+          ? (res.data.starPoints || 0)
+          : (res.data.partyPoints || 0)
+        const insufficient = userPoints < minPoints
+        this.setData({
+          insufficientPoints: insufficient,
+          pointsGap: insufficient ? (minPoints - userPoints) : 0
+        })
+      }
+    } catch (error) {
+      console.error('Check points eligibility failed:', error)
     }
   },
 
@@ -246,11 +273,10 @@ Page({
     }
   },
 
-  // Navigate to ranking
-  navigateToRanking() {
-    const type = this.data.event.type
+  // View event results
+  handleViewResults() {
     wx.navigateTo({
-      url: `/pages/ranking/ranking?type=${type}`
+      url: `/pages/event-results/event-results?id=${this.data.eventId}`
     })
   },
 

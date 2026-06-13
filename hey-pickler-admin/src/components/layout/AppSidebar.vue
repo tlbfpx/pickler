@@ -1,6 +1,8 @@
 <template>
   <div class="sidebar">
-    <div class="sidebar-logo">Hey Pickler 管理后台</div>
+    <div class="sidebar-logo">
+      Hey Pickler 管理后台
+    </div>
     <el-menu
       :default-active="activeMenu"
       class="sidebar-menu"

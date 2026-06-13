@@ -1,9 +1,19 @@
 <template>
   <div class="login-container">
     <div class="login-card">
-      <h1 class="login-title">Hey Pickler 管理后台</h1>
-      <el-form ref="formRef" :model="formData" :rules="rules" label-position="top">
-        <el-form-item label="用户名" prop="username">
+      <h1 class="login-title">
+        Hey Pickler 管理后台
+      </h1>
+      <el-form
+        ref="formRef"
+        :model="formData"
+        :rules="rules"
+        label-position="top"
+      >
+        <el-form-item
+          label="用户名"
+          prop="username"
+        >
           <el-input
             v-model="formData.username"
             placeholder="请输入用户名"
@@ -11,7 +21,10 @@
             :prefix-icon="User"
           />
         </el-form-item>
-        <el-form-item label="密码" prop="password">
+        <el-form-item
+          label="密码"
+          prop="password"
+        >
           <el-input
             v-model="formData.password"
             type="password"
@@ -26,8 +39,8 @@
             type="primary"
             size="large"
             :loading="loading"
-            @click="handleLogin"
             style="width: 100%"
+            @click="handleLogin"
           >
             登录
           </el-button>

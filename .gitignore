@@ -1,0 +1,33 @@
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+.logs/
+*.log
+
+# Backend (Spring Boot / Maven)
+hey-pickler-server/target/
+hey-pickler-server/.mvn/wrapper/maven-wrapper.jar
+*.class
+
+# Admin (Vue / Vite)
+hey-pickler-admin/node_modules/
+hey-pickler-admin/dist/
+
+# Wxapp (native, no build artifacts typically)
+hey-pickler-wxapp/miniprogram_npm/
+
+# Env files
+.env
+.env.local
+*.env.local
+
+# Misc
+.cache/
+*.tmp

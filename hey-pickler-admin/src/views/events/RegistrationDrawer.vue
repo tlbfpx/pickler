@@ -5,14 +5,30 @@
     size="780px"
     destroy-on-close
   >
-    <div v-loading="loading" class="reg-content">
+    <div
+      v-loading="loading"
+      class="reg-content"
+    >
       <!-- 赛事摘要 -->
-      <div class="event-summary" v-if="event">
+      <div
+        v-if="event"
+        class="event-summary"
+      >
         <div class="summary-row">
-          <el-tag :color="getEventTypeColor(event.type)" effect="dark" size="small" style="border: none">
+          <el-tag
+            :color="getEventTypeColor(event.type)"
+            effect="dark"
+            size="small"
+            style="border: none"
+          >
             {{ formatEventType(event.type) }}
           </el-tag>
-          <el-tag :color="getEventStatusColor(event.status)" effect="dark" size="small" style="border: none; margin-left: 8px">
+          <el-tag
+            :color="getEventStatusColor(event.status)"
+            effect="dark"
+            size="small"
+            style="border: none; margin-left: 8px"
+          >
             {{ formatEventStatus(event.status) }}
           </el-tag>
           <span class="summary-info">{{ event.location || '-' }} · {{ formatDate(event.eventTime!) }}</span>
@@ -32,67 +48,152 @@
 
       <!-- 筛选栏 -->
       <div class="filter-bar">
-        <el-select v-model="filterStatus" placeholder="报名状态" clearable style="width: 130px" @change="handleFilter">
-          <el-option label="已报名" value="REGISTERED" />
-          <el-option label="已签到" value="CHECKED_IN" />
+        <el-select
+          v-model="filterStatus"
+          placeholder="报名状态"
+          clearable
+          style="width: 130px"
+          @change="handleFilter"
+        >
+          <el-option
+            label="已报名"
+            value="REGISTERED"
+          />
+          <el-option
+            label="已签到"
+            value="CHECKED_IN"
+          />
         </el-select>
-        <el-select v-model="filterMatchType" placeholder="比赛类型" clearable style="width: 130px" @change="handleFilter">
-          <el-option label="单打" value="SINGLES" />
-          <el-option label="双打" value="DOUBLES" />
-          <el-option label="混双" value="MIXED" />
+        <el-select
+          v-model="filterMatchType"
+          placeholder="比赛类型"
+          clearable
+          style="width: 130px"
+          @change="handleFilter"
+        >
+          <el-option
+            label="单打"
+            value="SINGLES"
+          />
+          <el-option
+            label="双打"
+            value="DOUBLES"
+          />
+          <el-option
+            label="混双"
+            value="MIXED"
+          />
         </el-select>
-        <el-button @click="handleFilter">查询</el-button>
-        <el-button @click="handleReset">重置</el-button>
+        <el-button @click="handleFilter">
+          查询
+        </el-button>
+        <el-button @click="handleReset">
+          重置
+        </el-button>
       </div>
 
       <!-- 报名列表 -->
-      <el-table :data="registrationList" size="small" style="width: 100%">
-        <el-table-column prop="id" label="ID" width="60" />
-        <el-table-column label="用户" min-width="160">
+      <el-table
+        :data="registrationList"
+        size="small"
+        style="width: 100%"
+      >
+        <el-table-column
+          prop="id"
+          label="ID"
+          width="60"
+        />
+        <el-table-column
+          label="用户"
+          min-width="160"
+        >
           <template #default="{ row }">
             <div class="user-cell">
-              <el-avatar :src="row.avatarUrl || undefined" :size="28" />
+              <el-avatar
+                :src="row.avatarUrl || undefined"
+                :size="28"
+              />
               <span class="user-name">{{ row.nickname || '-' }}</span>
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="city" label="城市" width="80" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.city || '-' }}</template>
-        </el-table-column>
-        <el-table-column label="比赛类型" width="80">
+        <el-table-column
+          prop="city"
+          label="城市"
+          width="80"
+          show-overflow-tooltip
+        >
           <template #default="{ row }">
-            <el-tag size="small" :type="matchTypeTagType(row.matchType)">
+            {{ row.city || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="比赛类型"
+          width="80"
+        >
+          <template #default="{ row }">
+            <el-tag
+              size="small"
+              :type="matchTypeTagType(row.matchType)"
+            >
               {{ formatMatchType(row.matchType) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="搭档" width="90" show-overflow-tooltip>
+        <el-table-column
+          label="搭档"
+          width="90"
+          show-overflow-tooltip
+        >
           <template #default="{ row }">
             {{ row.partnerNickname || (row.partnerId ? 'ID:' + row.partnerId : '-') }}
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="80">
+        <el-table-column
+          label="状态"
+          width="80"
+        >
           <template #default="{ row }">
-            <el-tag size="small" :type="regStatusTagType(row.status)">
+            <el-tag
+              size="small"
+              :type="regStatusTagType(row.status)"
+            >
               {{ formatRegStatus(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="报名时间" width="150">
-          <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
+        <el-table-column
+          label="报名时间"
+          width="150"
+        >
+          <template #default="{ row }">
+            {{ formatDate(row.createdAt) }}
+          </template>
         </el-table-column>
-        <el-table-column label="操作" width="140" fixed="right">
+        <el-table-column
+          label="操作"
+          width="140"
+          fixed="right"
+        >
           <template #default="{ row }">
             <el-button
               v-if="row.status === 'REGISTERED'"
-              link type="success" size="small"
+              link
+              type="success"
+              size="small"
               @click="handleCheckIn(row)"
-            >签到</el-button>
+            >
+              签到
+            </el-button>
             <el-button
               v-if="row.status !== 'WITHDRAWN'"
-              link type="danger" size="small"
+              link
+              type="danger"
+              size="small"
               @click="handleWithdraw(row)"
-            >取消报名</el-button>
+            >
+              取消报名
+            </el-button>
           </template>
         </el-table-column>
       </el-table>

@@ -23,7 +23,7 @@ public class BannerServiceImpl implements BannerService {
     @Override
     public List<BannerVO> listEnabledBanners() {
         LambdaQueryWrapper<Banner> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Banner::getStatus, "ENABLED");
+        wrapper.eq(Banner::getStatus, "ACTIVE");
         wrapper.orderByAsc(Banner::getSortOrder);
         List<Banner> banners = bannerMapper.selectList(wrapper);
         return banners.stream().map(this::toVO).collect(Collectors.toList());
@@ -43,7 +43,7 @@ public class BannerServiceImpl implements BannerService {
         banner.setImageUrl(request.getImageUrl());
         banner.setLinkUrl(request.getLinkUrl());
         banner.setSortOrder(request.getSortOrder() != null ? request.getSortOrder() : 0);
-        banner.setStatus(request.getStatus() != null ? request.getStatus() : "ENABLED");
+        banner.setStatus(request.getStatus() != null ? request.getStatus() : "ACTIVE");
         bannerMapper.insert(banner);
         return banner.getId();
     }

@@ -6,16 +6,22 @@
     @update:model-value="$emit('update:modelValue', $event)"
   >
     <el-form
+      v-if="user"
       ref="formRef"
       :model="formData"
       :rules="rules"
       label-position="top"
-      v-if="user"
     >
       <el-form-item label="用户">
-        <el-input :value="user.nickname" disabled />
+        <el-input
+          :value="user.nickname"
+          disabled
+        />
       </el-form-item>
-      <el-form-item label="禁赛原因" prop="reason">
+      <el-form-item
+        label="禁赛原因"
+        prop="reason"
+      >
         <el-input
           v-model="formData.reason"
           type="textarea"
@@ -23,7 +29,10 @@
           placeholder="请输入禁赛原因"
         />
       </el-form-item>
-      <el-form-item label="禁赛天数" prop="days">
+      <el-form-item
+        label="禁赛天数"
+        prop="days"
+      >
         <el-input-number
           v-model="formData.days"
           :min="1"
@@ -33,8 +42,14 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="$emit('update:modelValue', false)">取消</el-button>
-      <el-button type="danger" :loading="loading" @click="handleConfirm">
+      <el-button @click="$emit('update:modelValue', false)">
+        取消
+      </el-button>
+      <el-button
+        type="danger"
+        :loading="loading"
+        @click="handleConfirm"
+      >
         确认禁赛
       </el-button>
     </template>

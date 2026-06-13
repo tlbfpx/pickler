@@ -1,0 +1,54 @@
+<wxs src="../../utils/util.wxs" module="util" />
+
+<view class="page">
+  <view wx:if="{{loading}}" class="loading">
+    <text>加载中...</text>
+  </view>
+
+  <block wx:elif="{{results.length > 0}}">
+    <view class="podium">
+      <view class="podium-item podium-silver" wx:if="{{results.length >= 2}}">
+        <image class="podium-avatar" src="{{results[1].avatarUrl || '/images/default-avatar.png'}}"></image>
+        <view class="podium-rank">2</view>
+        <view class="podium-name">{{results[1].nickname || '匿名'}}</view>
+        <view class="podium-points">{{results[1].points}} 分</view>
+      </view>
+      <view class="podium-item podium-gold" wx:if="{{results.length >= 1}}">
+        <image class="podium-avatar" src="{{results[0].avatarUrl || '/images/default-avatar.png'}}"></image>
+        <view class="podium-rank">1</view>
+        <view class="podium-name">{{results[0].nickname || '匿名'}}</view>
+        <view class="podium-points">{{results[0].points}} 分</view>
+      </view>
+      <view class="podium-item podium-bronze" wx:if="{{results.length >= 3}}">
+        <image class="podium-avatar" src="{{results[2].avatarUrl || '/images/default-avatar.png'}}"></image>
+        <view class="podium-rank">3</view>
+        <view class="podium-name">{{results[2].nickname || '匿名'}}</view>
+        <view class="podium-points">{{results[2].points}} 分</view>
+      </view>
+    </view>
+
+    <view class="list">
+      <view
+        class="result-item"
+        wx:for="{{results}}"
+        wx:if="{{index >= 3}}"
+        wx:key="userId">
+        <view class="rank-num">{{item.rank}}</view>
+        <image class="avatar" src="{{item.avatarUrl || '/images/default-avatar.png'}}"></image>
+        <view class="user-info">
+          <view class="nickname">{{item.nickname || '匿名'}}</view>
+          <view class="meta">
+            <text wx:if="{{item.city}}">{{item.city}} · </text>
+            <text>{{util.formatMatchType(item.matchType)}}</text>
+          </view>
+        </view>
+        <view class="points">{{item.points}} 分</view>
+      </view>
+    </view>
+  </block>
+
+  <view wx:else class="empty">
+    <text class="empty-icon">🏆</text>
+    <text>暂无成绩数据</text>
+  </view>
+</view>

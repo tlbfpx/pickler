@@ -12,49 +12,100 @@
           style="width: 150px"
           @change="handleFilter"
         >
-          <el-option label="封禁" value="BAN" />
-          <el-option label="解禁" value="UNBAN" />
+          <el-option
+            label="封禁"
+            value="BAN"
+          />
+          <el-option
+            label="解禁"
+            value="UNBAN"
+          />
         </el-select>
       </div>
 
-      <el-table v-loading="loading" :data="recordList" style="width: 100%; margin-top: 16px">
-        <el-table-column prop="id" label="ID" width="70" />
-        <el-table-column label="用户" width="220">
+      <el-table
+        v-loading="loading"
+        :data="recordList"
+        style="width: 100%; margin-top: 16px"
+      >
+        <el-table-column
+          prop="id"
+          label="ID"
+          width="70"
+        />
+        <el-table-column
+          label="用户"
+          width="220"
+        >
           <template #default="{ row }">
             <div class="user-cell">
               <div class="user-info">
-                <div class="user-name">{{ row.userNickname || '-' }}</div>
-                <div class="user-sub">{{ maskPhone(row.userPhone) }}  ·  ID: {{ row.userId }}</div>
+                <div class="user-name">
+                  {{ row.userNickname || '-' }}
+                </div>
+                <div class="user-sub">
+                  {{ maskPhone(row.userPhone) }}  ·  ID: {{ row.userId }}
+                </div>
               </div>
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="100">
+        <el-table-column
+          label="操作"
+          width="100"
+        >
           <template #default="{ row }">
-            <el-tag :type="row.action === 'BAN' ? 'danger' : 'success'" effect="dark">
+            <el-tag
+              :type="row.action === 'BAN' ? 'danger' : 'success'"
+              effect="dark"
+            >
               {{ row.action === 'BAN' ? '封禁' : '解禁' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="reason" label="原因" min-width="200" show-overflow-tooltip />
-        <el-table-column label="封禁至" width="170">
+        <el-table-column
+          prop="reason"
+          label="原因"
+          min-width="200"
+          show-overflow-tooltip
+        />
+        <el-table-column
+          label="封禁至"
+          width="170"
+        >
           <template #default="{ row }">
             {{ row.banUntil ? formatDate(row.banUntil) : '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="操作人" width="130">
+        <el-table-column
+          label="操作人"
+          width="130"
+        >
           <template #default="{ row }">
             {{ row.operatorName || '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="操作时间" width="170">
+        <el-table-column
+          label="操作时间"
+          width="170"
+        >
           <template #default="{ row }">
             {{ formatDate(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="80" fixed="right">
+        <el-table-column
+          label="操作"
+          width="80"
+          fixed="right"
+        >
           <template #default="{ row }">
-            <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+            <el-button
+              type="danger"
+              size="small"
+              @click="handleDelete(row)"
+            >
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>

@@ -7,17 +7,34 @@
   >
     <!-- Step 1: 选择赛事/活动 -->
     <div class="step-section">
-      <div class="step-title">关联赛事/活动</div>
+      <div class="step-title">
+        关联赛事/活动
+      </div>
       <el-form label-position="top">
-        <el-form-item label="积分类型">
-          <el-radio-group v-model="entryMode" @change="handleModeChange">
-            <el-radio value="STAR">关联赛事</el-radio>
-            <el-radio value="PARTY">关联活动</el-radio>
-            <el-radio value="MANUAL">手动录入</el-radio>
+        <el-form-item
+          v-if="!isPreset"
+          label="积分类型"
+        >
+          <el-radio-group
+            v-model="entryMode"
+            @change="handleModeChange"
+          >
+            <el-radio value="STAR">
+              关联赛事
+            </el-radio>
+            <el-radio value="PARTY">
+              关联活动
+            </el-radio>
+            <el-radio value="MANUAL">
+              手动录入
+            </el-radio>
           </el-radio-group>
         </el-form-item>
 
-        <el-form-item v-if="entryMode !== 'MANUAL'" label="选择赛事/活动">
+        <el-form-item
+          v-if="!isPreset && entryMode !== 'MANUAL'"
+          label="选择赛事/活动"
+        >
           <el-select
             v-model="selectedEventId"
             placeholder="请选择"
@@ -35,15 +52,30 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item v-if="entryMode === 'MANUAL'" label="积分类型">
-          <el-select v-model="manualType" style="width: 200px">
-            <el-option label="明星积分" value="STAR" />
-            <el-option label="派对积分" value="PARTY" />
+        <el-form-item
+          v-if="!isPreset && entryMode === 'MANUAL'"
+          label="积分类型"
+        >
+          <el-select
+            v-model="manualType"
+            style="width: 200px"
+          >
+            <el-option
+              label="明星积分"
+              value="STAR"
+            />
+            <el-option
+              label="派对积分"
+              value="PARTY"
+            />
           </el-select>
         </el-form-item>
 
         <!-- 选中赛事信息 -->
-        <div v-if="selectedEvent" class="event-info-card">
+        <div
+          v-if="selectedEvent"
+          class="event-info-card"
+        >
           <div class="event-info-row">
             <span class="event-info-label">{{ entryMode === 'STAR' ? '赛事' : '活动' }}名称</span>
             <span>{{ selectedEvent.title }}</span>
@@ -65,21 +97,36 @@
     </div>
 
     <!-- Step 2: 录入积分明细 -->
-    <div class="step-section" style="margin-top: 16px">
+    <div
+      class="step-section"
+      style="margin-top: 16px"
+    >
       <div class="step-title">
         积分明细
-        <span v-if="records.length" class="step-sub">（共 {{ records.length }} 人）</span>
+        <span
+          v-if="records.length"
+          class="step-sub"
+        >（共 {{ records.length }} 人）</span>
       </div>
 
-      <div v-if="participantsLoading" style="text-align: center; padding: 20px; color: #9ca3af;">
+      <div
+        v-if="participantsLoading"
+        style="text-align: center; padding: 20px; color: #9ca3af;"
+      >
         加载参赛者中...
       </div>
 
-      <div v-else-if="entryMode !== 'MANUAL' && selectedEventId && records.length === 0" style="text-align: center; padding: 20px; color: #9ca3af;">
+      <div
+        v-else-if="entryMode !== 'MANUAL' && selectedEventId && records.length === 0"
+        style="text-align: center; padding: 20px; color: #9ca3af;"
+      >
         该赛事暂无报名人员
       </div>
 
-      <div v-else-if="records.length > 0" class="records-list">
+      <div
+        v-else-if="records.length > 0"
+        class="records-list"
+      >
         <div
           v-for="(record, index) in records"
           :key="index"
@@ -105,7 +152,10 @@
                   :value="u.id"
                 >
                   <div class="user-option">
-                    <el-avatar :src="u.avatarUrl || undefined" :size="24" />
+                    <el-avatar
+                      :src="u.avatarUrl || undefined"
+                      :size="24"
+                    />
                     <span>{{ u.nickname || ('用户 ' + u.id) }}</span>
                     <span class="user-option-id">ID: {{ u.id }}</span>
                   </div>
@@ -115,18 +165,31 @@
 
             <!-- 已选用户 或 赛事模式：显示用户信息 -->
             <template v-else-if="record.userId">
-              <div class="user-cell" @click="startEdit(index)">
-                <el-avatar :src="record.avatarUrl || undefined" :size="32" />
+              <div
+                class="user-cell"
+                @click="startEdit(index)"
+              >
+                <el-avatar
+                  :src="record.avatarUrl || undefined"
+                  :size="32"
+                />
                 <div class="user-info">
-                  <div class="user-name">{{ record.nickname || ('用户 ' + record.userId) }}</div>
-                  <div class="user-id">ID: {{ record.userId }}</div>
+                  <div class="user-name">
+                    {{ record.nickname || ('用户 ' + record.userId) }}
+                  </div>
+                  <div class="user-id">
+                    ID: {{ record.userId }}
+                  </div>
                 </div>
               </div>
             </template>
 
             <!-- 手动模式未选用户时显示占位 -->
             <template v-else-if="entryMode === 'MANUAL'">
-              <el-button size="small" @click="startEdit(index)">
+              <el-button
+                size="small"
+                @click="startEdit(index)"
+              >
                 <el-icon><User /></el-icon>
                 选择用户
               </el-button>
@@ -169,8 +232,14 @@
     </div>
 
     <template #footer>
-      <el-button @click="$emit('update:modelValue', false)">取消</el-button>
-      <el-button type="primary" :loading="loading" @click="handleConfirm">
+      <el-button @click="$emit('update:modelValue', false)">
+        取消
+      </el-button>
+      <el-button
+        type="primary"
+        :loading="loading"
+        @click="handleConfirm"
+      >
         提交录入
       </el-button>
     </template>
@@ -197,12 +266,15 @@ interface RecordItem {
 
 const props = defineProps<{
   modelValue: boolean
+  presetEvent?: Event | null
 }>()
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   success: []
 }>()
+
+const isPreset = computed(() => !!props.presetEvent)
 
 const loading = ref(false)
 const eventsLoading = ref(false)
@@ -230,13 +302,22 @@ const reasonPlaceholder = computed(() => {
 
 watch(() => props.modelValue, (val) => {
   if (val) {
-    entryMode.value = 'STAR'
-    manualType.value = 'STAR'
-    selectedEventId.value = null
-    events.value = []
-    participants.value = []
     records.length = 0
-    fetchEvents()
+    participants.value = []
+
+    if (props.presetEvent) {
+      entryMode.value = props.presetEvent.type === 'PARTY' ? 'PARTY' : 'STAR'
+      manualType.value = entryMode.value
+      events.value = [props.presetEvent]
+      selectedEventId.value = props.presetEvent.id
+      fetchParticipants(props.presetEvent.id)
+    } else {
+      entryMode.value = 'STAR'
+      manualType.value = 'STAR'
+      selectedEventId.value = null
+      events.value = []
+      fetchEvents()
+    }
   }
 })
 
@@ -370,8 +451,12 @@ const handleConfirm = async () => {
 
   loading.value = true
   try {
-    const data: any = {
-      records: validRecords.map(r => ({
+    const data: {
+      eventId?: number
+      type?: string
+      records: { userId: number; points: number; reason: string }[]
+    } = {
+      records: records.map(r => ({
         userId: r.userId,
         points: r.points,
         reason: r.reason.trim()
