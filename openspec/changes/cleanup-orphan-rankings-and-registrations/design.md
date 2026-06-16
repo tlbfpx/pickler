@@ -15,21 +15,27 @@
 ```sql
 -- 1. 删除 ranking 表里指向已删用户的孤儿行
 DELETE r FROM ranking r
-LEFT JOIN user u ON r.user_id = u.id AND u.deleted_at IS NULL
+LEFT JOIN user u ON r.user_id = u.id
 WHERE u.id IS NULL;
 
 -- 2. 把 registration 表里指向已删用户的孤儿行 status 改为 CANCELLED
---    （registration 表无 deleted_at 列，靠 status 让 dashboard notIn 过滤掉）
+--    （靠 status 让 dashboard notIn 过滤掉）
 UPDATE registration reg
-LEFT JOIN user u ON reg.user_id = u.id AND u.deleted_at IS NULL
+LEFT JOIN user u ON reg.user_id = u.id
 SET reg.status = 'CANCELLED', reg.updated_at = NOW()
 WHERE u.id IS NULL AND reg.status NOT IN ('WITHDRAWN', 'CANCELLED');
 ```
 
 **决策**：
 - ranking 硬删 — 排名是衍生数据，可由 `refreshRankings` 重建
-- registration 改 status=CANCELLED — 报名表无 `deleted_at` 列，靠 status 让 `AdminDashboardController` 的 `notIn(WITHDRAWN, CANCELLED)` 过滤生效
+- registration 改 status=CANCELLED — 靠 status 让 `AdminDashboardController` 的 `notIn(WITHDRAWN, CANCELLED)` 过滤生效
 - registration 保留业务原始数据可审计（不物理删除）
+
+**Schema 事实**（实现时发现）：
+- `user` 表**无** `deleted_at` 列 — User 实体无 `@TableLogic` 字段，用户本就是物理删除
+- `event` 表才有 `deleted_at` 列
+- 因此 LEFT JOIN 不带 `deleted_at` 谓词，`u.id IS NULL` 即足以识别孤儿
+- 这与最初设计稿"假设 user 是软删"不同，已按真实 schema 校正
 
 **关于 Flyway 语法**：
 - MySQL 8 支持 `DELETE ... LEFT JOIN` 和 `UPDATE ... LEFT JOIN ... SET`
