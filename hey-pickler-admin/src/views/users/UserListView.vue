@@ -61,9 +61,9 @@
                 :size="32"
                 :src="row.avatarUrl"
               >
-                {{ row.nickname?.[0] || '?' }}
+                <el-icon><UserIcon /></el-icon>
               </el-avatar>
-              <span class="user-cell__name">{{ row.nickname || '-' }}</span>
+              <span class="user-cell__name">{{ row.nickname || '匿名用户' }}</span>
             </div>
           </template>
         </el-table-column>
@@ -166,6 +166,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { User as UserIcon } from '@element-plus/icons-vue'
 import { getUserList, unbanUser } from '@/api/users'
 import type { User } from '@/api/users'
 import { formatDate } from '@/utils'
