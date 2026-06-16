@@ -29,6 +29,9 @@ class BannerServiceTest {
     @Mock
     private BannerMapper bannerMapper;
 
+    @Mock
+    private ImageUrlValidator imageUrlValidator;
+
     @InjectMocks
     private BannerServiceImpl bannerService;
 
@@ -99,6 +102,7 @@ class BannerServiceTest {
         request.setSortOrder(10);
         request.setStatus("ACTIVE");
 
+        doNothing().when(imageUrlValidator).validate("https://example.com/new.jpg");
         when(bannerMapper.insert(any(Banner.class))).thenAnswer(invocation -> {
             Banner banner = invocation.getArgument(0);
             banner.setId(100L);
@@ -124,6 +128,7 @@ class BannerServiceTest {
         BannerCreateRequest request = new BannerCreateRequest();
         request.setImageUrl("https://example.com/new.jpg");
 
+        doNothing().when(imageUrlValidator).validate("https://example.com/new.jpg");
         when(bannerMapper.insert(any(Banner.class))).thenAnswer(invocation -> {
             Banner banner = invocation.getArgument(0);
             banner.setId(100L);
@@ -143,6 +148,24 @@ class BannerServiceTest {
     }
 
     @Test
+    void createBanner_WhenImageUrlUnreachable_ShouldThrowAndNotInsert() {
+        // Given
+        BannerCreateRequest request = new BannerCreateRequest();
+        request.setImageUrl("https://test.com/banner.jpg");
+        request.setSortOrder(5);
+        request.setStatus("ACTIVE");
+
+        doThrow(new BizException(ErrorCode.PARAM_ERROR, "图片地址校验失败"))
+            .when(imageUrlValidator).validate("https://test.com/banner.jpg");
+
+        // When & Then
+        BizException ex = assertThrows(BizException.class,
+            () -> bannerService.createBanner(request));
+        assertEquals(ErrorCode.PARAM_ERROR.getCode(), ex.getCode());
+        verify(bannerMapper, never()).insert(any(Banner.class));
+    }
+
+    @Test
     void updateBanner_WithAllFields_ShouldUpdateBanner() {
         // Given
         Long bannerId = 1L;
@@ -152,6 +175,7 @@ class BannerServiceTest {
         request.setSortOrder(20);
         request.setStatus("DISABLED");
 
+        doNothing().when(imageUrlValidator).validate("https://example.com/updated.jpg");
         when(bannerMapper.updateById(any(Banner.class))).thenReturn(1);
 
         // When
@@ -175,6 +199,7 @@ class BannerServiceTest {
         request.setImageUrl("https://example.com/updated.jpg");
         request.setSortOrder(30);
 
+        doNothing().when(imageUrlValidator).validate("https://example.com/updated.jpg");
         when(bannerMapper.updateById(any(Banner.class))).thenReturn(1);
 
         // When
@@ -186,6 +211,25 @@ class BannerServiceTest {
             banner.getImageUrl().equals("https://example.com/updated.jpg") &&
             banner.getSortOrder() == 30
         ));
+    }
+
+    @Test
+    void updateBanner_WhenImageUrlUnreachable_ShouldThrowAndNotUpdate() {
+        // Given
+        Long bannerId = 1L;
+        BannerCreateRequest request = new BannerCreateRequest();
+        request.setImageUrl("https://test.com/banner.jpg");
+        request.setSortOrder(50);
+        request.setStatus("ACTIVE");
+
+        doThrow(new BizException(ErrorCode.PARAM_ERROR, "图片地址校验失败"))
+            .when(imageUrlValidator).validate("https://test.com/banner.jpg");
+
+        // When & Then
+        BizException ex = assertThrows(BizException.class,
+            () -> bannerService.updateBanner(bannerId, request));
+        assertEquals(ErrorCode.PARAM_ERROR.getCode(), ex.getCode());
+        verify(bannerMapper, never()).updateById(any(Banner.class));
     }
 
     @Test
