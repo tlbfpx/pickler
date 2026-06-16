@@ -18,17 +18,18 @@ DELETE r FROM ranking r
 LEFT JOIN user u ON r.user_id = u.id AND u.deleted_at IS NULL
 WHERE u.id IS NULL;
 
--- 2. 软删 registration 表里指向已删用户的孤儿行
+-- 2. 把 registration 表里指向已删用户的孤儿行 status 改为 CANCELLED
+--    （registration 表无 deleted_at 列，靠 status 让 dashboard notIn 过滤掉）
 UPDATE registration reg
 LEFT JOIN user u ON reg.user_id = u.id AND u.deleted_at IS NULL
-SET reg.deleted_at = NOW(), reg.status = 'CANCELLED'
-WHERE u.id IS NULL AND reg.deleted_at IS NULL;
+SET reg.status = 'CANCELLED', reg.updated_at = NOW()
+WHERE u.id IS NULL AND reg.status NOT IN ('WITHDRAWN', 'CANCELLED');
 ```
 
 **决策**：
 - ranking 硬删 — 排名是衍生数据，可由 `refreshRankings` 重建
-- registration 软删 — 报名是原始业务数据，保留可审计
-- registration 同时改 status 为 CANCELLED — 让 `AdminDashboardController` 的 `notIn(WITHDRAWN, CANCELLED)` 过滤生效，dashboard 自然不显示
+- registration 改 status=CANCELLED — 报名表无 `deleted_at` 列，靠 status 让 `AdminDashboardController` 的 `notIn(WITHDRAWN, CANCELLED)` 过滤生效
+- registration 保留业务原始数据可审计（不物理删除）
 
 **关于 Flyway 语法**：
 - MySQL 8 支持 `DELETE ... LEFT JOIN` 和 `UPDATE ... LEFT JOIN ... SET`
