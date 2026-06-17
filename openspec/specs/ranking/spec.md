@@ -51,7 +51,7 @@ The system SHALL asynchronously refresh the ranking snapshot after point entry. 
 - **THEN** the `change` field SHALL be set to 0
 
 ### Requirement: Get rankings for app
-The system SHALL provide an endpoint (`GET /api/app/rankings`) that returns a paginated ranking list filtered by `type` (STAR/PARTY) and `tier` (LEGEND/SUPER/SHINING). The system SHALL check Redis cache first, falling back to MySQL on miss.
+The system SHALL provide an endpoint (`GET /api/app/rankings`) that returns a paginated ranking list filtered by `type` (STAR/PARTY) and `tier` (LEGEND/SUPER/SHINING). The system SHALL check Redis cache first, falling back to MySQL on miss. The system SHALL exclude any ranking row whose `user_id` cannot be resolved to an existing user (e.g., the user was physically deleted).
 
 #### Scenario: Get STAR LEGEND rankings
 - **WHEN** a GET request is sent to `/api/app/rankings?type=STAR&tier=LEGEND&page=1&size=20`
@@ -65,12 +65,20 @@ The system SHALL provide an endpoint (`GET /api/app/rankings`) that returns a pa
 - **WHEN** the ranking data is not in Redis
 - **THEN** the system SHALL query MySQL, write the result to Redis with 5-minute TTL, and return the data
 
+#### Scenario: Orphan ranking filtered out
+- **WHEN** a ranking row references `user_id = 999` and user 999 does not exist
+- **THEN** the response SHALL exclude that row from the list
+
 ### Requirement: Homepage top 5
-The system SHALL provide the top 5 ranked users (regardless of tier) for the homepage display, served from Redis cache.
+The system SHALL provide the top 5 ranked users (regardless of tier) for the homepage display, served from Redis cache. The orphan-row filter applies identically to this endpoint.
 
 #### Scenario: Get top 5
 - **WHEN** the homepage requests top rankings
 - **THEN** the system SHALL return the top 5 users by absolute points for the given type, from Redis cache
+
+#### Scenario: Top 5 with orphan
+- **WHEN** 6+ ranking rows exist and 1 references a missing user
+- **THEN** `getTop5` SHALL return 5 rows, all with valid user info
 
 ### Requirement: Redis cache invalidation
 The system SHALL proactively DELETE ranking-related Redis keys after ranking refresh completes. Keys SHALL use TTL of 5 minutes as a safety fallback.

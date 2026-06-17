@@ -26,5 +26,5 @@
 - [x] 5.3 访问 `/`，最新报名列表无 "未知" 行
 
 ## 6. 归档
-- [ ] 6.1 移动 change 目录到 `archive/`
-- [ ] 6.2 合并 spec delta 到 `ranking/spec.md` 和 `infrastructure/spec.md`
+- [x] 6.1 移动 change 目录到 `archive/`
+- [x] 6.2 合并 spec delta 到 `ranking/spec.md` 和 `infrastructure/spec.md`

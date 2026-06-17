@@ -94,6 +94,35 @@ The system SHALL use Flyway for database migration. Initial schema SHALL be in `
 - **WHEN** the application starts against an empty database
 - **THEN** Flyway SHALL execute V1 and V2 migrations, creating all tables and seed data (including a default SUPER_ADMIN account)
 
+### Requirement: V6 migration marks invalid banner URLs inactive
+The system SHALL ship `V6__cleanup_invalid_banner_urls.sql` that UPDATEs any banner whose `image_url` does not match `^https://[^/]+/.*\.(jpg|jpeg|png|webp|gif)(\?.*)?$` to `status = 'INACTIVE'`. This is a one-shot data cleanup; ongoing validation is enforced at the DTO + service layer.
+
+#### Scenario: Migration runs on application startup
+- **WHEN** the application starts and Flyway detects V6 is not yet applied
+- **THEN** the migration SHALL execute the cleanup SQL
+
+### Requirement: V7 migration cleans orphan rankings and registrations
+The system SHALL ship `V7__cleanup_orphan_rankings_and_registrations.sql` that hard-deletes ranking rows whose `user_id` does not exist (LEFT JOIN `user` ... WHERE `u.id IS NULL`), and updates orphan registration rows to `status = 'CANCELLED'` (preserving audit; `AdminDashboardController.notIn(WITHDRAWN, CANCELLED)` then filters them out).
+
+#### Scenario: Migration runs on application startup
+- **WHEN** the application starts and Flyway detects V7 is not yet applied
+- **THEN** the migration SHALL execute the cleanup SQL
+
+#### Scenario: Migration idempotency
+- **WHEN** V7 has already run and orphan rows are reintroduced later (e.g., admin hard-deletes a user directly)
+- **THEN** V7 SHALL NOT re-run (Flyway default) — query-layer defense in `RankingServiceImpl` covers the gap
+
+### Requirement: Dashboard recent registrations excludes orphan users
+The `AdminDashboardController.getStats` endpoint SHALL filter out registration rows whose user cannot be resolved, instead of returning a placeholder "未知" nickname. With the V7 cleanup applied, the recent-registrations stream is expected to never encounter an orphan; if one is observed it indicates a bug and SHALL surface as a missing row (not a silent placeholder).
+
+#### Scenario: Recent registrations all valid
+- **WHEN** the last 10 registrations all reference existing users
+- **THEN** the `recentRegistrations` array SHALL include all 10 with their real nicknames
+
+#### Scenario: Recent registrations include orphan
+- **WHEN** one of the last 10 registrations references a missing user
+- **THEN** the `recentRegistrations` array SHALL exclude that row (returned list may be shorter than 10)
+
 ### Requirement: Async configuration
 The system SHALL configure an async thread pool for ranking refresh and other background tasks. Core pool size: 2, max pool size: 4, queue capacity: 100.
 

@@ -11,5 +11,5 @@
 - [x] 2.3 验证有昵称用户不受影响
 
 ## 3. 归档
-- [ ] 3.1 移动 change 目录到 `archive/`
-- [ ] 3.2 合并 spec delta 到 `user/spec.md`
+- [x] 3.1 移动 change 目录到 `archive/`
+- [x] 3.2 合并 spec delta 到 `user/spec.md`

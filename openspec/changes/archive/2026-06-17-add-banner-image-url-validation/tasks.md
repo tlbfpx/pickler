@@ -30,5 +30,5 @@
 - [x] 6.3 验证历史非法 banner URL 已变为 INACTIVE
 
 ## 7. 归档
-- [ ] 7.1 移动 `openspec/changes/add-banner-image-url-validation/` 到 `archive/`
-- [ ] 7.2 合并 spec delta 到 `openspec/specs/content/spec.md`
+- [x] 7.1 移动 `openspec/changes/add-banner-image-url-validation/` 到 `archive/`
+- [x] 7.2 合并 spec delta 到 `openspec/specs/content/spec.md`
