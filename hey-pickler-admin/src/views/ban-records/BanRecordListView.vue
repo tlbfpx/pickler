@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="page-header">
-      <h1>操作日志</h1>
+      <h1>用户日志</h1>
     </div>
     <div class="card">
       <div class="filter-bar">
@@ -151,7 +151,7 @@ const fetchRecords = async () => {
       recordList.value = res.data.list || []
       pagination.total = res.data.total || 0
     } else {
-      ElMessage.error(res.message || '获取操作日志失败')
+      ElMessage.error(res.message || '获取用户日志失败')
     }
   } catch {
     
@@ -172,7 +172,7 @@ const maskPhone = (phone: string) => {
 
 const handleDelete = async (row: BanRecordItem) => {
   try {
-    await ElMessageBox.confirm('确定删除该操作日志？', '删除确认', {
+    await ElMessageBox.confirm('确定删除该用户日志？', '删除确认', {
       type: 'warning',
       confirmButtonText: '删除',
       cancelButtonText: '取消'
