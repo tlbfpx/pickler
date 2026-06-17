@@ -17,6 +17,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Captures every write operation (POST/PUT/DELETE) under /api/admin/** into
  * operation_log. GET requests are skipped. Failed calls (BizException +
@@ -32,7 +35,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 public class OperationLogAspect {
 
     private final OperationLogService operationLogService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     private static final int MAX_PARAMS_LEN = 2000;
     private static final int MAX_ERROR_MSG_LEN = 512;
@@ -97,9 +100,19 @@ public class OperationLogAspect {
 
     private String serializeAndMaskArgs(Object[] args) {
         if (args == null || args.length == 0) return null;
+        // Filter out framework types — Jackson can't serialize HttpServletRequest,
+        // HttpServletResponse, MultipartFile, etc. and they don't carry audit value anyway.
+        List<Object> auditable = new ArrayList<>(args.length);
+        for (Object arg : args) {
+            if (arg == null) continue;
+            if (jakarta.servlet.ServletRequest.class.isInstance(arg)) continue;
+            if (jakarta.servlet.ServletResponse.class.isInstance(arg)) continue;
+            if (org.springframework.web.multipart.MultipartFile.class.isInstance(arg)) continue;
+            auditable.add(arg);
+        }
+        if (auditable.isEmpty()) return null;
         try {
-            // Wrap single-arg vs multi-arg consistently
-            Object payload = args.length == 1 ? args[0] : args;
+            Object payload = auditable.size() == 1 ? auditable.get(0) : auditable;
             String json = objectMapper.writeValueAsString(payload);
             String masked = SensitiveDataUtil.maskJson(json);
             return truncate(masked, MAX_PARAMS_LEN);

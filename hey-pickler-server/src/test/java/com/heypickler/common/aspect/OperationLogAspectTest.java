@@ -33,7 +33,8 @@ class OperationLogAspectTest {
         service = mock(OperationLogService.class);
         doAnswer(inv -> { captured.add(inv.getArgument(0)); return null; })
             .when(service).record(any(OperationLog.class));
-        aspect = new OperationLogAspect(service);
+        aspect = new OperationLogAspect(service, new com.fasterxml.jackson.databind.ObjectMapper()
+                .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule()));
     }
 
     @AfterEach
