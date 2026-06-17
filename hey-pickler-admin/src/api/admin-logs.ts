@@ -34,5 +34,5 @@ export interface OperationLogQuery {
 }
 
 export const getOperationLogs = (params: OperationLogQuery) => {
-  return request.get<unknown, ApiResponse<PageResult<OperationLogItem>>>('/admin/operation-logs', { params })
+  return request.get<unknown, ApiResponse<PageResult<OperationLogItem>>>('/operation-logs', { params })
 }
