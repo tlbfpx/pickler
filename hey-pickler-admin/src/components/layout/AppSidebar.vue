@@ -41,6 +41,10 @@
       </el-menu-item>
       <el-menu-item index="/ban-records">
         <el-icon><Document /></el-icon>
+        <span>用户日志</span>
+      </el-menu-item>
+      <el-menu-item index="/admin-logs">
+        <el-icon><List /></el-icon>
         <span>操作日志</span>
       </el-menu-item>
     </el-menu>
