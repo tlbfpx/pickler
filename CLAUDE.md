@@ -60,17 +60,26 @@ Open in WeChat DevTools. API base URL configured in `app.js` → `globalData.bas
 
 ```
 controller/
-  admin/    → AdminAuthController, AdminEventController, ...
+  admin/    → AdminAuthController, AdminUserController, AdminEventController,
+              AdminBannerController, AdminRankingController, AdminAdminController,
+              AdminBanRecordController, AdminDashboardController, AdminOperationLogController
   app/      → AppAuthController, AppEventController, ...
 filter/     → AppAuthFilter, AdminAuthFilter, RateLimitFilter, XssFilter, SecurityHeadersFilter
 service/    → Interface definitions
-  impl/     → Service implementations
+  impl/     → Service implementations (incl. OperationLogService, HeadBasedImageUrlValidator)
 mapper/     → MyBatis-Plus mappers (one per entity)
-entity/     → JPA/MyBatis entities (User, Event, Registration, AdminUser, Banner, Ranking, BanRecord, PointRecord)
-dto/        → Request DTOs split by admin/ and app/
-vo/         → Response VOs (View Objects)
+entity/     → User, Event, Registration, AdminUser, Banner, Ranking, BanRecord, PointRecord, OperationLog
+dto/        → Request DTOs split by admin/ and app/; common/dto for shared (e.g. OperationLogQuery)
+vo/         → Response VOs (View Objects, e.g. OperationLogVO)
 config/     → SecurityConfig, CorsConfig, RedisConfig, MyBatisPlusConfig, SwaggerConfig, AsyncConfig, AppConfig
-common/     → Shared: Result wrapper, PageResult, ErrorCode, BizException, JwtUtil, AesUtil, enums, @RequireRole annotation
+common/
+  annotation/ → @RequireRole
+  aspect/     → RoleCheckAspect (role enforcement), OperationLogAspect (audit capture)
+  exception/  → BizException, ErrorCode
+  result/     → Result wrapper, PageResult
+  util/       → JwtUtil, AesUtil, StatusTransitionValidator, WxBizDataCrypt,
+                OperationLogClassifier (URL → module/action), SensitiveDataUtil (JSON field masking)
+  enums/      → UserRole, etc.
 scheduler/  → EventStatusScheduler (auto-transitions event statuses)
 listener/   → PointChangeListener (Spring event listener for point changes)
 ```
@@ -78,21 +87,26 @@ listener/   → PointChangeListener (Spring event listener for point changes)
 ### Key Patterns
 
 - **API response**: All endpoints return `Result<T>` with `{code: 0, data: ..., message: ...}`. Code 0 = success.
-- **Dual auth**: `AppAuthFilter` validates JWT from WeChat users; `AdminAuthFilter` validates JWT from admin users. Both use `JwtUtil` but with different token expiration configs.
-- **Role-based access**: `@RequireRole` annotation + `RoleCheckAspect` for admin role checks (SUPER_ADMIN, ADMIN).
+- **Dual auth**: `AppAuthFilter` validates JWT from WeChat users; `AdminAuthFilter` validates JWT from admin users. Both use `JwtUtil` but with different token expiration configs. `AdminAuthFilter` injects `adminId` / `adminRole` as request attributes for downstream use (controllers, aspects).
+- **Role-based access**: `@RequireRole` annotation + `RoleCheckAspect` for admin role checks (SUPER_ADMIN, ADMIN, OPERATOR).
 - **Rate limiting**: `RateLimitFilter` uses Redis + Lua scripts, per-IP and per-user limits configured in `application.yml` under `hey-pickler.rate-limit`.
-- **Soft delete**: MyBatis-Plus logical delete via `deletedAt` field (NULL = not deleted, timestamp = deleted).
+- **Soft delete**: MyBatis-Plus logical delete via `deletedAt` field (NULL = not deleted, timestamp = deleted). **Exception**: `operation_log` is append-only (no `deleted_at`) — audit data must never be erased.
 - **CORS split**: `CorsConfig` applies different origins for `/api/admin` vs `/api/app` paths.
-- **Database migration**: Flyway scripts in `src/main/resources/db/migration/`. Always add new migrations as incremental versions (V4__, V5__, etc.).
+- **Database migration**: Flyway scripts in `src/main/resources/db/migration/`. Always add new migrations as incremental versions (V9__, V10__, etc.). Current head: V8.
+- **Async executors** (`AsyncConfig`): `rankingExecutor` (queue=100) for ranking refresh; `auditLogExecutor` (queue=500, `DiscardOldestPolicy`) for audit log writes — must never block an admin request.
+- **Audit log capture**: `OperationLogAspect` is an `@Around` aspect on `com.heypickler.controller.admin..*` that records every non-GET admin request to `operation_log`. Captures operator (from request attributes), IP (X-Forwarded-For first hop), params (Jackson-serialized + `SensitiveDataUtil.maskJson` + truncated to 2000 chars), status (1=success / 0=fail with errorCode/errorMsg), latency. Writes are fire-and-forget via `@Async("auditLogExecutor")` — any persistence failure is swallowed and logged.
+- **URL classification**: `OperationLogClassifier.classify(method, path)` maps `/api/admin/{resource}[/{id}][/{sub-action}]` to `(module, action, targetType, targetId)`. Unknown resources fall back to `module=RAW, action=RAW`; the full path is still preserved in the `path` column for forensics.
 
 ### Admin Frontend Structure
 
 ```
 src/
-  api/         → One module per resource (auth, events, users, banners, rankings, etc.), all use axios instance from request.ts
+  api/         → One module per resource (auth, users, events, banners, rankings, admins,
+                 ban-records, admin-logs, dashboard, files), all use axios instance from request.ts
   stores/      → Pinia stores (auth, app)
   router/      → Vue Router with auth guard (redirects to /login if no valid token)
-  views/       → One folder per resource page (login/, dashboard/, events/, users/, activities/, rankings/, banners/, admins/, ban-records/)
+  views/       → One folder per resource page (login/, dashboard/, events/, users/, activities/,
+                 rankings/, banners/, admins/, ban-records/, admin-logs/)
   components/
     layout/    → AppLayout, AppHeader, AppSidebar
     common/    → Pagination, ImageUpload
@@ -100,6 +114,8 @@ src/
 ```
 
 Admin auth token stored in `localStorage` as `admin_token`. The auth store (`stores/auth.ts`) checks token expiry with 30s clock skew tolerance.
+
+**Sidebar note**: `/ban-records` (label "用户日志") shows user ban/unban records. `/admin-logs` (label "操作日志") shows the system operation audit log. Don't confuse them — the names sound similar but the data sources are completely different.
 
 ### WeChat Mini Program Structure
 
