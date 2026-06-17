@@ -43,7 +43,9 @@ public class OperationLogServiceImpl implements OperationLogService {
             if (q.getStartTime() != null) w.ge(OperationLog::getCreatedAt, q.getStartTime());
             if (q.getEndTime() != null) w.le(OperationLog::getCreatedAt, q.getEndTime());
         }
-        w.orderByDesc(OperationLog::getCreatedAt);
+        // created_at has second precision — ties are common under burst load.
+        // id as tiebreaker keeps pagination stable across page boundaries.
+        w.orderByDesc(OperationLog::getCreatedAt).orderByDesc(OperationLog::getId);
         return operationLogMapper.selectPage(new Page<>(page, size), w);
     }
 }
