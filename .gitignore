@@ -32,3 +32,4 @@ hey-pickler-wxapp/miniprogram_npm/
 .cache/
 *.tmp
 .vite/
+.gstack/

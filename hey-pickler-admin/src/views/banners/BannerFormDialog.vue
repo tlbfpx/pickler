@@ -108,7 +108,21 @@ const formData = reactive<FormData>({
 })
 
 const rules: FormRules = {
-  imageUrl: [{ required: true, message: '请输入图片地址', trigger: 'blur' }],
+  imageUrl: [
+    { required: true, message: '请输入图片地址', trigger: 'blur' },
+    {
+      pattern: /^https:\/\/[^/]+\/.*\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i,
+      message: '图片地址必须为 https 开头且以 .jpg/.jpeg/.png/.webp/.gif 结尾',
+      trigger: 'blur'
+    }
+  ],
+  linkUrl: [
+    {
+      pattern: /^(https:\/\/[^/]+\/.*)?$/,
+      message: '跳转链接必须为 https 开头',
+      trigger: 'blur'
+    }
+  ],
   sortOrder: [{ required: true, message: '请输入排序', trigger: 'blur' }],
   status: [{ required: true, message: '请选择状态', trigger: 'change' }]
 }

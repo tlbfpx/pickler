@@ -154,18 +154,20 @@ public class AdminDashboardController {
         Map<Long, Event> eventMap = regEventIds.isEmpty() ? Collections.emptyMap()
                 : eventMapper.selectBatchIds(regEventIds).stream().collect(Collectors.toMap(Event::getId, e -> e));
 
-        List<Map<String, Object>> recentRegList = recentRegs.stream().map(reg -> {
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("id", reg.getId());
-            User user = userMap.get(reg.getUserId());
-            item.put("nickname", user != null ? user.getNickname() : "未知");
-            Event event = eventMap.get(reg.getEventId());
-            item.put("eventTitle", event != null ? event.getTitle() : "未知赛事");
-            item.put("matchType", reg.getMatchType());
-            item.put("status", reg.getStatus());
-            item.put("createdAt", reg.getCreatedAt() != null ? reg.getCreatedAt().toString() : null);
-            return item;
-        }).collect(Collectors.toList());
+        List<Map<String, Object>> recentRegList = recentRegs.stream()
+                .filter(reg -> userMap.containsKey(reg.getUserId()))
+                .map(reg -> {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("id", reg.getId());
+                    User user = userMap.get(reg.getUserId());
+                    item.put("nickname", user.getNickname());
+                    Event event = eventMap.get(reg.getEventId());
+                    item.put("eventTitle", event != null ? event.getTitle() : "未知赛事");
+                    item.put("matchType", reg.getMatchType());
+                    item.put("status", reg.getStatus());
+                    item.put("createdAt", reg.getCreatedAt() != null ? reg.getCreatedAt().toString() : null);
+                    return item;
+                }).collect(Collectors.toList());
         data.put("recentRegistrations", recentRegList);
 
         // === Upcoming events (next 5) ===

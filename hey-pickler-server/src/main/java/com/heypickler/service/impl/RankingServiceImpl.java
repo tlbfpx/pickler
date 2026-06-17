@@ -197,22 +197,23 @@ public class RankingServiceImpl implements RankingService {
         List<Long> userIds = rankings.stream().map(Ranking::getUserId).distinct().collect(Collectors.toList());
         Map<Long, User> userMap = batchLoadUsers(userIds);
 
-        List<RankingVO> result = rankings.stream().map(ranking -> {
-            RankingVO vo = new RankingVO();
-            vo.setRank(ranking.getRank());
-            vo.setChange(ranking.getChange());
-            vo.setUserId(ranking.getUserId());
-            vo.setPoints(ranking.getPoints());
-            vo.setTier(ranking.getTier());
+        // 过滤孤儿行（user 已被软删/物理删除）
+        List<RankingVO> result = rankings.stream()
+                .filter(ranking -> userMap.containsKey(ranking.getUserId()))
+                .map(ranking -> {
+                    RankingVO vo = new RankingVO();
+                    vo.setRank(ranking.getRank());
+                    vo.setChange(ranking.getChange());
+                    vo.setUserId(ranking.getUserId());
+                    vo.setPoints(ranking.getPoints());
+                    vo.setTier(ranking.getTier());
 
-            User user = userMap.get(ranking.getUserId());
-            if (user != null) {
-                vo.setNickname(user.getNickname());
-                vo.setAvatarUrl(user.getAvatarUrl());
-                vo.setCity(user.getCity());
-            }
-            return vo;
-        }).collect(Collectors.toList());
+                    User user = userMap.get(ranking.getUserId());
+                    vo.setNickname(user.getNickname());
+                    vo.setAvatarUrl(user.getAvatarUrl());
+                    vo.setCity(user.getCity());
+                    return vo;
+                }).collect(Collectors.toList());
 
         redisTemplate.opsForValue().set(cacheKey, result, 5, TimeUnit.MINUTES);
 
@@ -242,22 +243,23 @@ public class RankingServiceImpl implements RankingService {
         List<Long> userIds = rankings.stream().map(Ranking::getUserId).distinct().collect(Collectors.toList());
         Map<Long, User> userMap = batchLoadUsers(userIds);
 
-        List<RankingVO> result = rankings.stream().map(ranking -> {
-            RankingVO vo = new RankingVO();
-            vo.setRank(ranking.getRank());
-            vo.setChange(ranking.getChange());
-            vo.setUserId(ranking.getUserId());
-            vo.setPoints(ranking.getPoints());
-            vo.setTier(ranking.getTier());
+        // 过滤孤儿行
+        List<RankingVO> result = rankings.stream()
+                .filter(ranking -> userMap.containsKey(ranking.getUserId()))
+                .map(ranking -> {
+                    RankingVO vo = new RankingVO();
+                    vo.setRank(ranking.getRank());
+                    vo.setChange(ranking.getChange());
+                    vo.setUserId(ranking.getUserId());
+                    vo.setPoints(ranking.getPoints());
+                    vo.setTier(ranking.getTier());
 
-            User user = userMap.get(ranking.getUserId());
-            if (user != null) {
-                vo.setNickname(user.getNickname());
-                vo.setAvatarUrl(user.getAvatarUrl());
-                vo.setCity(user.getCity());
-            }
-            return vo;
-        }).collect(Collectors.toList());
+                    User user = userMap.get(ranking.getUserId());
+                    vo.setNickname(user.getNickname());
+                    vo.setAvatarUrl(user.getAvatarUrl());
+                    vo.setCity(user.getCity());
+                    return vo;
+                }).collect(Collectors.toList());
 
         redisTemplate.opsForValue().set(cacheKey, result, 5, TimeUnit.MINUTES);
         return result;

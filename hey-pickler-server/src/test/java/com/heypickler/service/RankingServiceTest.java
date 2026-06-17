@@ -358,4 +358,74 @@ class RankingServiceTest {
         // 当前实现清理 4 个 tier key（LEGEND/SUPER/SHINING/null）+ 1 个 top5 = 5 次
         verify(redisTemplate, times(5)).delete(contains("ranking:STAR:"));
     }
+
+    @Test
+    void getRankings_ShouldFilterOutOrphanRows() {
+        Ranking r1 = new Ranking();
+        r1.setUserId(1L);
+        r1.setType("STAR");
+        r1.setTier("SHINING");
+        r1.setRank(1);
+        r1.setPoints(100);
+        r1.setChange(0);
+
+        Ranking orphan = new Ranking();
+        orphan.setUserId(999L);
+        orphan.setType("STAR");
+        orphan.setTier("SHINING");
+        orphan.setRank(2);
+        orphan.setPoints(80);
+        orphan.setChange(0);
+
+        RankingQuery query = new RankingQuery();
+        query.setType("STAR");
+        query.setTier(null);
+        query.setPage(1);
+        query.setSize(20);
+
+        org.springframework.data.redis.core.ValueOperations<String, Object> valueOps =
+            mock(org.springframework.data.redis.core.ValueOperations.class);
+        when(valueOps.get(any())).thenReturn(null);
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        when(rankingMapper.selectList(any())).thenReturn(Arrays.asList(r1, orphan));
+        when(userMapper.selectBatchIds(anyList())).thenReturn(Collections.singletonList(testUser));
+
+        com.heypickler.common.result.PageResult<RankingVO> result =
+            rankingService.getRankings(query);
+
+        assertEquals(1, result.getList().size(), "orphan ranking should be filtered out");
+        assertEquals(1L, result.getList().get(0).getUserId());
+        assertEquals("Test User", result.getList().get(0).getNickname());
+    }
+
+    @Test
+    void getTop5_ShouldFilterOutOrphanRows() {
+        Ranking r1 = new Ranking();
+        r1.setUserId(1L);
+        r1.setType("STAR");
+        r1.setTier("SHINING");
+        r1.setRank(1);
+        r1.setPoints(100);
+        r1.setChange(0);
+
+        Ranking orphan = new Ranking();
+        orphan.setUserId(999L);
+        orphan.setType("STAR");
+        orphan.setTier("SHINING");
+        orphan.setRank(2);
+        orphan.setPoints(80);
+        orphan.setChange(0);
+
+        org.springframework.data.redis.core.ValueOperations<String, Object> valueOps =
+            mock(org.springframework.data.redis.core.ValueOperations.class);
+        when(valueOps.get(any())).thenReturn(null);
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        when(rankingMapper.selectList(any())).thenReturn(Arrays.asList(r1, orphan));
+        when(userMapper.selectBatchIds(anyList())).thenReturn(Collections.singletonList(testUser));
+
+        List<RankingVO> result = rankingService.getTop5("STAR");
+
+        assertEquals(1, result.size(), "orphan ranking should be filtered out from top5");
+        assertEquals(1L, result.get(0).getUserId());
+    }
 }

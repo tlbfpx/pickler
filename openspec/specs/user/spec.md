@@ -36,7 +36,7 @@ The system SHALL provide an endpoint (`GET /api/app/user/points`) that returns a
 - **THEN** the system SHALL return a paginated list of point records including event title, points, reason, and creation time
 
 ### Requirement: Admin list users
-The system SHALL provide an endpoint (`GET /api/admin/users`) that returns a paginated, searchable, filterable list of users. Support search by nickname/phone, filter by tier and status.
+The system SHALL provide an endpoint (`GET /api/admin/users`) that returns a paginated, searchable, filterable list of users. Support search by nickname/phone, filter by tier and status. The admin UI (`/users` page) SHALL display a readable placeholder for users whose `nickname` is empty: the avatar SHALL render the Element Plus `<User />` icon (not a `?` character), and the name field SHALL display "匿名用户" (not `-`).
 
 #### Scenario: Search users by nickname
 - **WHEN** an admin sends a GET request to `/api/admin/users?keyword=张`
@@ -45,6 +45,11 @@ The system SHALL provide an endpoint (`GET /api/admin/users`) that returns a pag
 #### Scenario: Filter banned users
 - **WHEN** an admin sends a GET request to `/api/admin/users?status=BANNED`
 - **THEN** the system SHALL return paginated users whose status is BANNED
+
+#### Scenario: User without nickname (UI placeholder)
+- **WHEN** the admin views the user list and a row has `nickname = null` or empty string
+- **THEN** the avatar SHALL show the Element Plus `<User />` icon
+- **AND** the name field SHALL display "匿名用户"
 
 ### Requirement: Admin get/edit user
 The system SHALL provide endpoints (`GET/PUT /api/admin/users/{id}`) for admins to view and edit user details.

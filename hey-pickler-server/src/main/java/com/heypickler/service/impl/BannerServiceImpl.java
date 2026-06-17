@@ -7,6 +7,7 @@ import com.heypickler.dto.admin.BannerCreateRequest;
 import com.heypickler.entity.Banner;
 import com.heypickler.mapper.BannerMapper;
 import com.heypickler.service.BannerService;
+import com.heypickler.service.ImageUrlValidator;
 import com.heypickler.vo.BannerVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ import java.util.stream.Collectors;
 public class BannerServiceImpl implements BannerService {
 
     private final BannerMapper bannerMapper;
+    private final ImageUrlValidator imageUrlValidator;
 
     @Override
     public List<BannerVO> listEnabledBanners() {
@@ -39,6 +41,7 @@ public class BannerServiceImpl implements BannerService {
 
     @Override
     public Long createBanner(BannerCreateRequest request) {
+        imageUrlValidator.validate(request.getImageUrl());
         Banner banner = new Banner();
         banner.setImageUrl(request.getImageUrl());
         banner.setLinkUrl(request.getLinkUrl());
@@ -50,6 +53,7 @@ public class BannerServiceImpl implements BannerService {
 
     @Override
     public void updateBanner(Long id, BannerCreateRequest request) {
+        imageUrlValidator.validate(request.getImageUrl());
         Banner banner = new Banner();
         banner.setId(id);
         banner.setImageUrl(request.getImageUrl());
