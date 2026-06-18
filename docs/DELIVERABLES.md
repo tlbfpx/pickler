@@ -135,10 +135,11 @@ sudo logrotate -d /etc/logrotate.d/heypickler 2>&1 | tail -5
 |------|---------|
 | 后端单元测试 | `mvn test -Dtest='!*IntegrationTest'` 全绿 |
 | 后端集成测试 | `mvn test -Dtest='*IntegrationTest'` 全绿（除已知的 flaky case，附录说明）|
-| 后端测试报告 | HTML/XML 测试报告（如需，由 CI 生成；本变更不强制覆盖率阈值） |
+| 后端测试报告 | GitHub Actions CI 自动执行，PR 绿勾即通过；本变更不强制覆盖率阈值 |
 | 前端 e2e 测试 | `npm run test:e2e` 全绿 |
 | 端到端冒烟测试 | 部署后人工执行 RUNBOOK §1.4.4 + §1.5.4 通过 |
-| 安全审计 | 静态扫描（待变更 #5 CI 接入后）+ 凭据审计（CREDENTIALS.md 已覆盖）|
+| CI 流水线 | `.github/workflows/ci.yml` 双 job（backend + frontend）在 PR 上自动跑绿（PR #12 已交付） |
+| 安全审计 | 凭据审计（CREDENTIALS.md 已覆盖）；静态扫描留待后续 |
 
 **验收动作**：
 
@@ -154,7 +155,7 @@ npm run test:e2e 2>&1 | tail -10
 # 期望：N passed (N passed)
 ```
 
-测试报告归档位置：客户 CI 接入后由 CI 自动归档（Phase 2 变更 #5）；当前阶段手工保留 `mvn surefire-report:report` 输出。
+CI 自动归档：PR #12 引入的 GitHub Actions workflow 会在每次 push / PR 自动跑 backend 单元 + 集成测试（MySQL 8 + Redis 6 service container）+ frontend `lint:check` + build，跑绿即作为合并门槛。客户可在 GitHub Actions UI 查看历次 run 的日志与测试结果。
 
 ---
 
@@ -216,12 +217,16 @@ mysql -u root -p hey_pickler_verify -e "SELECT username, role FROM admin_user;"
 | 变更 | OpenSpec archive | PR | 范围 |
 |------|-----------------|----|----|
 | secure-credentials-parameterization | `2026-06-18-secure-credentials-parameterization` | #10 | 凭据参数化 + 启动校验 |
-| deployment-automation | `2026-06-XX-deployment-automation` | #TBD | systemd + Nginx + install.sh + RUNBOOK + 本文件 |
+| deployment-automation | `2026-06-18-deployment-automation` | #11 | systemd + Nginx + install.sh + RUNBOOK + 本文件 |
+| cicd-pipeline | `2026-06-18-add-cicd-pipeline` | #12 | GitHub Actions CI workflow + lint:check script + lint 债务清理 |
+
+**已跳过变更**：
+
+- 变更 #2：可观测性（actuator / 结构化日志 / Sentry）— 客户决定跳过，留待 Phase 2 按需评估
 
 **待交付变更**（不阻塞本次验收）：
 
-- 变更 #2：可观测性（actuator / 结构化日志 / Sentry）
 - 变更 #3：核心业务测试覆盖
-- 变更 #5：CI/CD + API 版本化
+- 变更 #5 剩余项：API 版本化（`/v1/` 前缀）+ 自动 CD（推迟 Phase 2）
 
 详见 `docs/RUNBOOK.md` 附录 D「Phase 2 待办」。
