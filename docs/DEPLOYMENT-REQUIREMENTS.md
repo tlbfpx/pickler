@@ -177,27 +177,37 @@ npm run build        # 输出到 dist/
 
 ## 六、Nginx 参考配置
 
+> 完整可部署的配置文件位于 `deploy/nginx/heypickler.conf`，含 admin + api 双 vhost、TLS 1.2/1.3 hardening、安全 header、gzip、log_format 分文件。**不要从本文档复制粘贴配置**，部署时直接：
+>
+> ```bash
+> sudo cp deploy/nginx/heypickler.conf /etc/nginx/sites-available/
+> sudo ln -s /etc/nginx/sites-available/heypickler.conf /etc/nginx/sites-enabled/
+> sudo nginx -t && sudo systemctl reload nginx
+> ```
+>
+> 详见 `docs/RUNBOOK.md §1.5` Nginx 接入与 SSL。
+
+下面是配置片段概览（完整版见 deploy/）：
+
 ```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-    return 301 https://$host$request_uri;
-}
+# 双 vhost：admin.heypickler.com（Vue3 SPA + /api/admin 反代）
+#         + api.heypickler.com（/api/app 反代给小程序）
 
 server {
     listen 443 ssl http2;
-    server_name your-domain.com;
+    server_name admin.heypickler.com;
 
-    ssl_certificate     /etc/nginx/ssl/cert.pem;
-    ssl_certificate_key /etc/nginx/ssl/key.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;          # 禁用 1.0/1.1
+    ssl_ciphers         HIGH:!aNULL:!MD5;
 
-    # 管理后台
-    location / {
-        root /var/www/heypickler-admin/dist;
-        try_files $uri $uri/ /index.html;
-    }
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
 
-    # API 反向代理
+    client_max_body_size 10m;                      # banner/event 图片上传
+
+    root /var/www/hey-pickler-admin/dist;
+    location / { try_files $uri $uri/ /index.html; }
     location /api/ {
         proxy_pass http://127.0.0.1:8080;
         proxy_set_header Host $host;
@@ -205,14 +215,6 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
-
-    # API 文档（可选，生产环境可关闭）
-    location /doc.html {
-        proxy_pass http://127.0.0.1:8080;
-    }
-
-    gzip on;
-    gzip_types text/plain text/css application/json application/javascript text/xml;
 }
 ```
 
@@ -227,31 +229,48 @@ server {
 
 ## 八、部署步骤
 
-```bash
-# 1. 安装基础软件
-apt update && apt install -y openjdk-17-jdk maven nodejs npm nginx
+> **生产部署**：不要手工执行下面的 `java -jar` 命令。完整自动化部署流程见 `docs/RUNBOOK.md §1`，核心步骤：
+>
+> 1. 准备 ECS + 安装前置软件（见本文件 §二/§三）
+> 2. 跑 `sudo bash deploy/scripts/install.sh` 一键安装部署工件（systemd unit + env 模板 + logrotate）
+> 3. 编辑 `/etc/heypickler/heypickler.env` 填入真实值（详见 `docs/CREDENTIALS.md`）
+> 4. `sudo systemctl start hey-pickler`
+> 5. Nginx 接入（见 §六）
+>
+> 下面的命令仅用于**手工本地构建二进制**，构建后 jar/dist 通过 scp 上传到 ECS：
 
-# 2. 创建数据库
+```bash
+# 1. 安装基础软件（在 ECS 上）
+apt update && apt install -y openjdk-17-jdk nginx
+
+# 2. 创建数据库（详见 §4.3）
 mysql -u root -p -e "CREATE DATABASE hey_pickler DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
-# 3. 构建后端
+# 3. 构建后端 jar（在开发机）
 cd hey-pickler-server
 mvn clean package -DskipTests
-java -jar target/hey-pickler-server-1.0.0.jar --spring.profiles.active=prod
+# 产物 target/hey-pickler-server-1.0.0.jar scp 到 ECS 的 /opt/heypickler/
 
-# 4. 构建管理后台
+# 4. 构建管理后台（在开发机）
 cd ../hey-pickler-admin
 npm ci && npm run build
-# 将 dist/ 部署到 Nginx
+# 产物 dist/ scp 到 ECS 的 /var/www/hey-pickler-admin/dist/
 
-# 5. 配置 Nginx 并启动
-systemctl enable nginx && systemctl start nginx
+# 5. 在 ECS 上：install.sh + 配置 env + 启动 + Nginx（见 RUNBOOK §1）
 
-# 6. 上传小程序
+# 6. 上传小程序（开发机）
 # 微信开发者工具打开 hey-pickler-wxapp → 上传 → 提交审核
 ```
 
-## 九、SSL 证书
+## 九、备份与恢复
+
+详见 `docs/RUNBOOK.md §3`。核心：
+
+- 每日凌晨 2 点自动备份（cron + `deploy/scripts/backup-mysql.sh`）
+- 阿里云 OSS 同 region 内网传输，30 天滚动
+- 恢复演练每季度执行一次（RUNBOOK §3.5）
+
+## 十、SSL 证书
 
 | 项目 | 要求 |
 |------|------|
