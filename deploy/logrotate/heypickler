@@ -1,0 +1,31 @@
+# =============================================================================
+# Hey Pickler logrotate 配置
+# 安装位置：/etc/logrotate.d/heypickler（install.sh 自动拷贝）
+# 测试：sudo logrotate -d /etc/logrotate.d/heypickler（dry-run）
+# =============================================================================
+
+/var/log/heypickler/*.log {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    su heypickler heypickler
+    dateext
+    dateformat -%Y%m%d
+}
+
+/var/log/heypickler/*.err.log {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    su heypickler heypickler
+    dateext
+    dateformat -%Y%m%d
+}
