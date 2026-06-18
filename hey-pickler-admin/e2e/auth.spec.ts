@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test'
+import { E2E_ADMIN_USERNAME, E2E_ADMIN_PASSWORD } from './fixtures/credentials'
 
 test.describe('登录认证', () => {
   test('使用正确凭据登录', async ({ page }) => {
     await page.goto('/login')
 
-    await page.getByPlaceholder('请输入用户名').fill('admin')
-    await page.getByPlaceholder('请输入密码').fill('admin123')
+    await page.getByPlaceholder('请输入用户名').fill(E2E_ADMIN_USERNAME)
+    await page.getByPlaceholder('请输入密码').fill(E2E_ADMIN_PASSWORD)
     await page.getByRole('button', { name: '登录' }).click()
 
     await expect(page).toHaveURL('/', { timeout: 10000 })
@@ -14,7 +15,7 @@ test.describe('登录认证', () => {
   test('使用错误密码登录失败', async ({ page }) => {
     await page.goto('/login')
 
-    await page.getByPlaceholder('请输入用户名').fill('admin')
+    await page.getByPlaceholder('请输入用户名').fill(E2E_ADMIN_USERNAME)
     await page.getByPlaceholder('请输入密码').fill('wrongpassword')
     await page.getByRole('button', { name: '登录' }).click()
 
@@ -33,8 +34,8 @@ test.describe('登录认证', () => {
 
   test('已登录访问登录页重定向首页', async ({ page }) => {
     await page.goto('/login')
-    await page.getByPlaceholder('请输入用户名').fill('admin')
-    await page.getByPlaceholder('请输入密码').fill('admin123')
+    await page.getByPlaceholder('请输入用户名').fill(E2E_ADMIN_USERNAME)
+    await page.getByPlaceholder('请输入密码').fill(E2E_ADMIN_PASSWORD)
     await page.getByRole('button', { name: '登录' }).click()
     await expect(page).toHaveURL('/', { timeout: 10000 })
 
@@ -44,8 +45,8 @@ test.describe('登录认证', () => {
 
   test('退出登录', async ({ page }) => {
     await page.goto('/login')
-    await page.getByPlaceholder('请输入用户名').fill('admin')
-    await page.getByPlaceholder('请输入密码').fill('admin123')
+    await page.getByPlaceholder('请输入用户名').fill(E2E_ADMIN_USERNAME)
+    await page.getByPlaceholder('请输入密码').fill(E2E_ADMIN_PASSWORD)
     await page.getByRole('button', { name: '登录' }).click()
     await expect(page).toHaveURL('/', { timeout: 10000 })
 
@@ -68,8 +69,8 @@ test.describe('登录认证', () => {
   test('登录后token存储', async ({ page }) => {
     await page.goto('/login')
 
-    await page.getByPlaceholder('请输入用户名').fill('admin')
-    await page.getByPlaceholder('请输入密码').fill('admin123')
+    await page.getByPlaceholder('请输入用户名').fill(E2E_ADMIN_USERNAME)
+    await page.getByPlaceholder('请输入密码').fill(E2E_ADMIN_PASSWORD)
     await page.getByRole('button', { name: '登录' }).click()
     await expect(page).toHaveURL('/', { timeout: 10000 })
 
@@ -81,7 +82,7 @@ test.describe('登录认证', () => {
   test('特殊字符密码处理', async ({ page }) => {
     await page.goto('/login')
 
-    await page.getByPlaceholder('请输入用户名').fill('admin')
+    await page.getByPlaceholder('请输入用户名').fill(E2E_ADMIN_USERNAME)
     await page.getByPlaceholder('请输入密码').fill('<script>alert(1)</script>')
     await page.getByRole('button', { name: '登录' }).click()
 
@@ -93,8 +94,8 @@ test.describe('登录认证', () => {
   test('登录表单回车提交', async ({ page }) => {
     await page.goto('/login')
 
-    await page.getByPlaceholder('请输入用户名').fill('admin')
-    await page.getByPlaceholder('请输入密码').fill('admin123')
+    await page.getByPlaceholder('请输入用户名').fill(E2E_ADMIN_USERNAME)
+    await page.getByPlaceholder('请输入密码').fill(E2E_ADMIN_PASSWORD)
     await page.getByPlaceholder('请输入密码').press('Enter')
 
     await expect(page).toHaveURL('/', { timeout: 10000 })

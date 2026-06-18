@@ -158,9 +158,10 @@ java -jar target/hey-pickler-server-1.0.0.jar \
 
 ```bash
 # 健康检查 - 管理后台登录接口
+# 替换 <your-initial-admin-password> 为 .env 里 INITIAL_ADMIN_PASSWORD 的值
 curl -X POST http://localhost:8080/api/admin/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin123"}'
+  -d '{"username":"admin","password":"<your-initial-admin-password>"}'
 
 # 返回 {"code":0,"data":{"token":"..."}} 表示成功
 ```
@@ -274,13 +275,17 @@ npm run test:e2e:ui
 
 ### 2.5 默认管理员账号
 
-| 字段 | 值 |
-|------|-----|
-| 用户名 | `admin` |
-| 密码 | `admin123` |
-| 角色 | `SUPER_ADMIN` |
+初始管理员账号通过环境变量 `INITIAL_ADMIN_USERNAME` / `INITIAL_ADMIN_PASSWORD`
+在首次启动时由 `AdminBootstrapper` 创建。dev 环境默认值参考 `.env.example`，
+生产环境必须自行设置强密码。详见 `docs/CREDENTIALS.md`。
 
-> 生产环境部署后请立即修改默认密码
+| 字段 | dev 默认 | 生产 |
+|------|---------|------|
+| 用户名 | `admin`（可改 `INITIAL_ADMIN_USERNAME`）| 必须显式设置 |
+| 密码 | 由 `INITIAL_ADMIN_PASSWORD` 决定 | 必须显式设置（建议 ≥ 12 字符）|
+| 角色 | `SUPER_ADMIN` | `SUPER_ADMIN` |
+
+> 首次部署后请立即在「管理员管理」页面修改密码
 
 ---
 
@@ -511,9 +516,9 @@ CREATE USER 'heypickler'@'localhost' IDENTIFIED BY 'strong-password';
 GRANT SELECT, INSERT, UPDATE, DELETE ON hey_pickler.* TO 'heypickler'@'localhost';
 FLUSH PRIVILEGES;
 
--- 生产环境务必修改默认管理员密码
--- 默认密码: admin123 (bcrypt hash)
--- 登录管理后台后在「管理员管理」中修改
+-- 生产环境：管理员账号通过 AdminBootstrapper 在应用启动时
+-- 从 INITIAL_ADMIN_USERNAME / INITIAL_ADMIN_PASSWORD 环境变量创建
+-- 不再有 V2 migration 内嵌的默认 admin/admin123 种子
 ```
 
 ---
@@ -525,8 +530,8 @@ FLUSH PRIVILEGES;
 | 配置项 | 开发默认值 | 说明 |
 |--------|-----------|------|
 | `JWT_SECRET` | `HeyPickler2026DevSecret...` | JWT 签名密钥，至少 32 字符 |
-| `AES_KEY` | `PicklerDevAesKey16` | 数据加密密钥，恰好 16 字符 |
-| 管理员密码 | `admin123` | 首次登录后立即修改 |
+| `AES_KEY` | `PicklerDevAesKey` | 数据加密密钥，恰好 16/24/32 字节，启动时严格校验 |
+| `INITIAL_ADMIN_PASSWORD` | 无（dev 库已有 admin 行可跳过）| 首次部署时必需，>= 12 字符推荐 |
 | `WX_DEV_MODE` | `true` | 生产环境必须设为 `false` |
 
 ### 5.2 安全机制
@@ -593,7 +598,7 @@ npm run dev
 
 # 5. 验证
 # 后端:     http://localhost:8080/doc.html
-# 管理后台: http://localhost:5173 (admin / admin123)
+# 管理后台: http://localhost:5173 (admin / <your INITIAL_ADMIN_PASSWORD>)
 # 小程序:   微信开发者工具模拟器
 ```
 

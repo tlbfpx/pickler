@@ -7,6 +7,10 @@ export { expect }
 const APP_BASE = '/api/app'
 const ADMIN_BASE = '/api/admin'
 
+// Admin credentials for E2E tests. CI MUST set ADMIN_PASSWORD to match
+// whatever INITIAL_ADMIN_PASSWORD was used at app bootstrap. Default
+// 'admin123' matches the legacy V2-seeded row on dev databases that
+// haven't been reset — see docs/CREDENTIALS.md §2.2.
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin'
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123'
 
