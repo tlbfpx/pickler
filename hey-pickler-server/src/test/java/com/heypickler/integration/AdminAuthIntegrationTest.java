@@ -11,7 +11,9 @@ class AdminAuthIntegrationTest extends IntegrationTestConfig {
 
     @Test
     void adminLogin_WithDefaultAdmin_ShouldReturnToken() {
-        Map<String, String> body = Map.of("username", "admin", "password", "admin123");
+        Map<String, String> body = Map.of(
+                "username", TEST_ADMIN_USERNAME,
+                "password", TEST_ADMIN_PASSWORD);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);

@@ -75,11 +75,11 @@ class AuthServiceTest {
         admin.setStatus("ACTIVE");
 
         when(adminUserMapper.selectOne(any())).thenReturn(admin);
-        when(passwordEncoder.matches("admin123", "$2a$10$hash")).thenReturn(true);
+        when(passwordEncoder.matches("any-test-password", "$2a$10$hash")).thenReturn(true);
         when(jwtUtil.generateAdminToken(1L, "SUPER_ADMIN")).thenReturn("admin-token");
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 
-        Map<String, Object> result = authService.adminLogin("admin", "admin123");
+        Map<String, Object> result = authService.adminLogin("admin", "any-test-password");
         assertEquals("admin-token", result.get("token"));
         assertEquals("SUPER_ADMIN", result.get("role"));
     }

@@ -32,7 +32,8 @@ hey-pickler:
     app-expiration: 604800000
     admin-expiration: 86400000
   aes:
-    key: PicklerDevAesKey16
+    # Exactly 16 bytes for AES-128. AesUtil @PostConstruct enforces 16/24/32.
+    key: PicklerDevAesKey
   wechat:
     appid: test-appid
     secret: test-secret
