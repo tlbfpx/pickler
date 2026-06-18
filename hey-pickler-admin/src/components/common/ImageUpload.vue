@@ -40,7 +40,7 @@ import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import type { UploadProps } from 'element-plus'
 
-const props = defineProps<{
+defineProps<{
   modelValue: string
 }>()
 

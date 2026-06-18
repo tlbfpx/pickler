@@ -354,7 +354,6 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
 import { getUserDetail, getUserPoints, getUserEvents } from '@/api/users'
 import type { User, PointRecord, EventRecord } from '@/api/users'
 import { formatDate, formatTier, getTierColor } from '@/utils'
