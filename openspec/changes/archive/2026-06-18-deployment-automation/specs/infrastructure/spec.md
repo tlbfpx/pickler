@@ -81,10 +81,10 @@ The system SHALL provide `docs/DELIVERABLES.md` enumerating all artifacts the cu
 - **AND** each artifact SHALL have an acceptance criterion (e.g., "customer can rebuild binary from tag in clean environment")
 - **AND** each category SHALL have a step-by-step verification procedure
 
-## MODIFIED Requirements
+## ADDED Requirements (continued)
 
-### Requirement: Deployment documentation (modified)
-The system SHALL maintain `docs/DEPLOYMENT-REQUIREMENTS.md` as a high-level deployment overview referencing the executable artifacts under `deploy/`, rather than embedding inline shell commands.
+### Requirement: Deployment documentation references executable artifacts
+The system SHALL maintain `docs/DEPLOYMENT-REQUIREMENTS.md` as a high-level deployment overview that references executable artifacts under `deploy/` rather than embedding inline shell commands, with operational procedures delegated to `docs/RUNBOOK.md`.
 
 #### Scenario: Operator locates executable artifacts
 - **WHEN** operator reads `docs/DEPLOYMENT-REQUIREMENTS.md` seeking deployment instructions

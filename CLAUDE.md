@@ -128,6 +128,23 @@ This project uses an OpenSpec + Superpowers workflow:
 
 Do not write code before OpenSpec design is confirmed. Do not archive before code/tests/spec are aligned.
 
+## Deployment Artifacts & Operations
+
+Customer-facing deployment lives under `deploy/`:
+- `deploy/systemd/hey-pickler.service` — systemd unit (env file at `/etc/heypickler/heypickler.env`)
+- `deploy/nginx/heypickler.conf` — Nginx 双 vhost reference config (admin + api)
+- `deploy/scripts/install.sh` — first-time deployment script (idempotent)
+- `deploy/scripts/backup-mysql.sh` / `restore-mysql.sh` — OSS-integrated MySQL backup/restore
+- `deploy/logrotate/heypickler` — log rotation config
+
+Operational docs in `docs/`:
+- `RUNBOOK.md` — 5-section operator manual (deploy/ops/backup/tune/incident)
+- `DELIVERABLES.md` — 6-category acceptance checklist for customer sign-off
+- `DEPLOYMENT-REQUIREMENTS.md` — pre-deployment hardware/software inventory
+- `CREDENTIALS.md` — credential lifecycle (first deploy/upgrade/rotation/emergency)
+
+Target deployment: Alibaba Cloud ECS (Ubuntu 22.04+ / Alibaba Cloud Linux 3) + OSS for backups.
+
 ## Environment Variables
 
 Full template at `.env.example`; operational guidance (key rotation, emergency response, upgrade path) at `docs/CREDENTIALS.md`. Production deployments must override these (dev defaults work locally):
