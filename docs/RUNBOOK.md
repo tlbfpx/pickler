@@ -1115,3 +1115,4 @@ sudo nginx -t && sudo systemctl reload nginx
 - [ ] K8s Helm chart（独立变更）
 - [ ] API `/api/v1/` 版本前缀（变更 #5）
 - [ ] Sentry 错误监控（变更 #2）
+- [ ] 运营仪表盘 Phase 1（独立变更，proposal 暂存 `openspec/changes/enhance-admin-dashboard-phase1/`，等 Phase 1 验收后启动）
