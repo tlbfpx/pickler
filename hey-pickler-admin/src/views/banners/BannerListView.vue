@@ -91,7 +91,6 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getBannerList, deleteBanner } from '@/api/banners'
-import { formatDate } from '@/utils'
 import BannerFormDialog from './BannerFormDialog.vue'
 import type { Banner } from '@/types'
 
@@ -143,7 +142,7 @@ const handleDelete = async (banner: Banner) => {
     }
   } catch (error: any) {
     if (error !== 'cancel') {
-      
+      // ignore
     }
   }
 }

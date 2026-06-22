@@ -1,9 +1,11 @@
 package com.heypickler.integration;
 
 import com.heypickler.common.util.JwtUtil;
+import com.heypickler.service.ImageUrlValidator;
 import org.junit.jupiter.api.BeforeAll;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.*;
@@ -16,6 +18,15 @@ import java.util.Map;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("integration")
 public abstract class IntegrationTestConfig {
+
+    /**
+     * Banner 图片 URL 校验器在 HeadBasedImageUrlValidator 里做真实 HTTP HEAD 请求，
+     * 集成测试不应依赖外网。validator 自身的语义在 ImageUrlValidatorTest 里用
+     * in-process HttpServer 单测覆盖；这里替换为 no-op，让 banner CRUD 集成测试
+     * 专注于业务逻辑而非网络可达性。
+     */
+    @MockBean
+    protected ImageUrlValidator imageUrlValidator;
 
     /** Test-only admin credentials. Self-seeded in {@link #seedTestAdmin} so the
      *  integration suite does not depend on the legacy V2 admin/admin123 row

@@ -356,7 +356,7 @@ const handleDelete = async (event: Event) => {
     }
   } catch (error: any) {
     if (error !== 'cancel') {
-      
+      // ignore
     }
   }
 }

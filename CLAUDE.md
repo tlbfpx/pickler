@@ -128,6 +128,17 @@ This project uses an OpenSpec + Superpowers workflow:
 
 Do not write code before OpenSpec design is confirmed. Do not archive before code/tests/spec are aligned.
 
+## Continuous Integration
+
+GitHub Actions CI runs on every push and every PR to master (`.github/workflows/ci.yml`). Two parallel jobs:
+
+- **`backend`** — JDK 17, runs `mvn clean package` (compile), `mvn test -Dtest='!*IntegrationTest'` (unit), `mvn test -Dtest='*IntegrationTest'` (integration with MySQL 8 + Redis 6 service containers). ~1m30s with Maven cache.
+- **`frontend`** — Node 18, runs `npm ci`, `npm run lint:check` (ESLint without `--fix`), `npm run build`. ~30s with npm cache.
+
+PRs require both jobs green to merge. `concurrency.cancel-in-progress: true` cancels superseded runs when a PR receives a new push. CI does **not** deploy — production releases are manual via `deploy/scripts/install.sh` (see `docs/RUNBOOK.md`).
+
+Frontend `npm run lint` (local, with `--fix`) and `npm run lint:check` (CI, no `--fix`) are separate scripts. ESLint config downgrades `no-explicit-any`, `ban-types` to `warn` and allows empty catch — see `.eslintrc.cjs` for the rule set.
+
 ## Environment Variables
 
 Full template at `.env.example`; operational guidance (key rotation, emergency response, upgrade path) at `docs/CREDENTIALS.md`. Production deployments must override these (dev defaults work locally):
