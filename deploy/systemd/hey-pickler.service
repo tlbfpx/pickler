@@ -1,0 +1,38 @@
+[Unit]
+Description=Hey Pickler Server (Pickleball event management backend)
+Documentation=https://github.com/tlbfpx/pickler/blob/master/docs/RUNBOOK.md
+After=network.target mysql.service redis.service
+Wants=mysql.service redis.service
+
+[Service]
+Type=simple
+User=heypickler
+Group=heypickler
+WorkingDirectory=/opt/heypickler
+
+# 所有 env var 从此文件加载（JWT_SECRET / AES_KEY / INITIAL_ADMIN_* /
+# PROD_GUARD / DB_* / REDIS_* / WX_* / CORS_ADMIN_ORIGINS /
+# SPRING_PROFILES_ACTIVE 等）。文件权限必须 0600 heypickler:heypickler。
+EnvironmentFile=/etc/heypickler/heypickler.env
+
+ExecStart=/usr/bin/java \
+  -Xms512m -Xmx2g \
+  -XX:+UseG1GC \
+  -XX:+HeapDumpOnOutOfMemoryError \
+  -XX:HeapDumpPath=/var/log/heypickler/ \
+  -Dfile.encoding=UTF-8 \
+  -jar /opt/heypickler/hey-pickler-server-1.0.0.jar
+
+Restart=on-failure
+RestartSec=10
+StartLimitInterval=60
+StartLimitBurst=3
+
+StandardOutput=append:/var/log/heypickler/app.log
+StandardError=append:/var/log/heypickler/app.err.log
+
+LimitNOFILE=65536
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
