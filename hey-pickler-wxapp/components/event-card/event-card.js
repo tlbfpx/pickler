@@ -18,6 +18,7 @@ Component({
   },
 
   data: {
+    imgSrc: '/images/default-event.png',
     statusText: '',
     statusColor: '#999',
     eventTime: '',
@@ -44,6 +45,9 @@ Component({
       var typeText = typeMap[event.type] || '赛事'
       var typeClass = event.type === 'STAR' ? 'type-star' : 'type-party'
 
+      // Reset fallback state when event changes; default to local image if bannerUrl missing
+      var imgSrc = event.bannerUrl || '/images/default-event.png'
+
       // Remaining time
       var remainingTime = ''
       if (event.registrationDeadline) {
@@ -65,6 +69,7 @@ Component({
       }
 
       this.setData({
+        imgSrc: imgSrc,
         statusText: statusText,
         statusColor: statusColor,
         eventTime: eventTime,
@@ -89,6 +94,12 @@ Component({
       this.triggerEvent('register', {
         event: this.data.event
       })
+    },
+
+    // Event image failed to load → swap to local fallback (idempotent: local file won't re-error)
+    onBannerError: function () {
+      if (this.data.imgSrc === '/images/default-event.png') return
+      this.setData({ imgSrc: '/images/default-event.png' })
     }
   }
 })
