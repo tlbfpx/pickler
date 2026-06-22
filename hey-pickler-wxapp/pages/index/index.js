@@ -153,5 +153,14 @@ Page({
         url: banner.linkUrl
       })
     }
+  },
+
+  // Banner image failed to load (e.g. image host not whitelisted in the Mini Program) → fallback
+  onBannerError(e) {
+    const { index } = e.currentTarget.dataset
+    if (index === undefined) return
+    this.setData({
+      [`banners[${index}].imageUrl`]: '/images/default-event.png'
+    })
   }
 })
