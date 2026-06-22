@@ -1,3 +1,9 @@
--- Default super admin (password: admin123, bcrypt hash)
-INSERT INTO `admin_user` (`username`, `password_hash`, `role`, `status`)
-VALUES ('admin', '$2a$10$YZPJw5WLWFVP1IsHDZmsFetU.vUeJoxqbQm1Mdd/d0QjaFj7Cw76G', 'SUPER_ADMIN', 'ACTIVE');
+-- No admin seed in migration. Initial admin is created at application startup
+-- by AdminBootstrapper (config/AdminBootstrapper.java), reading
+-- INITIAL_ADMIN_USERNAME (default: admin) and INITIAL_ADMIN_PASSWORD env vars.
+-- See docs/CREDENTIALS.md for first-deployment instructions.
+--
+-- If you have an existing dev environment that ran a prior version of this
+-- migration (which seeded admin/admin123), the Flyway checksum will differ
+-- after this change. Run `mvn flyway:repair` once to update the checksum.
+-- Existing admin rows are preserved (AdminBootstrapper skips non-empty table).

@@ -149,7 +149,7 @@ class OperationLogAspectTest {
 
         Map<String, Object> loginBody = new HashMap<>();
         loginBody.put("username", "admin");
-        loginBody.put("password", "admin123");
+        loginBody.put("password", "test-login-password");
         ProceedingJoinPoint pjp = mockJoinPoint(loginBody);
         when(pjp.proceed()).thenReturn("token");
 
@@ -165,7 +165,7 @@ class OperationLogAspectTest {
         assertNotNull(log.getParams());
         assertTrue(log.getParams().contains("\"password\":\"***\""),
             "password should be masked, got: " + log.getParams());
-        assertFalse(log.getParams().contains("admin123"));
+        assertFalse(log.getParams().contains("test-login-password"));
     }
 
     @Test

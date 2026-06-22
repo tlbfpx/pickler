@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures/admin.fixture'
+import { E2E_ADMIN_USERNAME, E2E_ADMIN_PASSWORD } from './fixtures/credentials'
 
 test.describe('安全与权限', () => {
   test('未登录访问受保护页面重定向', async ({ page }) => {
@@ -45,8 +46,8 @@ test.describe('安全与权限', () => {
 
   test('退出后token清除', async ({ page }) => {
     await page.goto('/login')
-    await page.getByPlaceholder('请输入用户名').fill('admin')
-    await page.getByPlaceholder('请输入密码').fill('admin123')
+    await page.getByPlaceholder('请输入用户名').fill(E2E_ADMIN_USERNAME)
+    await page.getByPlaceholder('请输入密码').fill(E2E_ADMIN_PASSWORD)
     await page.getByRole('button', { name: '登录' }).click()
     await expect(page).toHaveURL('/', { timeout: 10000 })
 

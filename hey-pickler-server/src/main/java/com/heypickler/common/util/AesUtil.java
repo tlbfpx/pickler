@@ -1,5 +1,6 @@
 package com.heypickler.common.util;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -22,11 +23,21 @@ public class AesUtil {
     @Value("${hey-pickler.aes.key}")
     private String key;
 
+    @PostConstruct
+    void validate() {
+        byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length != 16 && keyBytes.length != 24 && keyBytes.length != 32) {
+            throw new IllegalStateException(
+                "AES_KEY must be exactly 16, 24, or 32 bytes for AES-128/192/256. " +
+                "Got " + keyBytes.length + " bytes. " +
+                "Generate via `openssl rand -base64 32` and trim to 32 chars, or set raw 16/24/32 bytes."
+            );
+        }
+    }
+
     private SecretKeySpec getKeySpec() {
         byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
-        byte[] aesKey = new byte[32];
-        System.arraycopy(keyBytes, 0, aesKey, 0, Math.min(keyBytes.length, 32));
-        return new SecretKeySpec(aesKey, "AES");
+        return new SecretKeySpec(keyBytes, "AES");
     }
 
     public String encrypt(String plainText) {
