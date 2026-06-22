@@ -141,9 +141,13 @@ Frontend `npm run lint` (local, with `--fix`) and `npm run lint:check` (CI, no `
 
 ## Environment Variables
 
-Production deployments must override these (dev defaults work locally):
-- `JWT_SECRET`, `AES_KEY` — crypto keys
+Full template at `.env.example`; operational guidance (key rotation, emergency response, upgrade path) at `docs/CREDENTIALS.md`. Production deployments must override these (dev defaults work locally):
+- `JWT_SECRET` — JWT signing secret, ≥ 32 chars; generate via `openssl rand -base64 48`
+- `AES_KEY` — data encryption key, exactly 16/24/32 bytes; AesUtil `@PostConstruct` strictly validates length
+- `INITIAL_ADMIN_USERNAME`, `INITIAL_ADMIN_PASSWORD` — bootstrap SUPER_ADMIN on first start when `admin_user` table is empty; fail-fast `exit(1)` if missing
 - `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` — MySQL connection
 - `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`
 - `WX_APPID`, `WX_SECRET` — WeChat credentials (set `WX_DEV_MODE=false` in prod)
 - `CORS_ADMIN_ORIGINS` — allowed admin origins
+- `SPRING_PROFILES_ACTIVE` — must be `prod` in production
+- `PROD_GUARD=true` — defense-in-depth check refuses start if `dev` profile active or secrets match dev fallbacks

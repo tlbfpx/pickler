@@ -1,3 +1,25 @@
+# =============================================================================
+# Production profile. All sensitive values resolve from environment variables;
+# there are NO hardcoded fallbacks. Missing env vars cause startup failure.
+#
+# Required env vars (see .env.example and docs/CREDENTIALS.md):
+#   DB_URL, DB_USERNAME, DB_PASSWORD       — MySQL connection
+#   REDIS_HOST, REDIS_PORT, REDIS_PASSWORD — Redis connection
+#   JWT_SECRET                             — >= 32 chars; openssl rand -base64 48
+#   AES_KEY                                — exactly 16/24/32 bytes; openssl rand -base64 32
+#   WX_APPID, WX_SECRET                    — WeChat Mini-Program credentials
+#   CORS_ADMIN_ORIGINS                     — comma-separated admin panel origins
+#
+# Initial admin bootstrap (AdminBootstrapper reads these directly via Environment):
+#   INITIAL_ADMIN_USERNAME                 — default 'admin' if unset
+#   INITIAL_ADMIN_PASSWORD                 — REQUIRED on first start (empty admin_user table);
+#                                            no default. Fail-fast exit(1) if missing.
+#
+# Safety guard:
+#   PROD_GUARD                             — optional 'true' to enable strict profile checks
+#                                            (refuses to start if dev profile is active)
+# =============================================================================
+
 server:
   port: 8080
 
@@ -19,12 +41,23 @@ mybatis-plus:
     log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
 
 hey-pickler:
+  rate-limit:
+    # Per-IP / per-user limits per minute. Conservative defaults for production.
+    # Override per deployment if business traffic requires higher ceilings.
+    login: 60
+    admin: 120
+    admin-anon: 30
+    default: 60
   jwt:
     secret: ${JWT_SECRET}
-    app-expiration: 604800000
-    admin-expiration: 86400000
+    app-expiration: ${JWT_APP_EXPIRATION:604800000}
+    admin-expiration: ${JWT_ADMIN_EXPIRATION:86400000}
+  cors:
+    admin-origins: ${CORS_ADMIN_ORIGINS}
+    app-origins: ${CORS_APP_ORIGINS:}
   aes:
     key: ${AES_KEY}
   wechat:
     appid: ${WX_APPID}
     secret: ${WX_SECRET}
+    dev-mode: ${WX_DEV_MODE:false}

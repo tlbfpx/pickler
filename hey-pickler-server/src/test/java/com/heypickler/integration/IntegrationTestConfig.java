@@ -10,6 +10,7 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.*;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Map;
@@ -27,6 +28,13 @@ public abstract class IntegrationTestConfig {
     @MockBean
     protected ImageUrlValidator imageUrlValidator;
 
+    /** Test-only admin credentials. Self-seeded in {@link #seedTestAdmin} so the
+     *  integration suite does not depend on the legacy V2 admin/admin123 row
+     *  (which has been removed from Flyway). Production deployments use
+     *  AdminBootstrapper with INITIAL_ADMIN_PASSWORD env var instead. */
+    protected static final String TEST_ADMIN_USERNAME = "admin";
+    protected static final String TEST_ADMIN_PASSWORD = "integration-test-pw-12";
+
     @Autowired
     protected JdbcTemplate jdbcTemplate;
 
@@ -42,6 +50,20 @@ public abstract class IntegrationTestConfig {
                             "VALUES (?, ?, ?, 'NORMAL', 0, 0, 'SHINING', 'SHINING')",
                     userId, "test_openid_" + userId, "TestUser_" + userId);
         }
+    }
+
+    /**
+     * Reset the admin row to a known password. Idempotent — runs before every
+     * test class. This decouples integration tests from whatever admin password
+     * happens to live in the dev DB (legacy admin123, post-bootstrap random, etc).
+     */
+    @BeforeAll
+    static void seedTestAdmin(@Autowired JdbcTemplate jdbcTemplate) {
+        String bcryptHash = BCrypt.hashpw(TEST_ADMIN_PASSWORD, BCrypt.gensalt());
+        jdbcTemplate.update("DELETE FROM admin_user WHERE username = ?", TEST_ADMIN_USERNAME);
+        jdbcTemplate.update(
+                "INSERT INTO admin_user (username, password_hash, role, status) VALUES (?, ?, 'SUPER_ADMIN', 'ACTIVE')",
+                TEST_ADMIN_USERNAME, bcryptHash);
     }
 
 
@@ -63,7 +85,7 @@ public abstract class IntegrationTestConfig {
      * This ensures the Redis session is created so subsequent admin requests pass the filter.
      */
     protected String loginAsSuperAdmin() {
-        Map<String, String> body = Map.of("username", "admin", "password", "admin123");
+        Map<String, String> body = Map.of("username", TEST_ADMIN_USERNAME, "password", TEST_ADMIN_PASSWORD);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, String>> req = new HttpEntity<>(body, headers);

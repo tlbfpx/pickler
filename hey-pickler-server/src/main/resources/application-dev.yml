@@ -44,7 +44,11 @@ hey-pickler:
     admin-origins: ${CORS_ADMIN_ORIGINS:http://localhost:5173,http://localhost:3000}
     app-origins: ${CORS_APP_ORIGINS:}
   aes:
-    key: ${AES_KEY:PicklerDevAesKey16}
+    # Exactly 16 bytes for AES-128. AesUtil @PostConstruct enforces 16/24/32.
+    # NB: previous fallback `PicklerDevAesKey16` was actually 18 bytes and
+    # silently zero-padded — any dev phone data encrypted with it will not
+    # decrypt after this change. Empty the user.phone column to rebind.
+    key: ${AES_KEY:PicklerDevAesKey}
   wechat:
     appid: ${WX_APPID:your-appid}
     secret: ${WX_SECRET:your-secret}
