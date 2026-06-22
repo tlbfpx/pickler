@@ -43,3 +43,10 @@ hey-pickler:
     admin: 100000
     admin-anon: 100000
     default: 100000
+
+# AdminBootstrapper reads these from Environment. Integration tests run against
+# a fresh schema (admin_user empty), so without a password the app would
+# System.exit(1) before tests start. Real deployments set INITIAL_ADMIN_PASSWORD
+# via /etc/heypickler/heypickler.env — see docs/CREDENTIALS.md.
+INITIAL_ADMIN_USERNAME: admin
+INITIAL_ADMIN_PASSWORD: integration-test-pw-12
