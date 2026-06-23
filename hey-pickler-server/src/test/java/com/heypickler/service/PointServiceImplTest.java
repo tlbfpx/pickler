@@ -61,4 +61,16 @@ class PointServiceImplTest {
         verify(eventPublisher).publishEvent(evt.capture());
         assertEquals("2026-Q2", evt.getValue().seasonCode());
     }
+
+    @Test
+    void getBalance_returnsStarOrPartyPoints() {
+        User u = new User();
+        u.setId(1L);
+        u.setStarPoints(1230);
+        u.setPartyPoints(450);
+        when(userMapper.selectById(1L)).thenReturn(u);
+
+        assertEquals(1230, service.getBalance(1L, "STAR"));
+        assertEquals(450, service.getBalance(1L, "PARTY"));
+    }
 }

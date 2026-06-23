@@ -15,6 +15,7 @@ import com.heypickler.mapper.PointRecordMapper;
 import com.heypickler.mapper.SeasonMapper;
 import com.heypickler.mapper.UserMapper;
 import com.heypickler.service.PointService;
+import com.heypickler.service.PointWallet;
 import com.heypickler.service.dto.PointEntry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +31,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class PointServiceImpl implements PointService {
+public class PointServiceImpl implements PointService, PointWallet {
 
     private final EventMapper eventMapper;
     private final PointRecordMapper pointRecordMapper;
@@ -107,6 +108,15 @@ public class PointServiceImpl implements PointService {
 
         // 5. 发布赛季维度事件（携 seasonCode）
         eventPublisher.publishEvent(new PointChangeListener.PointChangeEvent(resolvedType, seasonCode));
+    }
+
+    @Override
+    public int getBalance(Long userId, String type) {
+        User u = userMapper.selectById(userId);
+        if (u == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "用户不存在");
+        }
+        return "PARTY".equals(type) ? u.getPartyPoints() : u.getStarPoints();
     }
 
     private Map<Long, User> batchLoadUsers(List<Long> userIds) {
