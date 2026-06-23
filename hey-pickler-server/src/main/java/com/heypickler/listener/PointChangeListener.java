@@ -19,9 +19,10 @@ public class PointChangeListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onPointChange(PointChangeEvent event) {
         try {
-            rankingService.refreshRankings(event.type());
+            rankingService.refreshRankings(event.type(), event.seasonCode());
         } catch (Exception e) {
-            log.error("Failed to refresh rankings for type: {}", event.type(), e);
+            log.error("Failed to refresh rankings for type={} season={}",
+                    event.type(), event.seasonCode(), e);
         }
     }
 
