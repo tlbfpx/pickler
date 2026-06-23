@@ -54,7 +54,7 @@
 | `src/api/seasons.ts`（新） | 赛季 API 客户端 |
 | `src/views/seasons/*`（新） | 赛季管理页（列表/新建/切换/归档排名） |
 | `src/router/index.ts` | +赛季路由 |
-| `views/events/EventFormDialog.vue`、`UserDetailDrawer.vue`、`PointEntryDialog.vue`、`views/rankings/*`、`views/dashboard/*` | 文案替换 + 段位 6 档 |
+| `views/events/EventFormDialog.vue`、`views/users/UserDetailDrawer.vue`、`views/rankings/PointEntryDialog.vue`、`views/rankings/*`、`views/dashboard/*` | 文案替换 + 段位 6 档 |
 
 ---
 
@@ -139,7 +139,13 @@ class TierPropertiesTest {
             "hey-pickler.tier.star.thresholds[2]", "1200",
             "hey-pickler.tier.star.thresholds[3]", "2500",
             "hey-pickler.tier.star.thresholds[4]", "5000",
-            "hey-pickler.tier.star.thresholds[5]", "10000"
+            "hey-pickler.tier.star.thresholds[5]", "10000",
+            "hey-pickler.tier.party.thresholds[0]", "0",
+            "hey-pickler.tier.party.thresholds[1]", "200",
+            "hey-pickler.tier.party.thresholds[2]", "500",
+            "hey-pickler.tier.party.thresholds[3]", "1200",
+            "hey-pickler.tier.party.thresholds[4]", "2500",
+            "hey-pickler.tier.party.thresholds[5]", "5000"
         ));
         TierProperties props = Binder.get(source).bind("hey-pickler.tier", TierProperties.class).get();
 
@@ -147,6 +153,8 @@ class TierPropertiesTest {
         assertEquals("SILVER", props.keyFor(499, "STAR"));
         assertEquals("GOLD", props.keyFor(1200, "STAR"));
         assertEquals("MASTER", props.keyFor(10000, "STAR"));
+        assertEquals("BRONZE", props.keyFor(0, "PARTY"));
+        assertEquals("GOLD", props.keyFor(500, "PARTY"));
         assertEquals(6, props.getKeys().size());
     }
 }
@@ -174,8 +182,6 @@ import java.util.Map;
 public class TierProperties {
     private List<String> keys;          // [BRONZE, SILVER, GOLD, PLATINUM, DIAMOND, MASTER]
     private List<String> names;         // [青铜, 白银, 黄金, 铂金, 钻石, 王者]
-    private Map<String, TypeTier> types; // 但用 star / party 两个具名字段更直观，见下
-
     private StarTier star;
     private PartyTier party;
 
@@ -184,9 +190,9 @@ public class TierProperties {
     @Data
     public static class PartyTier { private List<Integer> thresholds; }
 
-    /** 返回某积分在某类型下对应的档位 key；types=null 时按默认 STAR 阈值 */
+    /** 返回某积分在某类型下对应的档位 key；type 非 PARTY 一律按 STAR 阈值 */
     public String keyFor(int points, String type) {
-        List<Integer> th = "PARTY".equals(type) ? party.getThresholds() : star.getThresholds();
+        List<Integer> th = ("PARTY".equals(type) && party != null) ? party.getThresholds() : star.getThresholds();
         String result = keys.get(0);
         for (int i = 0; i < keys.size(); i++) {
             if (points >= th.get(i)) result = keys.get(i);
@@ -209,7 +215,7 @@ public class TierProperties {
 }
 ```
 
-> 注：测试里只 bind 了 `keys` 与 `star.thresholds`，实现里 `party` 在该测试用例下可能为 null——`keyFor` 对非 PARTY 都走 `star`，测试只断言 STAR 分支，可过。如需更稳，测试补 party 阈值 bind。
+> 注：`@ConfigurationProperties + @Component` 在 Spring Boot 3.2 可直接生效。项目此前**无** `@ConfigurationProperties` 先例（现有配置用 `@Value`，如 `AppConfig`/`RateLimitFilter`），本任务为新引入该模式；若 review 倾向标准写法，可改为在 `@SpringBootApplication` 加 `@ConfigurationPropertiesScan` 并去掉 `@Component`。
 
 - [ ] **Step 4: 加 yml 配置**
 
@@ -338,7 +344,8 @@ ALTER TABLE point_record ADD COLUMN source     VARCHAR(16) NOT NULL DEFAULT 'MAN
 ALTER TABLE point_record ADD COLUMN season_code VARCHAR(16);
 UPDATE point_record SET season_code = '2026-Q2' WHERE season_code IS NULL;
 CREATE INDEX idx_type_season ON point_record (type, season_code);
-CREATE INDEX idx_user        ON point_record (user_id);
+-- 不再单建 idx_user(user_id)：V1 已有 idx_user_created(user_id, created_at DESC)，
+-- 最左前缀已覆盖 user_id 等值查询（spec §5.1 的 idx_user 经核冗余，勘误不建）。
 
 -- 4) ranking.tier 重算（覆盖旧值 SHINING/SUPER/LEGEND 三档 → 6 档）—— STAR 按 star_points
 UPDATE ranking r JOIN user u ON r.user_id = u.id
@@ -379,7 +386,7 @@ UPDATE user SET party_tier = CASE
   ELSE 'BRONZE' END;
 ```
 
-- [ ] **Step 2: 启动应用，验证 Flyway 执行 V11**
+- [ ] **Step 2: 启动应用，验证 Flyway 执行 V11**（本地手动验证，需本地 MySQL+Redis 在跑；CI 环境无 DB，由 Task 4.1 集成测试覆盖）
 
 Run: `mvn -f hey-pickler-server/pom.xml spring-boot:run`（后台），等启动。
 Expected 日志含：`Migrating schema "hey_pickler" to version "11 - dual points system"` + `Successfully applied 1 migration ... now at version v11` + `Started HeyPicklerApplication`
@@ -480,7 +487,7 @@ public interface PointService {
 - 重算 tier 改为 `tierProperties.keyFor(points, type)`（替代原 `calculateTier`）
 - `publishEvent(new PointChangeEvent(type, seasonCode))`
 
-`PointChangeListener.PointChangeEvent`：`record PointChangeEvent(String type, String seasonCode) {}`。
+`PointChangeListener.PointChangeEvent`：`record PointChangeEvent(String type, String seasonCode) {}`。改造后 grep `new PointChangeListener.PointChangeEvent(` 确认所有构造点（原 `RankingServiceImpl:101` 已随 `enterPoints` 迁移到 `PointServiceImpl`）均改为 `(type, seasonCode)`；已核仅 `PointChangeListener` 一个监听器，无其他消费方。
 
 - [ ] **Step 4: 跑测试，确认通过**
 
@@ -514,12 +521,20 @@ admin 手填入口**强制 `PointSource.MANUAL`**（不读请求体的 source；
 
 - [ ] **Step 2: 删 `RankingService` 接口与 Impl 的 `enterPoints`**
 
-- [ ] **Step 3: 编译 + 回归测试**
+- [ ] **Step 3: 处理 `RankingServiceTest` 回归**（现有 ~12 个测试会因删 `enterPoints`/改 `calculateTier` 而编译或断言失败，必须同步改）
+
+  1. 删除 6 个 `testEnterPoints_*`（:133/:153/:189/:207/:231/:249）——逻辑已迁 `PointService`，迁到 `PointServiceImplTest` 或删
+  2. 删除 6 个 `testCalculateTier_*`（:89-123，反射调私有 `calculateTier` 断言 SHINING/SUPER/LEGEND）——该方法已删，测试随之删
+  3. `testRefreshRankings_GroupByTier`（:320-348）：mock `tierProperties.keyFor` 返回新 6 档 key，改断言
+  4. `testRefreshRankings_ClearsRedisCache`（:350-360）：`times(5)` → `times(7)`（6 档 key + null + top5），或参数化为 `tierProperties.cacheKeysWithNull().size()+1`
+  5. `RankingServiceImpl` 测试类加 `@Mock TierProperties tierProperties` + `@BeforeEach` stub（`keyFor`/`cacheKeysWithNull`），避免 NPE
+
+- [ ] **Step 4: 编译 + 回归测试**
 
 Run: `mvn -f hey-pickler-server/pom.xml test -Dtest='!*IntegrationTest'`
-Expected: BUILD SUCCESS（现有 ranking 测试不应回归；若有测试直测 `RankingService.enterPoints`，迁移到 `PointServiceImplTest`）
+Expected: BUILD SUCCESS
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add hey-pickler-server/src/main/java/com/heypickler/service/RankingService.java \
@@ -540,29 +555,24 @@ git commit -m "refactor(points): RankingService 删 enterPoints; 调用点改调
 - Modify: `controller/admin/AdminRankingController.java`（手动 refresh 取当前赛季 code）
 - Create/Modify: `test/.../service/RankingServiceImplTest.java`
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: 写失败测试**（黑盒验证"防归档删除"——不内省 wrapper）
 
 ```java
 @Test
-void refreshRankings_onlyDeletesCurrentSeason_andKeepsArchive() {
-    // ranking 表已有旧赛季(STAR,2025-Q1)归档行 + 当前赛季(STAR,2026-Q2)行
+void refreshRankings_keepsArchivedSeason_rowsSurvive() {
+    Ranking archived = ranking(1L, "STAR", "2025-Q1");   // 旧赛季归档行，不应被删
+    when(rankingMapper.selectList(any())).thenReturn(List.of());
     when(tierProperties.keyFor(anyInt(), eq("STAR"))).thenReturn("SILVER");
     when(tierProperties.cacheKeysWithNull()).thenReturn(List.of("BRONZE","SILVER","GOLD","PLATINUM","DIAMOND","MASTER",null));
 
     service.refreshRankings("STAR", "2026-Q2");
 
-    // delete 必须含 season 维度，不能删 2025-Q1
-    ArgumentCaptor<LambdaQueryWrapper<Ranking>> w = ArgumentCaptor.forClass(Class.forName(...));
-    // 断言 delete wrapper 含 .eq(season,"2026-Q2")（用 verify + wrapper toString 或拆分查询方法）
-}
-
-@Test
-void calculateTier_usesTierProperties() {
-    when(tierProperties.keyFor(0, "STAR")).thenReturn("BRONZE");
-    when(tierProperties.keyFor(1500, "STAR")).thenReturn("GOLD");
-    // 通过 refreshRankings 或公开入口间接验证 tier 来自 tierProperties
+    // 实现须把 delete 抽成 protected deleteRankingsByTypeAndSeason(type, seasonCode)；
+    // 这里用 spy 捕获实际被 delete 命中的 id 集合，断言不含 archived.id(=1L)
+    verify(rankingMapper).delete(any());
 }
 ```
+> 说明：MyBatis-Plus `LambdaQueryWrapper` 内部条件无法可靠内省（`ArgumentCaptor<wrapper>` 断言 `.eq(season,...)` 不可行）。实现把 delete 抽成 `protected deleteRankingsByTypeAndSeason(type, seasonCode)`，对其单独写小单测：构造 wrapper 后断言 `getTargetSql()` 含 `season_code`；上层 `refreshRankings` 用黑盒（spy rankingMapper 捕获被删 id，断言旧赛季 id 不在其中）验证归档保留。
 
 - [ ] **Step 2: 跑测试，确认失败**
 
@@ -702,7 +712,7 @@ git commit -m "feat(points): PointWallet 接口预留 (getBalance 实现; deduct
 
 **Files:**
 - Modify: `vo/RankingVO.java`（+`tierName`）
-- Modify: 含 `starTier/partyTier` 的用户 VO（如 `vo/UserVO.java` 或 `UserDetailVO`，实施时 grep `starTier` 定位）（+`starTierName` / `partyTierName`）
+- Modify: `vo/UserDetailVO.java`、`vo/UserAdminVO.java`、`vo/UserProfileVO.java`（三个均含 `starTier/partyTier`，各加 `starTierName`/`partyTierName`；实施时 grep `starTier` 确认全集——注意 **`UserVO.java` 不存在**，别写错）
 - Modify: 对应 service 装配处用 `tierProperties.nameFor(key)` 填充
 
 - [ ] **Step 1: 写失败测试**（`RankingVO` 装配时 `tierName` = 中文名）
@@ -780,7 +790,7 @@ git commit -m "feat(wxapp): 积分体系文案替换为战力/活力 + 段位 6 
 
 **Files:**
 - Create: `hey-pickler-admin/src/constants/terms.ts`
-- Modify: `views/events/EventFormDialog.vue`、`views/users/UserDetailDrawer.vue`、`views/events/PointEntryDialog.vue`、`views/rankings/*`、`views/dashboard/*`
+- Modify: `views/events/EventFormDialog.vue`、`views/users/UserDetailDrawer.vue`、`views/rankings/PointEntryDialog.vue`、`views/rankings/*`、`views/dashboard/*`
 
 - [ ] **Step 1: 建术语常量**（TS 版，结构同 wxapp）
 - [ ] **Step 2: 全量替换文案；段位展示用 `tierName`（VO 已返回）或本地映射**
