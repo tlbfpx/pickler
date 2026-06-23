@@ -8,7 +8,7 @@
   <!-- Event header -->
   <view class="event-header">
     <view class="event-type-badge {{event.type === 'STAR' ? 'type-star' : 'type-party'}}">
-      {{event.type === 'STAR' ? '明星赛事' : '派对活动'}}
+      {{event.type === 'STAR' ? '竞技赛事' : '社交活动'}}
     </view>
 
     <view class="event-status-badge" style="background-color: {{util.getEventStatusColor(event.status)}}">
@@ -56,7 +56,7 @@
       <text class="info-icon">⭐</text>
       <view class="info-content">
         <text class="info-label">积分门槛</text>
-        <text class="info-value">{{event.minPoints}} 分（{{event.type === 'STAR' ? '明星积分' : '派对积分'}}）</text>
+        <text class="info-value">{{event.minPoints}} 分（{{event.type === 'STAR' ? '战力' : '活力'}}）</text>
       </view>
     </view>
 

@@ -50,7 +50,7 @@ function getRegistrationStatusColor(status) {
 
       <!-- Event type badge -->
       <view class="event-type-badge {{item.type === 'STAR' ? 'type-star' : 'type-party'}}">
-        {{item.type === 'STAR' ? '明星赛事' : '派对活动'}}
+        {{item.type === 'STAR' ? '竞技赛事' : '社交活动'}}
       </view>
 
       <!-- Registration status badge -->
