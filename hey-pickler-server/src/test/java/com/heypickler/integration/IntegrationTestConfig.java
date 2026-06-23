@@ -47,7 +47,7 @@ public abstract class IntegrationTestConfig {
         for (long userId : new long[]{8001L, 9000L, 9001L}) {
             jdbcTemplate.update(
                     "INSERT IGNORE INTO user (id, openid, nickname, status, star_points, party_points, star_tier, party_tier) " +
-                            "VALUES (?, ?, ?, 'NORMAL', 0, 0, 'SHINING', 'SHINING')",
+                            "VALUES (?, ?, ?, 'NORMAL', 0, 0, 'BRONZE', 'BRONZE')",
                     userId, "test_openid_" + userId, "TestUser_" + userId);
         }
     }

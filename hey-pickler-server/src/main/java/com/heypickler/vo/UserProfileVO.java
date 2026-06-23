@@ -15,5 +15,9 @@ public class UserProfileVO {
     private Integer partyPoints;
     private String starTier;
     private String partyTier;
+    /** 中文档名，由 TierProperties.nameFor(starTier) 装配 */
+    private String starTierName;
+    /** 中文档名，由 TierProperties.nameFor(partyTier) 装配 */
+    private String partyTierName;
     private Integer totalEvents;
 }

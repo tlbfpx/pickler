@@ -70,8 +70,8 @@ public class AuthServiceImpl implements AuthService {
             user.setStatus("NORMAL");
             user.setStarPoints(0);
             user.setPartyPoints(0);
-            user.setStarTier("SHINING");
-            user.setPartyTier("SHINING");
+            user.setStarTier("BRONZE");
+            user.setPartyTier("BRONZE");
             userMapper.insert(user);
             needBindPhone = true;
         } else {

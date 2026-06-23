@@ -1,6 +1,7 @@
 package com.heypickler.controller.admin;
 
 import com.heypickler.common.annotation.RequireRole;
+import com.heypickler.common.enums.PointSource;
 import com.heypickler.common.enums.UserRole;
 import com.heypickler.common.result.PageResult;
 import com.heypickler.common.result.Result;
@@ -8,7 +9,8 @@ import com.heypickler.dto.admin.EventCreateRequest;
 import com.heypickler.dto.admin.EventUpdateRequest;
 import com.heypickler.dto.admin.PointEntryRequest;
 import com.heypickler.service.EventService;
-import com.heypickler.service.RankingService;
+import com.heypickler.service.PointService;
+import com.heypickler.service.dto.PointEntry;
 import com.heypickler.vo.EventParticipantVO;
 import com.heypickler.vo.EventVO;
 import com.heypickler.vo.RegistrationVO;
@@ -29,7 +31,7 @@ import java.util.Map;
 public class AdminEventController {
 
     private final EventService eventService;
-    private final RankingService rankingService;
+    private final PointService pointService;
 
     @GetMapping
     @Operation(summary = "赛事列表（管理后台）")
@@ -101,7 +103,8 @@ public class AdminEventController {
             @PathVariable Long id,
             @Valid @RequestBody PointEntryRequest req) {
         Long adminId = (Long) request.getAttribute("adminId");
-        rankingService.enterPoints(id, req, adminId);
+        // 关联赛事发分：强制 MANUAL 来源，不读请求体 source
+        pointService.enterPoints(id, req.getType(), toPointEntries(req), PointSource.MANUAL, adminId);
         return Result.ok();
     }
 
@@ -127,5 +130,11 @@ public class AdminEventController {
         String status = body.get("status");
         eventService.updateRegistrationStatus(eventId, registrationId, status);
         return Result.ok();
+    }
+
+    private java.util.List<PointEntry> toPointEntries(PointEntryRequest req) {
+        return req.getRecords().stream()
+                .map(item -> new PointEntry(item.getUserId(), item.getPoints(), item.getReason()))
+                .collect(java.util.stream.Collectors.toList());
     }
 }

@@ -1,26 +1,22 @@
 package com.heypickler.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.heypickler.common.exception.BizException;
-import com.heypickler.common.exception.ErrorCode;
 import com.heypickler.common.constant.RedisKey;
 import com.heypickler.common.result.PageResult;
-import com.heypickler.dto.admin.PointEntryRequest;
+import com.heypickler.common.exception.BizException;
+import com.heypickler.common.exception.ErrorCode;
+import com.heypickler.config.TierProperties;
 import com.heypickler.dto.app.RankingQuery;
-import com.heypickler.entity.Event;
-import com.heypickler.entity.PointRecord;
 import com.heypickler.entity.Ranking;
+import com.heypickler.entity.Season;
 import com.heypickler.entity.User;
-import com.heypickler.mapper.EventMapper;
-import com.heypickler.mapper.PointRecordMapper;
 import com.heypickler.mapper.RankingMapper;
+import com.heypickler.mapper.SeasonMapper;
 import com.heypickler.mapper.UserMapper;
 import com.heypickler.service.RankingService;
 import com.heypickler.vo.RankingVO;
-import com.heypickler.listener.PointChangeListener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,88 +30,24 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class RankingServiceImpl implements RankingService {
 
-    private final EventMapper eventMapper;
-    private final PointRecordMapper pointRecordMapper;
     private final UserMapper userMapper;
     private final RankingMapper rankingMapper;
     private final RedisTemplate<String, Object> redisTemplate;
-    private final ApplicationEventPublisher eventPublisher;
+    private final TierProperties tierProperties;
+    private final SeasonMapper seasonMapper;
 
-    private static final String CURRENT_SEASON = "2026-Q2";
     private static final int MAX_PAGE_SIZE = 100;
 
     @Override
     @Transactional
-    public void enterPoints(Long eventId, PointEntryRequest request, Long operatorId) {
-        String type = "STAR";
-        String eventTitle = null;
-        if (eventId != null && eventId > 0) {
-            Event event = eventMapper.selectById(eventId);
-            if (event == null) {
-                throw new BizException(ErrorCode.NOT_FOUND, "赛事不存在");
-            }
-            type = event.getType();
-            eventTitle = event.getTitle();
-        } else if (request.getType() != null) {
-            type = request.getType();
-        }
-
-        // Batch load all users needed
-        List<Long> userIds = request.getRecords().stream()
-                .map(PointEntryRequest.PointRecordItem::getUserId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .collect(Collectors.toList());
-        Map<Long, User> userMap = batchLoadUsers(userIds);
-
-        for (PointEntryRequest.PointRecordItem item : request.getRecords()) {
-            User user = userMap.get(item.getUserId());
-            if (user == null) continue;
-
-            PointRecord record = new PointRecord();
-            record.setUserId(item.getUserId());
-            record.setEventId(eventId != null && eventId > 0 ? eventId : null);
-            record.setType(type);
-            record.setPoints(item.getPoints());
-            record.setReason(eventTitle != null
-                    ? "[" + eventTitle + "] " + item.getReason()
-                    : item.getReason());
-            record.setOperatorId(operatorId);
-            pointRecordMapper.insert(record);
-
-            int newPoints;
-            if ("STAR".equals(type)) {
-                int current = user.getStarPoints() != null ? user.getStarPoints() : 0;
-                newPoints = Math.max(0, current + item.getPoints());
-                user.setStarPoints(newPoints);
-                user.setStarTier(calculateTier(newPoints, type));
-            } else {
-                int current = user.getPartyPoints() != null ? user.getPartyPoints() : 0;
-                newPoints = Math.max(0, current + item.getPoints());
-                user.setPartyPoints(newPoints);
-                user.setPartyTier(calculateTier(newPoints, type));
-            }
-            userMapper.updateById(user);
-        }
-
-        eventPublisher.publishEvent(new PointChangeListener.PointChangeEvent(type));
-    }
-
-    private String calculateTier(int points, String type) {
-        if ("STAR".equals(type)) {
-            if (points >= 1000) return "LEGEND";
-            if (points >= 500) return "SUPER";
-            return "SHINING";
-        } else {
-            if (points >= 500) return "LEGEND";
-            if (points >= 200) return "SUPER";
-            return "SHINING";
-        }
+    public void refreshRankings(String type) {
+        // 兼容旧签名：取当前赛季 code 委托新签名。手动刷新路径优先用 controller 解析的 code。
+        refreshRankings(type, resolveCurrentSeasonCode(type));
     }
 
     @Override
     @Transactional
-    public void refreshRankings(String type) {
+    public void refreshRankings(String type, String seasonCode) {
         LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
         if ("STAR".equals(type)) {
             queryWrapper.gt(User::getStarPoints, 0).orderByDesc(User::getStarPoints);
@@ -127,17 +59,16 @@ public class RankingServiceImpl implements RankingService {
 
         // Batch load existing rankings for all users
         List<Long> userIds = users.stream().map(User::getId).collect(Collectors.toList());
-        Map<Long, Ranking> existingRankingMap = batchLoadRankings(userIds, type);
+        Map<Long, Ranking> existingRankingMap = batchLoadRankings(userIds, type, seasonCode);
 
-        // Delete old rankings for this type+season
-        rankingMapper.delete(new LambdaQueryWrapper<Ranking>()
-                .eq(Ranking::getType, type));
+        // Delete old rankings ONLY for this type+season (保留归档赛季)
+        deleteRankingsByTypeAndSeason(type, seasonCode);
 
         List<Ranking> toInsert = new ArrayList<>();
         int globalRank = 1;
         for (User user : users) {
             int points = "STAR".equals(type) ? user.getStarPoints() : user.getPartyPoints();
-            String tier = calculateTier(points, type);
+            String tier = tierProperties.keyFor(points, type);
 
             Ranking existing = existingRankingMap.get(user.getId());
             int change = existing != null ? existing.getRank() - globalRank : 0;
@@ -149,7 +80,7 @@ public class RankingServiceImpl implements RankingService {
             ranking.setRank(globalRank);
             ranking.setPoints(points);
             ranking.setChange(change);
-            ranking.setSeason(CURRENT_SEASON);
+            ranking.setSeason(seasonCode);
             toInsert.add(ranking);
             globalRank++;
         }
@@ -162,10 +93,30 @@ public class RankingServiceImpl implements RankingService {
         // Clear caches after DB is updated.
         // NOTE: getRankings 缓存 key 为 ranking:{type}:{tier}，tier=null 时 key 形如
         // "ranking:STAR:null"，必须一并清理，否则不指定 tier 的查询会读到旧数据。
-        for (String tier : Arrays.asList("LEGEND", "SUPER", "SHINING", null)) {
+        // 档位由 TierProperties 配置驱动（6 档 + null），参数化避免硬编码。
+        for (String tier : tierProperties.cacheKeysWithNull()) {
             redisTemplate.delete(RedisKey.ranking(type, tier));
         }
         redisTemplate.delete(RedisKey.rankingTop5(type));
+    }
+
+    /**
+     * 仅删除当前赛季的 ranking 行，保留归档赛季数据。
+     */
+    protected void deleteRankingsByTypeAndSeason(String type, String seasonCode) {
+        rankingMapper.delete(new LambdaQueryWrapper<Ranking>()
+                .eq(Ranking::getType, type)
+                .eq(Ranking::getSeason, seasonCode));
+    }
+
+    private String resolveCurrentSeasonCode(String type) {
+        Season season = seasonMapper.selectOne(new LambdaQueryWrapper<Season>()
+                .eq(Season::getType, type)
+                .eq(Season::getStatus, "CURRENT"));
+        if (season == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "当前赛季不存在: " + type);
+        }
+        return season.getCode();
     }
 
     @Override
@@ -207,6 +158,7 @@ public class RankingServiceImpl implements RankingService {
                     vo.setUserId(ranking.getUserId());
                     vo.setPoints(ranking.getPoints());
                     vo.setTier(ranking.getTier());
+                    vo.setTierName(tierProperties.nameFor(ranking.getTier()));
 
                     User user = userMap.get(ranking.getUserId());
                     vo.setNickname(user.getNickname());
@@ -253,6 +205,7 @@ public class RankingServiceImpl implements RankingService {
                     vo.setUserId(ranking.getUserId());
                     vo.setPoints(ranking.getPoints());
                     vo.setTier(ranking.getTier());
+                    vo.setTierName(tierProperties.nameFor(ranking.getTier()));
 
                     User user = userMap.get(ranking.getUserId());
                     vo.setNickname(user.getNickname());
@@ -271,11 +224,12 @@ public class RankingServiceImpl implements RankingService {
                 .collect(Collectors.toMap(User::getId, u -> u));
     }
 
-    private Map<Long, Ranking> batchLoadRankings(List<Long> userIds, String type) {
+    private Map<Long, Ranking> batchLoadRankings(List<Long> userIds, String type, String seasonCode) {
         if (userIds.isEmpty()) return Collections.emptyMap();
         List<Ranking> rankings = rankingMapper.selectList(
                 new LambdaQueryWrapper<Ranking>()
                         .eq(Ranking::getType, type)
+                        .eq(Ranking::getSeason, seasonCode)
                         .in(Ranking::getUserId, userIds));
         return rankings.stream().collect(Collectors.toMap(Ranking::getUserId, r -> r, (a, b) -> a));
     }

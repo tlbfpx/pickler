@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.heypickler.common.annotation.RequireRole;
 import com.heypickler.common.enums.UserRole;
 import com.heypickler.common.result.Result;
+import com.heypickler.config.TierProperties;
 import com.heypickler.entity.Event;
 import com.heypickler.entity.Registration;
 import com.heypickler.entity.User;
@@ -32,6 +33,7 @@ public class AdminDashboardController {
     private final UserMapper userMapper;
     private final EventMapper eventMapper;
     private final RegistrationMapper registrationMapper;
+    private final TierProperties tierProperties;
 
     @GetMapping
     @Operation(summary = "首页统计数据")
@@ -88,13 +90,14 @@ public class AdminDashboardController {
         data.put("weeklyRevenue", Math.round(weeklyRevenue * 100) / 100.0);
 
         // === Tier distribution ===
+        String defaultTier = tierProperties.getKeys().get(0);
         List<User> allUsers = userMapper.selectList(null);
         Map<String, Long> starTierDist = allUsers.stream()
                 .filter(u -> u.getStarPoints() != null && u.getStarPoints() > 0)
-                .collect(Collectors.groupingBy(u -> u.getStarTier() != null ? u.getStarTier() : "SHINING", Collectors.counting()));
+                .collect(Collectors.groupingBy(u -> u.getStarTier() != null ? u.getStarTier() : defaultTier, Collectors.counting()));
         Map<String, Long> partyTierDist = allUsers.stream()
                 .filter(u -> u.getPartyPoints() != null && u.getPartyPoints() > 0)
-                .collect(Collectors.groupingBy(u -> u.getPartyTier() != null ? u.getPartyTier() : "SHINING", Collectors.counting()));
+                .collect(Collectors.groupingBy(u -> u.getPartyTier() != null ? u.getPartyTier() : defaultTier, Collectors.counting()));
         data.put("starTierDistribution", starTierDist);
         data.put("partyTierDistribution", partyTierDist);
 
