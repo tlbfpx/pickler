@@ -39,6 +39,8 @@ class SeasonServiceImplTest {
     RankingMapper rankingMapper;
     @Mock
     UserMapper userMapper;
+    @Mock
+    com.heypickler.config.TierProperties tierProperties;
 
     @Test
     void activate_archivesOldCurrent_andSetsNew_forSameType() {
@@ -117,6 +119,8 @@ class SeasonServiceImplTest {
         r.setTier("GOLD");
         r.setChange(0);
         when(rankingMapper.selectList(any())).thenReturn(List.of(r));
+        // Task 2.6: SeasonServiceImpl 装配 RankingVO.tierName 走 tierProperties.nameFor
+        when(tierProperties.nameFor("GOLD")).thenReturn("黄金");
 
         User u = new User();
         u.setId(7L);

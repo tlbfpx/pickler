@@ -158,6 +158,7 @@ public class RankingServiceImpl implements RankingService {
                     vo.setUserId(ranking.getUserId());
                     vo.setPoints(ranking.getPoints());
                     vo.setTier(ranking.getTier());
+                    vo.setTierName(tierProperties.nameFor(ranking.getTier()));
 
                     User user = userMap.get(ranking.getUserId());
                     vo.setNickname(user.getNickname());
@@ -204,6 +205,7 @@ public class RankingServiceImpl implements RankingService {
                     vo.setUserId(ranking.getUserId());
                     vo.setPoints(ranking.getPoints());
                     vo.setTier(ranking.getTier());
+                    vo.setTierName(tierProperties.nameFor(ranking.getTier()));
 
                     User user = userMap.get(ranking.getUserId());
                     vo.setNickname(user.getNickname());

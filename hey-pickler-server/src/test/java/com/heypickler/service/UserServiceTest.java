@@ -5,6 +5,7 @@ import com.heypickler.common.enums.BanAction;
 import com.heypickler.common.enums.UserStatus;
 import com.heypickler.common.result.PageResult;
 import com.heypickler.common.util.AesUtil;
+import com.heypickler.config.TierProperties;
 import com.heypickler.dto.admin.BanRequest;
 import com.heypickler.dto.admin.UserQueryRequest;
 import com.heypickler.dto.app.UserUpdateRequest;
@@ -18,6 +19,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -29,6 +32,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class UserServiceTest {
 
     @Mock private UserMapper userMapper;
@@ -37,6 +41,7 @@ class UserServiceTest {
     @Mock private PointRecordMapper pointRecordMapper;
     @Mock private BanRecordMapper banRecordMapper;
     @Mock private AesUtil aesUtil;
+    @Mock private TierProperties tierProperties;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -57,6 +62,14 @@ class UserServiceTest {
         testUser.setPartyTier("BRONZE");
         testUser.setStatus(UserStatus.NORMAL.name());
         testUser.setCreatedAt(LocalDateTime.now());
+
+        // Task 2.6: User VO 装配时用 tierProperties.nameFor(key) 填充中文名
+        when(tierProperties.nameFor("BRONZE")).thenReturn("青铜");
+        when(tierProperties.nameFor("SILVER")).thenReturn("白银");
+        when(tierProperties.nameFor("GOLD")).thenReturn("黄金");
+        when(tierProperties.nameFor("PLATINUM")).thenReturn("铂金");
+        when(tierProperties.nameFor("DIAMOND")).thenReturn("钻石");
+        when(tierProperties.nameFor("MASTER")).thenReturn("王者");
     }
 
     @Test
@@ -70,6 +83,13 @@ class UserServiceTest {
         assertEquals(1L, profile.getId());
         assertEquals("测试用户", profile.getNickname());
         assertEquals("138****1234", profile.getPhone());
+
+        // Task 2.6: UserProfileVO 必须装配 starTierName / partyTierName（中文档名）
+        assertEquals("青铜", profile.getStarTierName(),
+                "starTierName 必须由 nameFor(user.starTier) 推导");
+        assertEquals("青铜", profile.getPartyTierName(),
+                "partyTierName 必须由 nameFor(user.partyTier) 推导");
+        verify(tierProperties, times(2)).nameFor("BRONZE");
         verify(userMapper).selectById(1L);
     }
 
@@ -154,6 +174,11 @@ class UserServiceTest {
         assertEquals(1, result.getList().size());
         assertEquals("测试用户", result.getList().get(0).getNickname());
         verify(userMapper).selectPage(any(Page.class), any());
+
+        // Task 2.6: adminListUsers 装配的 UserAdminVO 必须含中文名
+        UserAdminVO adminVO = result.getList().get(0);
+        assertEquals("青铜", adminVO.getStarTierName());
+        assertEquals("青铜", adminVO.getPartyTierName());
     }
 
     @Test
@@ -185,6 +210,10 @@ class UserServiceTest {
 
         assertNotNull(user);
         assertEquals("13812341234", user.getPhone());
+
+        // Task 2.6: adminGetUser 装配的 UserAdminVO 必须含中文名
+        assertEquals("青铜", user.getStarTierName());
+        assertEquals("青铜", user.getPartyTierName());
         verify(aesUtil).decrypt("encrypted_phone_13812341234");
     }
 

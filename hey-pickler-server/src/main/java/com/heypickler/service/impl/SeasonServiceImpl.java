@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.heypickler.common.exception.BizException;
 import com.heypickler.common.exception.ErrorCode;
 import com.heypickler.common.result.PageResult;
+import com.heypickler.config.TierProperties;
 import com.heypickler.dto.admin.SeasonCreateRequest;
 import com.heypickler.dto.app.RankingQuery;
 import com.heypickler.entity.Ranking;
@@ -35,6 +36,7 @@ public class SeasonServiceImpl implements SeasonService {
     private final SeasonMapper seasonMapper;
     private final RankingMapper rankingMapper;
     private final UserMapper userMapper;
+    private final TierProperties tierProperties;
 
     @Override
     public List<SeasonVO> list(String type) {
@@ -114,6 +116,7 @@ public class SeasonServiceImpl implements SeasonService {
                     vo.setUserId(r.getUserId());
                     vo.setPoints(r.getPoints());
                     vo.setTier(r.getTier());
+                    vo.setTierName(tierProperties.nameFor(r.getTier()));
                     User u = userMap.get(r.getUserId());
                     vo.setNickname(u.getNickname());
                     vo.setAvatarUrl(u.getAvatarUrl());

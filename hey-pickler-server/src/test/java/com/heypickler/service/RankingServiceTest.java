@@ -100,6 +100,14 @@ class RankingServiceTest {
         });
         when(tierProperties.cacheKeysWithNull()).thenReturn(
                 Arrays.asList("BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "MASTER", null));
+
+        // nameFor 契约：英文 key → 中文档名。装配 RankingVO 时填充 tierName 必须走此方法。
+        when(tierProperties.nameFor(eq("BRONZE"))).thenReturn("青铜");
+        when(tierProperties.nameFor(eq("SILVER"))).thenReturn("白银");
+        when(tierProperties.nameFor(eq("GOLD"))).thenReturn("黄金");
+        when(tierProperties.nameFor(eq("PLATINUM"))).thenReturn("铂金");
+        when(tierProperties.nameFor(eq("DIAMOND"))).thenReturn("钻石");
+        when(tierProperties.nameFor(eq("MASTER"))).thenReturn("王者");
     }
 
     @Test
@@ -279,6 +287,12 @@ class RankingServiceTest {
         assertEquals(1, result.getList().size(), "orphan ranking should be filtered out");
         assertEquals(1L, result.getList().get(0).getUserId());
         assertEquals("Test User", result.getList().get(0).getNickname());
+
+        // Task 2.6: RankingVO 必须填充 tierName（中文档名），由 tierProperties.nameFor(tier) 推导
+        RankingVO first = result.getList().get(0);
+        assertEquals("青铜", first.getTierName(),
+                "tierName 必须由 tierProperties.nameFor(tier) 装配；实际 tier=" + first.getTier());
+        verify(tierProperties).nameFor("BRONZE");
     }
 
     @Test
@@ -310,5 +324,9 @@ class RankingServiceTest {
 
         assertEquals(1, result.size(), "orphan ranking should be filtered out from top5");
         assertEquals(1L, result.get(0).getUserId());
+
+        // Task 2.6: getTop5 装配路径同样必须填充 tierName
+        assertEquals("青铜", result.get(0).getTierName(),
+                "getTop5 tierName 必须由 nameFor(tier) 装配；实际 tier=" + result.get(0).getTier());
     }
 }
