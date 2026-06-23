@@ -14,6 +14,8 @@ public class PointRecord {
     private String type;
     private Integer points;
     private String reason;
+    private String source;
+    private String seasonCode;
     private Long operatorId;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;

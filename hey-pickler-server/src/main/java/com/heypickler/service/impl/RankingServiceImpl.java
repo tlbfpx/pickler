@@ -98,7 +98,7 @@ public class RankingServiceImpl implements RankingService {
             userMapper.updateById(user);
         }
 
-        eventPublisher.publishEvent(new PointChangeListener.PointChangeEvent(type));
+        eventPublisher.publishEvent(new PointChangeListener.PointChangeEvent(type, CURRENT_SEASON));
     }
 
     private String calculateTier(int points, String type) {

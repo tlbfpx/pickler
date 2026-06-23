@@ -25,6 +25,6 @@ public class PointChangeListener {
         }
     }
 
-    public record PointChangeEvent(String type) {
+    public record PointChangeEvent(String type, String seasonCode) {
     }
 }
