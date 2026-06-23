@@ -1,6 +1,7 @@
 package com.heypickler.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.heypickler.config.TierProperties;
 import com.heypickler.entity.Event;
 import com.heypickler.entity.Registration;
 import com.heypickler.entity.User;
@@ -35,6 +36,8 @@ class AdminDashboardControllerTest {
     private EventMapper eventMapper;
     @Mock
     private RegistrationMapper registrationMapper;
+    @Mock
+    private TierProperties tierProperties;
 
     @InjectMocks
     private AdminDashboardController controller;
@@ -50,6 +53,8 @@ class AdminDashboardControllerTest {
         when(userMapper.selectList(any())).thenReturn(Collections.emptyList());
         when(eventMapper.selectList(any())).thenReturn(Collections.emptyList());
         when(registrationMapper.selectList(any())).thenReturn(Collections.emptyList());
+        // TierProperties.getKeys().get(0) 兜底档 = BRONZE（与 yml keys[0] 一致）
+        when(tierProperties.getKeys()).thenReturn(Arrays.asList("BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "MASTER"));
 
         existingUser = new User();
         existingUser.setId(1L);
