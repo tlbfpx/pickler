@@ -1,12 +1,20 @@
 package com.heypickler.controller.admin;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.heypickler.common.annotation.RequireRole;
+import com.heypickler.common.enums.PointSource;
 import com.heypickler.common.enums.UserRole;
+import com.heypickler.common.exception.BizException;
+import com.heypickler.common.exception.ErrorCode;
 import com.heypickler.common.result.PageResult;
 import com.heypickler.common.result.Result;
 import com.heypickler.dto.admin.PointEntryRequest;
 import com.heypickler.dto.app.RankingQuery;
+import com.heypickler.entity.Season;
+import com.heypickler.mapper.SeasonMapper;
+import com.heypickler.service.PointService;
 import com.heypickler.service.RankingService;
+import com.heypickler.service.dto.PointEntry;
 import com.heypickler.vo.RankingVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,6 +36,8 @@ import java.util.Map;
 public class AdminRankingController {
 
     private final RankingService rankingService;
+    private final PointService pointService;
+    private final SeasonMapper seasonMapper;
 
     @GetMapping("/{type}")
     @Operation(summary = "获取排名列表")
@@ -45,7 +55,9 @@ public class AdminRankingController {
     @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
     public Result<Void> refreshRankings(@RequestBody(required = false) Map<String, String> body) {
         String type = body != null ? body.getOrDefault("type", "STAR") : "STAR";
-        rankingService.refreshRankings(type);
+        type = type.toUpperCase();
+        String seasonCode = resolveCurrentSeasonCode(type);
+        rankingService.refreshRankings(type, seasonCode);
         return Result.ok();
     }
 
@@ -56,7 +68,24 @@ public class AdminRankingController {
             HttpServletRequest request,
             @Valid @RequestBody PointEntryRequest req) {
         Long adminId = (Long) request.getAttribute("adminId");
-        rankingService.enterPoints(req.getEventId(), req, adminId);
+        // 手动发分：强制 MANUAL 来源，不读请求体 source
+        pointService.enterPoints(req.getEventId(), req.getType(), toPointEntries(req), PointSource.MANUAL, adminId);
         return Result.ok();
+    }
+
+    private String resolveCurrentSeasonCode(String type) {
+        Season season = seasonMapper.selectOne(new LambdaQueryWrapper<Season>()
+                .eq(Season::getType, type)
+                .eq(Season::getStatus, "CURRENT"));
+        if (season == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "当前赛季不存在: " + type);
+        }
+        return season.getCode();
+    }
+
+    private List<PointEntry> toPointEntries(PointEntryRequest req) {
+        return req.getRecords().stream()
+                .map(item -> new PointEntry(item.getUserId(), item.getPoints(), item.getReason()))
+                .collect(java.util.stream.Collectors.toList());
     }
 }
