@@ -41,6 +41,11 @@ const router = createRouter({
           component: () => import('@/views/rankings/RankingView.vue')
         },
         {
+          path: 'seasons',
+          name: 'Seasons',
+          component: () => import('@/views/seasons/SeasonView.vue')
+        },
+        {
           path: 'banners',
           name: 'Banners',
           component: () => import('@/views/banners/BannerListView.vue')

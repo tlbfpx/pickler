@@ -10,6 +10,10 @@ export interface User {
   partyPoints: number
   starTier: string
   partyTier: string
+  /** 后端返回的中文段位名（优先展示） */
+  starTierName?: string
+  /** 后端返回的中文段位名（优先展示） */
+  partyTierName?: string
   status: 'NORMAL' | 'BANNED'
   createdAt: string
 }
@@ -98,6 +102,8 @@ export interface RankingEntry {
   city: string | null
   points: number
   tier: string
+  /** 后端返回的中文段位名（优先展示） */
+  tierName?: string
 }
 
 export interface PointEntryRecord {
@@ -110,6 +116,32 @@ export interface EnterPointsRequest {
   eventId?: number | null
   type?: string
   records: PointEntryRecord[]
+}
+
+// ==================== Season Types ====================
+
+export interface Season {
+  id: number
+  type: 'STAR' | 'PARTY'
+  code: string
+  name: string
+  startDate: string
+  endDate: string
+  /** CURRENT | ARCHIVED */
+  status: string
+  createdAt: string
+}
+
+export interface SeasonRankingEntry {
+  rank: number
+  userId: number
+  nickname: string | null
+  avatarUrl: string | null
+  city: string | null
+  points: number
+  tier: string
+  /** 后端返回的中文段位名（优先展示） */
+  tierName?: string
 }
 
 // ==================== Admin Types ====================

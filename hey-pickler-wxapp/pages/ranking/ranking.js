@@ -1,13 +1,14 @@
 // Ranking page
 import request from '../../utils/request'
 import util from '../../utils/util'
+import { TERMS, TIER_NAME } from '../../utils/terms'
 
 Page({
   data: {
     type: 'STAR', // STAR or PARTY
-    tier: 'ALL', // ALL, LEGEND, SUPER, SHINING
-    tabs: ['明星排名', '派对排名'],
-    tierTabs: ['全部', '传奇', '超级', '闪耀'],
+    tier: 'ALL', // ALL, BRONZE, SILVER, GOLD, PLATINUM, DIAMOND, MASTER
+    tabs: [TERMS.STAR.type, TERMS.PARTY.type],
+    tierTabs: ['全部', TIER_NAME.BRONZE, TIER_NAME.SILVER, TIER_NAME.GOLD, TIER_NAME.PLATINUM, TIER_NAME.DIAMOND, TIER_NAME.MASTER],
     currentTab: 0,
     currentTierTab: 0,
     rankings: [],
@@ -62,7 +63,7 @@ Page({
     const index = e.currentTarget.dataset.index
     if (index === this.data.currentTierTab) return
 
-    const tierMap = ['ALL', 'LEGEND', 'SUPER', 'SHINING']
+    const tierMap = ['ALL', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND', 'MASTER']
     const tier = tierMap[index]
 
     this.setData({

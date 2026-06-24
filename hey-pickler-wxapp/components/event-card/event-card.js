@@ -1,5 +1,6 @@
 // Event card component
 import util from '../../utils/util'
+import { TERMS } from '../../utils/terms'
 
 Component({
   properties: {
@@ -41,8 +42,7 @@ Component({
       var isFull = event.currentParticipants >= event.maxParticipants
       var isOpen = util.isRegistrationOpen(event)
 
-      var typeMap = { STAR: '明星赛事', PARTY: '派对活动' }
-      var typeText = typeMap[event.type] || '赛事'
+      var typeText = (TERMS[event.type] && TERMS[event.type].type) || '赛事'
       var typeClass = event.type === 'STAR' ? 'type-star' : 'type-party'
 
       // Reset fallback state when event changes; default to local image if bannerUrl missing

@@ -29,11 +29,11 @@
           @change="handleFilter"
         >
           <el-option
-            label="明星赛"
+            :label="TERMS.STAR.type"
             value="STAR"
           />
           <el-option
-            label="派对赛"
+            :label="TERMS.PARTY.type"
             value="PARTY"
           />
         </el-select>
@@ -257,6 +257,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { getEventList, deleteEvent, changeEventStatus } from '@/api/events'
 import { formatDate, formatEventType, formatEventStatus, getEventTypeColor, getEventStatusColor } from '@/utils'
+import { TERMS } from '@/constants/terms'
 import Pagination from '@/components/common/Pagination.vue'
 import EventFormDialog from './EventFormDialog.vue'
 import RegistrationDrawer from './RegistrationDrawer.vue'

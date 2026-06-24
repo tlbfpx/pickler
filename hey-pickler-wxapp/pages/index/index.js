@@ -2,13 +2,14 @@
 import request from '../../utils/request'
 import auth from '../../utils/auth'
 import util from '../../utils/util'
+import { TERMS } from '../../utils/terms'
 
 Page({
   data: {
     banners: [],
     events: [],
     currentTab: 0, // 0: Star, 1: Party
-    tabs: ['明星赛事', '派对活动'],
+    tabs: [TERMS.STAR.type, TERMS.PARTY.type],
     loading: false,
     hasMore: true,
     page: 1,

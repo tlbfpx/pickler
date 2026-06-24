@@ -13,7 +13,8 @@
   <view class="ranking-stats">
     <tier-badge
       wx:if="{{showTier}}"
-      tier="{{user.tier || 'SHINING'}}"
+      tier="{{user.tier || 'BRONZE'}}"
+      tier-name="{{user.tierName}}"
       type="{{user.type || 'STAR'}}"
       size="small">
     </tier-badge>

@@ -3,5 +3,5 @@
   class="tier-badge {{tierClass}} {{sizeClass}}"
   bindtap="handleTap"
 >
-  <text class="tier-text">{{tierName}}{{typeName}}</text>
+  <text class="tier-text">{{tierNameText}}</text>
 </view>

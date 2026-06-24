@@ -1,3 +1,5 @@
+import { TERMS, TIER_NAME } from './terms'
+
 /**
  * Format date to string
  * @param {Date|string} date - Date object or date string
@@ -57,31 +59,29 @@ function formatRelativeTime(date) {
 
 /**
  * Format tier to display name
- * @param {string} tier - Tier code (LEGEND/SUPER/SHINING)
+ * @param {string} tier - Tier code (BRONZE/SILVER/GOLD/PLATINUM/DIAMOND/MASTER)
  * @param {string} type - Type (STAR/PARTY)
  */
 function formatTier(tier, type = 'STAR') {
-  const tierMap = {
-    LEGEND: '传奇',
-    SUPER: '超级',
-    SHINING: '闪耀'
-  }
-
-  const typeSuffix = type === 'STAR' ? '明星' : '派对'
-  return tierMap[tier] ? `${tierMap[tier]}${typeSuffix}` : '未知'
+  const tierName = TIER_NAME[tier] || '青铜'
+  const typeSuffix = TERMS[type] ? TERMS[type].tier : TERMS.STAR.tier
+  return `${tierName}${typeSuffix}`
 }
 
 /**
  * Get tier color class
- * @param {string} tier - Tier code (LEGEND/SUPER/SHINING)
+ * @param {string} tier - Tier code (BRONZE/SILVER/GOLD/PLATINUM/DIAMOND/MASTER)
  */
 function getTierClass(tier) {
   const classMap = {
-    LEGEND: 'tier-legend',
-    SUPER: 'tier-super',
-    SHINING: 'tier-shining'
+    BRONZE: 'tier-bronze',
+    SILVER: 'tier-silver',
+    GOLD: 'tier-gold',
+    PLATINUM: 'tier-platinum',
+    DIAMOND: 'tier-diamond',
+    MASTER: 'tier-master'
   }
-  return classMap[tier] || 'tier-shining'
+  return classMap[tier] || 'tier-bronze'
 }
 
 /**

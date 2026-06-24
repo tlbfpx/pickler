@@ -128,7 +128,7 @@
         style="flex:1"
       >
         <div class="panel-head">
-          <span>明星段位分布</span>
+          <span>{{ TERMS.STAR.tier }}分布</span>
         </div>
         <div
           ref="starTierRef"
@@ -140,7 +140,7 @@
         style="flex:1"
       >
         <div class="panel-head">
-          <span>派对段位分布</span>
+          <span>{{ TERMS.PARTY.tier }}分布</span>
         </div>
         <div
           ref="partyTierRef"
@@ -180,7 +180,7 @@
                 size="small"
                 round
               >
-                {{ row.type === 'STAR' ? '明星' : '派对' }}
+                {{ row.type === 'STAR' ? TERMS.STAR.type : TERMS.PARTY.type }}
               </el-tag>
             </template>
           </el-table-column>
@@ -298,6 +298,7 @@ import { ref, reactive, onMounted, nextTick, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getDashboardStats } from '@/api/dashboard'
 import * as echarts from 'echarts'
+import { TERMS, TIER_NAME, TIER_COLOR } from '@/constants/terms'
 import type { DashboardStats } from '@/types'
 
 const loading = ref(true)
@@ -375,13 +376,13 @@ function renderCharts() {
 
   if (eventTypeRef.value) mk(eventTypeRef.value, {
     tooltip: pieTip, legend: pieLeg,
-    series: [mkPie([{ value: stats.eventTypes?.STAR || 0, name: '明星赛事', itemStyle: { color: '#E6A23C' } }, { value: stats.eventTypes?.PARTY || 0, name: '派对活动', itemStyle: { color: '#F56C6C' } }])]
+    series: [mkPie([{ value: stats.eventTypes?.STAR || 0, name: TERMS.STAR.type, itemStyle: { color: '#E6A23C' } }, { value: stats.eventTypes?.PARTY || 0, name: TERMS.PARTY.type, itemStyle: { color: '#F56C6C' } }])]
   })
 
-  const tc: Record<string, string> = { LEGEND: '#E6A23C', SUPER: '#9C27B0', SHINING: '#909399' }
-  const tn: Record<string, string> = { LEGEND: '传奇', SUPER: '超级', SHINING: '闪耀' }
+  const tc = TIER_COLOR
+  const tn = TIER_NAME
 
-  const mapTier = (td: Record<string, number>) => Object.entries(td).map(([k, v]) => ({ value: v, name: tn[k] || k, itemStyle: { color: tc[k] } }))
+  const mapTier = (td: Record<string, number>) => Object.entries(td).map(([k, v]) => ({ value: v, name: tn[k] || k, itemStyle: { color: tc[k] || '#6B7280' } }))
 
   if (starTierRef.value) mk(starTierRef.value, { tooltip: pieTip, legend: pieLeg, series: [mkPie(mapTier(stats.starTierDistribution || {}))] })
   if (partyTierRef.value) mk(partyTierRef.value, { tooltip: pieTip, legend: pieLeg, series: [mkPie(mapTier(stats.partyTierDistribution || {}))] })

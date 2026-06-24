@@ -59,7 +59,7 @@
         <div class="points-overview">
           <div class="points-card star">
             <div class="points-label">
-              明星积分
+              {{ TERMS.STAR.points }}
             </div>
             <div class="points-value">
               {{ user?.starPoints ?? 0 }}
@@ -69,13 +69,13 @@
                 class="tier-badge"
                 :style="{ backgroundColor: getTierColor(user?.starTier) }"
               >
-                {{ formatTier(user?.starTier) }}
+                {{ user?.starTierName || formatTierName(user?.starTier) }}
               </span>
             </div>
           </div>
           <div class="points-card party">
             <div class="points-label">
-              派对积分
+              {{ TERMS.PARTY.points }}
             </div>
             <div class="points-value">
               {{ user?.partyPoints ?? 0 }}
@@ -85,7 +85,7 @@
                 class="tier-badge"
                 :style="{ backgroundColor: getTierColor(user?.partyTier) }"
               >
-                {{ formatTier(user?.partyTier) }}
+                {{ user?.partyTierName || formatTierName(user?.partyTier) }}
               </span>
             </div>
           </div>
@@ -96,7 +96,7 @@
       <div class="section">
         <el-tabs v-model="activeTab">
           <el-tab-pane
-            label="明星积分明细"
+            :label="`${TERMS.STAR.points}明细`"
             name="star-points"
           >
             <el-table
@@ -159,7 +159,7 @@
           </el-tab-pane>
 
           <el-tab-pane
-            label="派对积分明细"
+            :label="`${TERMS.PARTY.points}明细`"
             name="party-points"
           >
             <el-table
@@ -222,7 +222,7 @@
           </el-tab-pane>
 
           <el-tab-pane
-            label="赛事记录"
+            :label="`${TERMS.STAR.type}记录`"
             name="star-events"
           >
             <el-table
@@ -285,7 +285,7 @@
           </el-tab-pane>
 
           <el-tab-pane
-            label="活动记录"
+            :label="`${TERMS.PARTY.type}记录`"
             name="party-events"
           >
             <el-table
@@ -356,7 +356,8 @@
 import { ref, watch } from 'vue'
 import { getUserDetail, getUserPoints, getUserEvents } from '@/api/users'
 import type { User, PointRecord, EventRecord } from '@/api/users'
-import { formatDate, formatTier, getTierColor } from '@/utils'
+import { formatDate, getTierColor } from '@/utils'
+import { TERMS, formatTierName } from '@/constants/terms'
 
 const props = defineProps<{
   modelValue: boolean

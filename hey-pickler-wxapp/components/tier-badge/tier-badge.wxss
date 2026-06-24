@@ -9,18 +9,33 @@
   box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
 }
 
-.tier-legend {
+.tier-bronze {
+  background: linear-gradient(135deg, #CD7F32, #A0522D);
+  color: white;
+}
+
+.tier-silver {
+  background: linear-gradient(135deg, #C0C0C0, #9E9E9E);
+  color: white;
+}
+
+.tier-gold {
   background: linear-gradient(135deg, #FFD700, #FFA500);
   color: white;
 }
 
-.tier-super {
-  background: linear-gradient(135deg, #9C27B0, #7B1FA2);
-  color: white;
+.tier-platinum {
+  background: linear-gradient(135deg, #E5E4E2, #B9F2FF);
+  color: #333;
 }
 
-.tier-shining {
-  background: linear-gradient(135deg, #C0C0C0, #9E9E9E);
+.tier-diamond {
+  background: linear-gradient(135deg, #B9F2FF, #4FC3F7);
+  color: #333;
+}
+
+.tier-master {
+  background: linear-gradient(135deg, #9C27B0, #6A1B9A);
   color: white;
 }
 

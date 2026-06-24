@@ -10,10 +10,14 @@ export const formatDate = (date: string): string => {
 }
 
 export const formatTier = (tier: string): string => {
+  // 段位 6 档（与后端 TierName 对齐），见 @/constants/terms
   const tierMap: Record<string, string> = {
-    LEGEND: '传奇',
-    SUPER: '超级',
-    SHINING: '新星'
+    BRONZE: '青铜',
+    SILVER: '白银',
+    GOLD: '黄金',
+    PLATINUM: '铂金',
+    DIAMOND: '钻石',
+    MASTER: '王者'
   }
   return tierMap[tier] || tier
 }
@@ -31,18 +35,23 @@ export const formatEventStatus = (status: string): string => {
 }
 
 export const formatEventType = (type: string): string => {
+  // 双积分体系：STAR→竞技赛事，PARTY→社交活动（字段不变，仅文案）
   const typeMap: Record<string, string> = {
-    STAR: '星级赛',
-    PARTY: '派对赛'
+    STAR: '竞技赛事',
+    PARTY: '社交活动'
   }
   return typeMap[type] || type
 }
 
 export const getTierColor = (tier: string): string => {
+  // 段位 6 档展示色（仅前端展示用）
   const colorMap: Record<string, string> = {
-    LEGEND: '#F59E0B',
-    SUPER: '#8B5CF6',
-    SHINING: '#6B7280'
+    BRONZE: '#A56C2C',
+    SILVER: '#9CA3AF',
+    GOLD: '#E6A23C',
+    PLATINUM: '#409EFF',
+    DIAMOND: '#9C27B0',
+    MASTER: '#EF4444'
   }
   return colorMap[tier] || '#6B7280'
 }

@@ -11,6 +11,10 @@ export interface User {
   partyPoints: number
   starTier: string
   partyTier: string
+  /** 后端返回的中文段位名（优先展示） */
+  starTierName?: string
+  /** 后端返回的中文段位名（优先展示） */
+  partyTierName?: string
   status: 'NORMAL' | 'BANNED'
   createdAt: string
 }

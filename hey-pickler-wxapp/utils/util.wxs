@@ -53,12 +53,16 @@ function getEventStatusColor(status) {
 
 function formatTier(tier, type) {
   var tierMap = {
-    LEGEND: '传奇',
-    SUPER: '超级',
-    SHINING: '闪耀'
+    BRONZE: '青铜',
+    SILVER: '白银',
+    GOLD: '黄金',
+    PLATINUM: '铂金',
+    DIAMOND: '钻石',
+    MASTER: '王者'
   }
-  var typeSuffix = type === 'STAR' ? '明星' : '派对'
-  return tierMap[tier] ? tierMap[tier] + typeSuffix : '未知'
+  // 积分体系术语：STAR→战力段位 / PARTY→活力段位（与 utils/terms.js 一致）
+  var typeSuffix = type === 'PARTY' ? '活力段位' : '战力段位'
+  return (tierMap[tier] || '青铜') + typeSuffix
 }
 
 function formatMatchType(matchType) {

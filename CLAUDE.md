@@ -65,10 +65,10 @@ controller/
               AdminBanRecordController, AdminDashboardController, AdminOperationLogController
   app/      → AppAuthController, AppEventController, ...
 filter/     → AppAuthFilter, AdminAuthFilter, RateLimitFilter, XssFilter, SecurityHeadersFilter
-service/    → Interface definitions
+service/    → Interface definitions (incl. PointService 发分、PointWallet 商城预留、SeasonService 赛季管理)
   impl/     → Service implementations (incl. OperationLogService, HeadBasedImageUrlValidator)
 mapper/     → MyBatis-Plus mappers (one per entity)
-entity/     → User, Event, Registration, AdminUser, Banner, Ranking, BanRecord, PointRecord, OperationLog
+entity/     → User, Event, Registration, AdminUser, Banner, Ranking, BanRecord, PointRecord, OperationLog, Season
 dto/        → Request DTOs split by admin/ and app/; common/dto for shared (e.g. OperationLogQuery)
 vo/         → Response VOs (View Objects, e.g. OperationLogVO)
 config/     → SecurityConfig, CorsConfig, RedisConfig, MyBatisPlusConfig, SwaggerConfig, AsyncConfig, AppConfig
@@ -81,7 +81,7 @@ common/
                 OperationLogClassifier (URL → module/action), SensitiveDataUtil (JSON field masking)
   enums/      → UserRole, etc.
 scheduler/  → EventStatusScheduler (auto-transitions event statuses)
-listener/   → PointChangeListener (Spring event listener for point changes)
+listener/   → PointChangeListener (Spring event listener; PointChangeEvent 携 seasonCode)
 ```
 
 ### Key Patterns
@@ -92,10 +92,11 @@ listener/   → PointChangeListener (Spring event listener for point changes)
 - **Rate limiting**: `RateLimitFilter` uses Redis + Lua scripts, per-IP and per-user limits configured in `application.yml` under `hey-pickler.rate-limit`.
 - **Soft delete**: MyBatis-Plus logical delete via `deletedAt` field (NULL = not deleted, timestamp = deleted). **Exception**: `operation_log` is append-only (no `deleted_at`) — audit data must never be erased.
 - **CORS split**: `CorsConfig` applies different origins for `/api/admin` vs `/api/app` paths.
-- **Database migration**: Flyway scripts in `src/main/resources/db/migration/`. Always add new migrations as incremental versions (V9__, V10__, etc.). Current head: V8.
+- **Database migration**: Flyway scripts in `src/main/resources/db/migration/`. Always add new migrations as incremental versions (V9__, V10__, etc.). Current head: V11.
 - **Async executors** (`AsyncConfig`): `rankingExecutor` (queue=100) for ranking refresh; `auditLogExecutor` (queue=500, `DiscardOldestPolicy`) for audit log writes — must never block an admin request.
 - **Audit log capture**: `OperationLogAspect` is an `@Around` aspect on `com.heypickler.controller.admin..*` that records every non-GET admin request to `operation_log`. Captures operator (from request attributes), IP (X-Forwarded-For first hop), params (Jackson-serialized + `SensitiveDataUtil.maskJson` + truncated to 2000 chars), status (1=success / 0=fail with errorCode/errorMsg), latency. Writes are fire-and-forget via `@Async("auditLogExecutor")` — any persistence failure is swallowed and logged.
 - **URL classification**: `OperationLogClassifier.classify(method, path)` maps `/api/admin/{resource}[/{id}][/{sub-action}]` to `(module, action, targetType, targetId)`. Unknown resources fall back to `module=RAW, action=RAW`; the full path is still preserved in the `path` column for forensics.
+- **Dual points system**: Two independent point tracks keyed by type. **STAR = 战力 (竞技赛事 / competitive events)**; **PARTY = 活力 (社交活动 / social events)**. Backend enum values `STAR` / `PARTY` are unchanged from the legacy single-track schema. Tiers are 6 ranks — `BRONZE`青铜 / `SILVER`白银 / `GOLD`黄金 / `PLATINUM`铂金 / `DIAMOND`钻石 / `MASTER`王者 — with thresholds configured in `application.yml` under `hey-pickler.tier` (changing thresholds requires a restart). `point_record.source` records origin: `REGISTRATION` / `CHECK_IN` / `PLACEMENT` / `MANUAL` / `REDEEM` / `ADJUST`. Seasons are tracked per type in the `season` table (status `CURRENT` / `ARCHIVED`); archiving a season keeps historical rankings queryable. Point issuance is decoupled through `PointService` (formerly `RankingService.enterPoints`); `PointWallet` is a placeholder interface for the planned points-mall redemption.
 
 ### Admin Frontend Structure
 

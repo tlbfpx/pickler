@@ -101,7 +101,7 @@
           style="width: 100%"
         />
         <div class="form-tip">
-          设为 0 表示不限制；活动校验派对积分
+          设为 0 表示不限制；{{ TERMS.PARTY.type }}校验{{ TERMS.PARTY.points }}
         </div>
       </el-form-item>
       <el-form-item
@@ -142,6 +142,7 @@ import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { createEvent, updateEvent } from '@/api/events'
 import { formatEventStatus } from '@/utils'
+import { TERMS } from '@/constants/terms'
 import ImageUpload from '@/components/common/ImageUpload.vue'
 import type { Event, CreateEventRequest } from '@/types'
 

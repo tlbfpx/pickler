@@ -1,13 +1,21 @@
 // Tier badge component
+var terms = require('../../utils/terms')
+var TIER_NAME = terms.TIER_NAME
+
 Component({
   properties: {
     tier: {
       type: String,
-      value: 'SHINING'
+      value: 'BRONZE'
     },
     type: {
       type: String,
       value: 'STAR'
+    },
+    // 后端已返回 tierName 时优先使用（fallback 本地 TIER_NAME）
+    tierName: {
+      type: String,
+      value: ''
     },
     size: {
       type: String,
@@ -16,27 +24,20 @@ Component({
   },
 
   data: {
-    tierClass: 'tier-shining',
-    tierName: '闪耀',
-    typeName: '明星',
+    tierClass: 'tier-bronze',
+    tierNameText: '青铜',
     sizeClass: 'tier-medium'
   },
 
   observers: {
-    'tier, type, size': function (tier, type, size) {
+    'tier, type, tierName, size': function (tier, type, tierName, size) {
       var tierClassMap = {
-        LEGEND: 'tier-legend',
-        SUPER: 'tier-super',
-        SHINING: 'tier-shining'
-      }
-      var tierNameMap = {
-        LEGEND: '传奇',
-        SUPER: '超级',
-        SHINING: '闪耀'
-      }
-      var typeNameMap = {
-        STAR: '明星',
-        PARTY: '派对'
+        BRONZE: 'tier-bronze',
+        SILVER: 'tier-silver',
+        GOLD: 'tier-gold',
+        PLATINUM: 'tier-platinum',
+        DIAMOND: 'tier-diamond',
+        MASTER: 'tier-master'
       }
       var sizeClassMap = {
         small: 'tier-small',
@@ -44,10 +45,12 @@ Component({
         large: 'tier-large'
       }
 
+      // 优先后端 tierName，fallback 本地 TIER_NAME
+      var resolvedName = tierName || TIER_NAME[tier] || TIER_NAME.BRONZE
+
       this.setData({
-        tierClass: tierClassMap[tier] || 'tier-shining',
-        tierName: tierNameMap[tier] || '未知',
-        typeName: typeNameMap[type] || '',
+        tierClass: tierClassMap[tier] || 'tier-bronze',
+        tierNameText: resolvedName,
         sizeClass: sizeClassMap[size] || 'tier-medium'
       })
     }
