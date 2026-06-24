@@ -30,4 +30,6 @@ public class Event {
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt;
     private LocalDateTime deletedAt;
+    private String format;
+    private Boolean groupingLocked;
 }
