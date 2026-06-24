@@ -21,11 +21,11 @@
           style="width: 100%"
         >
           <el-option
-            label="明星赛"
+            :label="TERMS.STAR.type"
             value="STAR"
           />
           <el-option
-            label="派对赛"
+            :label="TERMS.PARTY.type"
             value="PARTY"
           />
         </el-select>
@@ -117,7 +117,7 @@
           style="width: 100%"
         />
         <div class="form-tip">
-          设为 0 表示不限制；STAR 赛事校验明星积分，PARTY 活动校验派对积分
+          设为 0 表示不限制；{{ TERMS.STAR.type }}校验{{ TERMS.STAR.points }}，{{ TERMS.PARTY.type }}校验{{ TERMS.PARTY.points }}
         </div>
       </el-form-item>
       <el-form-item
@@ -158,6 +158,7 @@ import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { createEvent, updateEvent } from '@/api/events'
 import { formatEventStatus } from '@/utils'
+import { TERMS } from '@/constants/terms'
 import type { Event, CreateEventRequest } from '@/types'
 
 const props = defineProps<{

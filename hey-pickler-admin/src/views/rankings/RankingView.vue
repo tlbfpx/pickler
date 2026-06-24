@@ -14,13 +14,13 @@
           type="success"
           @click="handleRefresh('STAR')"
         >
-          刷新明星排名
+          刷新{{ TERMS.STAR.ranking }}
         </el-button>
         <el-button
           type="success"
           @click="handleRefresh('PARTY')"
         >
-          刷新派对排名
+          刷新{{ TERMS.PARTY.ranking }}
         </el-button>
       </div>
     </div>
@@ -30,7 +30,7 @@
       @tab-change="handleTabChange"
     >
       <el-tab-pane
-        label="明星排名"
+        :label="TERMS.STAR.ranking"
         name="STAR"
       >
         <div class="card">
@@ -74,7 +74,7 @@
                   class="tier-badge"
                   :style="{ backgroundColor: getTierColor(row.tier) }"
                 >
-                  {{ formatTier(row.tier) }}
+                  {{ row.tierName || formatTierName(row.tier) }}
                 </span>
               </template>
             </el-table-column>
@@ -96,7 +96,7 @@
       </el-tab-pane>
 
       <el-tab-pane
-        label="派对排名"
+        :label="TERMS.PARTY.ranking"
         name="PARTY"
       >
         <div class="card">
@@ -140,7 +140,7 @@
                   class="tier-badge"
                   :style="{ backgroundColor: getTierColor(row.tier) }"
                 >
-                  {{ formatTier(row.tier) }}
+                  {{ row.tierName || formatTierName(row.tier) }}
                 </span>
               </template>
             </el-table-column>
@@ -173,7 +173,8 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getRankings, refreshRankings } from '@/api/rankings'
-import { formatTier, getTierColor } from '@/utils'
+import { getTierColor } from '@/utils'
+import { TERMS, formatTierName } from '@/constants/terms'
 import PointEntryDialog from './PointEntryDialog.vue'
 import type { RankingEntry } from '@/types'
 
@@ -194,13 +195,13 @@ const fetchRankings = async () => {
     if (starRes.code === 0) {
       starRankings.value = starRes.data.list || []
     } else {
-      ElMessage.error(starRes.message || '获取明星排名失败')
+      ElMessage.error(starRes.message || `获取${TERMS.STAR.ranking}失败`)
     }
 
     if (partyRes.code === 0) {
       partyRankings.value = partyRes.data.list || []
     } else {
-      ElMessage.error(partyRes.message || '获取派对排名失败')
+      ElMessage.error(partyRes.message || `获取${TERMS.PARTY.ranking}失败`)
     }
   } catch {
     
@@ -221,7 +222,7 @@ const handleRefresh = async (type: 'STAR' | 'PARTY') => {
   try {
     const res = await refreshRankings(type)
     if (res.code === 0) {
-      ElMessage.success(`${type === 'STAR' ? '明星' : '派对'}排名刷新成功`)
+      ElMessage.success(`${TERMS[type].ranking}刷新成功`)
       fetchRankings()
     } else {
       ElMessage.error(res.message || '刷新排名失败')

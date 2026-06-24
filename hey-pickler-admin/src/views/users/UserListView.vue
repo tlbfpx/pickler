@@ -76,19 +76,19 @@
           </template>
         </el-table-column>
         <el-table-column
-          label="明星"
+          :label="TERMS.STAR.tier"
           width="120"
         >
           <template #default="{ row }">
-            {{ row.starTier }} / {{ row.starPoints }}分
+            {{ row.starTierName || formatTierName(row.starTier) }} / {{ row.starPoints }}分
           </template>
         </el-table-column>
         <el-table-column
-          label="派对"
+          :label="TERMS.PARTY.tier"
           width="120"
         >
           <template #default="{ row }">
-            {{ row.partyTier }} / {{ row.partyPoints }}分
+            {{ row.partyTierName || formatTierName(row.partyTier) }} / {{ row.partyPoints }}分
           </template>
         </el-table-column>
         <el-table-column
@@ -170,6 +170,7 @@ import { User as UserIcon } from '@element-plus/icons-vue'
 import { getUserList, unbanUser } from '@/api/users'
 import type { User } from '@/api/users'
 import { formatDate } from '@/utils'
+import { TERMS, formatTierName } from '@/constants/terms'
 import Pagination from '@/components/common/Pagination.vue'
 import BanDialog from './BanDialog.vue'
 import UserDetailDrawer from './UserDetailDrawer.vue'
