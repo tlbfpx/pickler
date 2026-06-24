@@ -90,7 +90,7 @@ CREATE TABLE group_assignment (
   KEY idx_event (event_id),
   FOREIGN KEY (group_id) REFERENCES match_group(id) ON DELETE CASCADE,
   CHECK ((user_id IS NOT NULL AND team_id IS NULL)
-      OR (user_id IS NULL AND team_id IS NOT NULL))  -- 互斥：单打填 user，双打填 team
+      OR (user_id IS NULL AND team_id IS NOT NULL))  -- 互斥：单打填 user，双打填 team。要求 MySQL ≥ 8.0.16（CHECK 强制）；低版本则由 GroupingService.assign 入口应用层校验
 );
 ```
 - 单打：`group_assignment.user_id` 填参赛者
@@ -174,6 +174,14 @@ interface GroupingStrategy {
 | PUT | `/api/admin/events/{id}/grouping/assignments/{aid}` | 微调换组（body: targetGroupId，仅未锁定） |
 | POST | `/api/admin/events/{id}/grouping/lock` | 锁定 |
 | POST | `/api/admin/events/{id}/grouping/unlock` | 解锁（清结果） |
+
+### 6.6 app API（报名/退赛/队伍，wxapp 用）
+| 方法 | 路径 | 作用 |
+|------|------|------|
+| POST | `/api/app/events/{id}/register` | 单打直接报；双打/混打队长发起建队（body 带 partnerUserId）或队友确认（body 带 teamId） |
+| POST | `/api/app/events/{id}/cancel` | 退赛：单打撤 registration；PENDING 队长取消（删 team+队长 reg）；CONFIRMED 任一成员退赛（删 team+双方 reg） |
+| POST | `/api/app/teams/{teamId}/decline` | 队友拒邀（删 team 行 + 队长 reg 撤，队长需重组） |
+| GET | `/api/app/events/{id}/my-team` | 查当前用户在该赛事的队伍状态（PENDING/CONFIRMED/无） |
 
 ## 7. 前端 + 改动面 + 兼容性
 
