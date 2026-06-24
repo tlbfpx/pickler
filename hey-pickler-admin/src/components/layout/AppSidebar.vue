@@ -31,6 +31,10 @@
         <el-icon><Trophy /></el-icon>
         <span>排名管理</span>
       </el-menu-item>
+      <el-menu-item index="/seasons">
+        <el-icon><Timer /></el-icon>
+        <span>赛季管理</span>
+      </el-menu-item>
       <el-menu-item index="/banners">
         <el-icon><Picture /></el-icon>
         <span>Banner管理</span>
