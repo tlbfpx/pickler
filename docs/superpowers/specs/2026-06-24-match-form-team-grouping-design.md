@@ -53,7 +53,7 @@ CREATE TABLE team (
   member1_user_id BIGINT NOT NULL,        -- 队长
   member2_user_id BIGINT NOT NULL,        -- 队友（建队时即填 partnerUserId）
   name            VARCHAR(64),
-  status          VARCHAR(12) NOT NULL,   -- PENDING | CONFIRMED | DISSOLVED
+  status          VARCHAR(12) NOT NULL,   -- PENDING | CONFIRMED（解散/拒邀直接删行，不留状态）
   created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uk_event_member1 (event_id, member1_user_id),
@@ -62,9 +62,10 @@ CREATE TABLE team (
 ```
 - 双打/混打固定 2 人，用 `member1/member2` 两字段（比 team_member 关联表简单）
 - 单打（SINGLES）不建 Team
-- **建队时 `member2_user_id` 即填队长指定的 partnerUserId**（NOT NULL），`status` 表达是否被队友确认：`PENDING`（待队友确认）/ `CONFIRMED`（队友确认，可分组）/ `DISSOLVED`（退赛解散）
-- 两个唯一约束（member1 / member2）都非 NULL，保证同一赛事任一用户不能同时是多个队的成员；建队时若 member2 已在别队（member1 或 member2），唯一约束命中即拒绝
-- 仍需应用层兜底：建队/确认时事务内 `SELECT ... WHERE event_id=? AND (member1=? OR member2=?) FOR UPDATE` 防止 member1/member2 角色错位竞态
+- **建队时 `member2_user_id` 即填队长指定的 partnerUserId**（NOT NULL），`status` 表达是否被队友确认：`PENDING`（待队友确认）/ `CONFIRMED`（队友确认，可分组）
+- 两个唯一约束（member1 / member2）都非 NULL，保证同一赛事任一用户不能同时是多个队的成员
+- **解散/拒邀 = 物理删除 team 行**（不用 DISSOLVED 状态）：退赛、队友拒邀、队长取消 PENDING 队都直接 `DELETE FROM team`，释放 member1/member2 唯一约束，允许重新组队。状态字段只保留 `PENDING` / `CONFIRMED` 两态（无历史需求，物理删即可，避免唯一约束被已解散行占住）
+- 应用层兜底：建队/确认事务内 `SELECT ... WHERE event_id=? AND (member1=? OR member2=?) FOR UPDATE` 防止 member1/member2 角色错位竞态
 
 ### 4.3 分组表（避 `group` 保留字，用 `match_group`）
 ```sql
@@ -80,11 +81,14 @@ CREATE TABLE match_group (
 CREATE TABLE group_assignment (
   id        BIGINT NOT NULL AUTO_INCREMENT,
   group_id  BIGINT NOT NULL,
+  event_id  BIGINT NOT NULL,    -- 冗余，便于按 event 查/校验锁状态，免 group→event 两跳
   user_id   BIGINT NULL,     -- 单打：参赛者
   team_id   BIGINT NULL,     -- 双打/混打：队伍
-  seed      INT,             -- 蛇形/分配序号
+  seed      INT NOT NULL,    -- 蛇形/分配序号
   PRIMARY KEY (id),
   KEY idx_group (group_id),
+  KEY idx_event (event_id),
+  FOREIGN KEY (group_id) REFERENCES match_group(id) ON DELETE CASCADE,
   CHECK ((user_id IS NOT NULL AND team_id IS NULL)
       OR (user_id IS NULL AND team_id IS NOT NULL))  -- 互斥：单打填 user，双打填 team
 );
@@ -103,10 +107,10 @@ ALTER TABLE registration ADD COLUMN team_id BIGINT NULL;
 - `matchType` / `partnerId` **保留**（兼容现有数据/前端；新建报名服务端强制 `matchType = event.format`，双打改走 Team，partnerId 不再用于新报名）
 
 ### 4.5 V12 migration
-- `event` +`format`（回填现有：默认 `SINGLES`）+`grouping_locked`
-- 建 `team`、`match_group`、`group_assignment` 表
+- `event` +`format`（回填策略见 §7.4）+`grouping_locked`
+- 建 `team`、`match_group`、`group_assignment` 表（含 group_assignment 的 FK CASCADE 与 CHECK）
 - `registration` +`team_id`
-- migration head 现 V11 → V12
+- migration head：V8 之后已被凭据参数化(V9?)/图片(V9/V10)/双积分(V11)占用，**本 spec 用 V12**（实施前 `ls db/migration/` 确认 head）
 
 ## 5. 报名与队伍流程
 
@@ -118,8 +122,10 @@ ALTER TABLE registration ADD COLUMN team_id BIGINT NULL;
 2. 队友确认：`POST .../register` 带 `teamId` → 服务端校验：`team.status=PENDING`、`team.member2_user_id == 当前用户`（防非被邀请人确认）、当前用户未在别队 → `team.status=CONFIRMED` + 队友 registration（同 `team_id`）。重复确认/状态不符抛 `BizException`
 3. team `CONFIRMED` 才算成队，可参与分组
 
-### 5.3 退赛与队伍 + 锁定后冻结
-- 双打/混打：任一成员退赛 → 整队 `DISSOLVED`（不补人，YAGNI），分组时排除
+### 5.3 退赛/拒邀 + 锁定后冻结
+- **队友拒邀**：队友显式拒绝 PENDING 邀请 → 物理删 team 行 + 队长 registration 也撤（队长需重新组队）；或队长可主动取消 PENDING 队（删行 + 撤队长 registration）
+- **PENDING 队长退赛**：直接删 team 行 + 队长 registration（队友此时无 registration，不受影响）
+- **CONFIRMED 任一成员退赛**：整队解散 = 物理删 team 行 + 双方 registration（不补人，YAGNI）；分组时排除
 - 单打：个人退赛，分组排除
 - **分组锁定（`event.grouping_locked=true`）后冻结参赛名单**：拒绝新报名、拒绝退赛/解散（提示"已分组锁定，如需调整请先解锁"）。锁定 = 固化分组供 Spec 2 比赛
 
@@ -150,7 +156,7 @@ interface GroupingStrategy {
 
 ### 6.3 分组流程（管理员手动触发）
 1. 后台「开始分组」→ 选策略 + 组数 → `GroupingService.group(eventId, strategy, groupCount)`
-2. 服务端取参赛者（SINGLES→CONFIRMED registrations 的 user；DOUBLES/MIXED→CONFIRMED teams），算 rankScore 排序
+2. 服务端取参赛者（SINGLES→CONFIRMED registrations 的 `user_id`，**忽略 partnerId**；DOUBLES/MIXED→CONFIRMED teams），算 rankScore 排序
 3. 策略分配 → 建 `match_group`(N 个) + `group_assignment`
 4. 返回分组预览（**未锁定**，可微调）
 5. 管理员微调换组 → 满意后「确认分组」→ `event.grouping_locked=true`
@@ -191,7 +197,7 @@ interface GroupingStrategy {
 | wxapp | 双打报名选队友 UI | event-card/event-detail format 标签 |
 
 ### 7.4 兼容性
-- 现有 event 无 format → V12 **按 registration 多数 matchType 回填**：`UPDATE event e SET format=COALESCE((SELECT matchType FROM registration WHERE event_id=e.id GROUP BY matchType ORDER BY COUNT(*) DESC LIMIT 1),'SINGLES')`；无 registration 的 event 默认 `SINGLES`。存量 matchType 与回填 format 不一致的 registration 视为脏数据（分组服务按 `event.format` 取参赛者，会被忽略——属预期，因历史数据本就无队伍）
+- 现有 event 无 format → V12 **按 registration 多数 matchType 回填**（仅更新有 registration 的 event；无 registration 的保持列默认 `SINGLES`）：`UPDATE event e SET format=COALESCE((SELECT matchType FROM registration WHERE event_id=e.id GROUP BY matchType ORDER BY COUNT(*) DESC LIMIT 1),'SINGLES') WHERE EXISTS(SELECT 1 FROM registration WHERE event_id=e.id)`。存量 matchType 与回填 format 不一致的 registration 视为脏数据（分组服务按 `event.format` 取参赛者，会被忽略——属预期，因历史数据本就无队伍）
 - `registration.matchType/partnerId` 保留（不删）
 - 双积分 ranking/积分体系不动
 
