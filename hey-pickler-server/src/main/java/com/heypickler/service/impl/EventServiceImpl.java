@@ -3,6 +3,7 @@ package com.heypickler.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.heypickler.common.enums.EventFormat;
 import com.heypickler.common.exception.BizException;
 import com.heypickler.common.exception.ErrorCode;
 import com.heypickler.common.result.PageResult;
@@ -13,12 +14,14 @@ import com.heypickler.dto.app.RegisterRequest;
 import com.heypickler.entity.Event;
 import com.heypickler.entity.PointRecord;
 import com.heypickler.entity.Registration;
+import com.heypickler.entity.Team;
 import com.heypickler.entity.User;
 import com.heypickler.mapper.EventMapper;
 import com.heypickler.mapper.PointRecordMapper;
 import com.heypickler.mapper.RegistrationMapper;
 import com.heypickler.mapper.UserMapper;
 import com.heypickler.service.EventService;
+import com.heypickler.service.TeamService;
 import com.heypickler.vo.EventDetailVO;
 import com.heypickler.vo.EventParticipantVO;
 import com.heypickler.vo.EventResultVO;
@@ -41,6 +44,7 @@ public class EventServiceImpl implements EventService {
     private final RegistrationMapper registrationMapper;
     private final UserMapper userMapper;
     private final PointRecordMapper pointRecordMapper;
+    private final TeamService teamService;
 
     @Override
     public PageResult<EventVO> listEvents(String type, String status, int page, int size) {
@@ -92,84 +96,81 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void register(Long userId, Long eventId, RegisterRequest request) {
-        Event event = eventMapper.selectById(eventId);
-        if (event == null || event.getDeletedAt() != null) {
-            throw new BizException(ErrorCode.NOT_FOUND);
-        }
+        Event event = requireEvent(eventId);
 
+        if (Boolean.TRUE.equals(event.getGroupingLocked())) {
+            throw new BizException(ErrorCode.REGISTRATION_CLOSED, "赛事已分组锁定，如需调整请先解锁");
+        }
         if (!"OPEN".equals(event.getStatus())) {
             throw new BizException(ErrorCode.REGISTRATION_CLOSED);
         }
-
         if (LocalDateTime.now().isAfter(event.getRegistrationDeadline())) {
             throw new BizException(ErrorCode.REGISTRATION_CLOSED);
         }
 
-        if (event.getMinPoints() != null && event.getMinPoints() > 0) {
-            User user = userMapper.selectById(userId);
-            if (user != null) {
-                int userPoints = "STAR".equals(event.getType()) ? user.getStarPoints() : user.getPartyPoints();
-                if (userPoints < event.getMinPoints()) {
-                    throw new BizException(ErrorCode.INSUFFICIENT_POINTS,
-                            String.format("积分不足，需 %d 分，当前 %d 分", event.getMinPoints(), userPoints));
-                }
-            }
+        String format = resolveFormat(event);
+        if (EventFormat.SINGLES.name().equals(format)) {
+            registerSingles(userId, eventId, event, request);
+        } else {
+            registerTeam(userId, eventId, event, request, format);
         }
+    }
 
-        Registration existingRegistration = registrationMapper.selectOne(
-                new LambdaQueryWrapper<Registration>()
-                        .eq(Registration::getUserId, userId)
-                        .eq(Registration::getEventId, eventId)
-        );
-
-        if (existingRegistration != null && !"WITHDRAWN".equals(existingRegistration.getStatus())) {
-            throw new BizException(ErrorCode.DUPLICATE_REGISTRATION);
+    /**
+     * Single-player registration: one registration row, matchType forced to SINGLES,
+     * partner/team payload rejected.
+     */
+    private void registerSingles(Long userId, Long eventId, Event event, RegisterRequest request) {
+        if (request.getPartnerId() != null || request.getPartnerUserId() != null || request.getTeamId() != null) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "单打赛事不能携带搭档或队伍");
         }
-
-        String matchType = request.getMatchType();
-        if (("DOUBLES".equals(matchType) || "MIXED".equals(matchType)) && request.getPartnerId() == null) {
-            throw new BizException(ErrorCode.PARAM_ERROR, "双打和混双需要指定搭档");
-        }
-
-        int rows = eventMapper.update(null,
-                new LambdaUpdateWrapper<Event>()
-                        .eq(Event::getId, eventId)
-                        .lt(Event::getCurrentParticipants, event.getMaxParticipants())
-                        .setSql("current_participants = current_participants + 1"));
-
-        if (rows == 0) {
-            throw new BizException(ErrorCode.REGISTRATION_FULL);
-        }
+        checkPointsEligibility(userId, event);
+        guardDuplicate(userId, eventId);
+        reserveSlot(eventId, event);
 
         Registration registration = new Registration();
         registration.setUserId(userId);
         registration.setEventId(eventId);
-        registration.setMatchType(matchType);
-        registration.setPartnerId(request.getPartnerId());
+        registration.setMatchType(EventFormat.SINGLES.name());
         registration.setStatus("REGISTERED");
         registrationMapper.insert(registration);
 
-        // Auto transition: OPEN → FULL when capacity reached
-        if ("OPEN".equals(event.getStatus()) && event.getMaxParticipants() != null) {
-            Event updated = eventMapper.selectById(eventId);
-            if (updated.getCurrentParticipants() >= event.getMaxParticipants()) {
-                eventMapper.update(null,
-                        new LambdaUpdateWrapper<Event>()
-                                .eq(Event::getId, eventId)
-                                .eq(Event::getStatus, "OPEN")
-                                .set(Event::getStatus, "FULL"));
-            }
+        maybeTransitionFull(eventId, event);
+    }
+
+    /**
+     * Doubles/mixed registration, branch by intent:
+     *   partnerUserId present -> captain initiates a PENDING team (createTeam)
+     *   teamId present        -> invited partner confirms (confirmTeam)
+     * The chosen TeamService op inserts the member's registration; this method
+     * only gates capacity/dedup/eligibility and stamps matchType = event.format.
+     */
+    private void registerTeam(Long userId, Long eventId, Event event, RegisterRequest request, String format) {
+        if (request.getTeamId() != null) {
+            guardDuplicate(userId, eventId);
+            reserveSlot(eventId, event);
+            Team team = teamService.confirmTeam(request.getTeamId(), userId);
+            stampTeamMatchType(team.getId(), format);
+        } else if (request.getPartnerUserId() != null) {
+            checkPointsEligibility(userId, event);
+            guardDuplicate(userId, eventId);
+            reserveSlot(eventId, event);
+            Team team = teamService.createTeam(eventId, userId, request.getPartnerUserId());
+            stampTeamMatchType(team.getId(), format);
+        } else {
+            throw new BizException(ErrorCode.PARAM_ERROR, "双打/混打需指定搭档(partnerUserId)或确认队伍(teamId)");
         }
+        maybeTransitionFull(eventId, event);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancelRegistration(Long userId, Long eventId) {
-        Event event = eventMapper.selectById(eventId);
-        if (event == null || event.getDeletedAt() != null) {
-            throw new BizException(ErrorCode.NOT_FOUND);
-        }
+        Event event = requireEvent(eventId);
 
+        if (Boolean.TRUE.equals(event.getGroupingLocked())) {
+            throw new BizException(ErrorCode.REGISTRATION_CLOSED, "赛事已分组锁定，如需调整请先解锁");
+        }
         if (LocalDateTime.now().isAfter(event.getRegistrationDeadline())) {
             throw new BizException(ErrorCode.REGISTRATION_CLOSED);
         }
@@ -178,33 +179,31 @@ public class EventServiceImpl implements EventService {
                 new LambdaQueryWrapper<Registration>()
                         .eq(Registration::getUserId, userId)
                         .eq(Registration::getEventId, eventId)
-                        .eq(Registration::getStatus, "REGISTERED")
-        );
+                        .eq(Registration::getStatus, "REGISTERED"));
 
         if (registration == null) {
             throw new BizException(ErrorCode.NOT_FOUND, "未找到有效的报名记录");
         }
 
-        registration.setStatus("WITHDRAWN");
-        registrationMapper.updateById(registration);
-
-        eventMapper.update(null,
-                new LambdaUpdateWrapper<Event>()
-                        .eq(Event::getId, eventId)
-                        .gt(Event::getCurrentParticipants, 0)
-                        .setSql("current_participants = current_participants - 1"));
-
-        // Auto transition: FULL → OPEN when participants drop below capacity
-        if ("FULL".equals(event.getStatus()) && event.getMaxParticipants() != null) {
-            Event updated = eventMapper.selectById(eventId);
-            if (updated.getCurrentParticipants() < event.getMaxParticipants()) {
-                eventMapper.update(null,
-                        new LambdaUpdateWrapper<Event>()
-                                .eq(Event::getId, eventId)
-                                .eq(Event::getStatus, "FULL")
-                                .set(Event::getStatus, "OPEN"));
+        if (registration.getTeamId() != null) {
+            // Doubles/mixed: any member withdrawing dissolves the whole team.
+            // Count active team registrations first (1 for PENDING, 2 for CONFIRMED),
+            // then dissolve (which withdraws them all) and release that many slots.
+            List<Registration> teamRegs = registrationMapper.selectList(
+                    new LambdaQueryWrapper<Registration>()
+                            .eq(Registration::getTeamId, registration.getTeamId())
+                            .eq(Registration::getStatus, "REGISTERED"));
+            teamService.dissolve(registration.getTeamId());
+            for (Registration ignored : teamRegs) {
+                releaseSlot(eventId);
             }
+        } else {
+            registration.setStatus("WITHDRAWN");
+            registrationMapper.updateById(registration);
+            releaseSlot(eventId);
         }
+
+        maybeTransitionOpen(eventId, event);
     }
 
     @Override
@@ -499,6 +498,97 @@ public class EventServiceImpl implements EventService {
         } else {
             throw new BizException(ErrorCode.PARAM_ERROR, "不支持的状态变更");
         }
+    }
+
+    // ---------- registration helpers ----------
+
+    private Event requireEvent(Long eventId) {
+        Event event = eventMapper.selectById(eventId);
+        if (event == null || event.getDeletedAt() != null) {
+            throw new BizException(ErrorCode.NOT_FOUND);
+        }
+        return event;
+    }
+
+    private String resolveFormat(Event event) {
+        return event.getFormat() != null ? event.getFormat() : EventFormat.SINGLES.name();
+    }
+
+    private void checkPointsEligibility(Long userId, Event event) {
+        if (event.getMinPoints() != null && event.getMinPoints() > 0) {
+            User user = userMapper.selectById(userId);
+            if (user != null) {
+                int userPoints = "STAR".equals(event.getType()) ? user.getStarPoints() : user.getPartyPoints();
+                if (userPoints < event.getMinPoints()) {
+                    throw new BizException(ErrorCode.INSUFFICIENT_POINTS,
+                            String.format("积分不足，需 %d 分，当前 %d 分", event.getMinPoints(), userPoints));
+                }
+            }
+        }
+    }
+
+    private void guardDuplicate(Long userId, Long eventId) {
+        Registration existing = registrationMapper.selectOne(
+                new LambdaQueryWrapper<Registration>()
+                        .eq(Registration::getUserId, userId)
+                        .eq(Registration::getEventId, eventId));
+        if (existing != null && !"WITHDRAWN".equals(existing.getStatus())) {
+            throw new BizException(ErrorCode.DUPLICATE_REGISTRATION);
+        }
+    }
+
+    /** Atomic capacity-guarded slot reservation. */
+    private void reserveSlot(Long eventId, Event event) {
+        int rows = eventMapper.update(null,
+                new LambdaUpdateWrapper<Event>()
+                        .eq(Event::getId, eventId)
+                        .lt(Event::getCurrentParticipants, event.getMaxParticipants())
+                        .setSql("current_participants = current_participants + 1"));
+        if (rows == 0) {
+            throw new BizException(ErrorCode.REGISTRATION_FULL);
+        }
+    }
+
+    private void releaseSlot(Long eventId) {
+        eventMapper.update(null,
+                new LambdaUpdateWrapper<Event>()
+                        .eq(Event::getId, eventId)
+                        .gt(Event::getCurrentParticipants, 0)
+                        .setSql("current_participants = current_participants - 1"));
+    }
+
+    private void maybeTransitionFull(Long eventId, Event event) {
+        if ("OPEN".equals(event.getStatus()) && event.getMaxParticipants() != null) {
+            Event updated = eventMapper.selectById(eventId);
+            if (updated.getCurrentParticipants() >= event.getMaxParticipants()) {
+                eventMapper.update(null,
+                        new LambdaUpdateWrapper<Event>()
+                                .eq(Event::getId, eventId)
+                                .eq(Event::getStatus, "OPEN")
+                                .set(Event::getStatus, "FULL"));
+            }
+        }
+    }
+
+    private void maybeTransitionOpen(Long eventId, Event event) {
+        if ("FULL".equals(event.getStatus()) && event.getMaxParticipants() != null) {
+            Event updated = eventMapper.selectById(eventId);
+            if (updated.getCurrentParticipants() < event.getMaxParticipants()) {
+                eventMapper.update(null,
+                        new LambdaUpdateWrapper<Event>()
+                                .eq(Event::getId, eventId)
+                                .eq(Event::getStatus, "FULL")
+                                .set(Event::getStatus, "OPEN"));
+            }
+        }
+    }
+
+    /** Force matchType = event.format on every registration of a team (spec §5.4). */
+    private void stampTeamMatchType(Long teamId, String format) {
+        registrationMapper.update(null,
+                new LambdaUpdateWrapper<Registration>()
+                        .eq(Registration::getTeamId, teamId)
+                        .set(Registration::getMatchType, format));
     }
 
     private EventVO convertToVO(Event event) {

@@ -4,9 +4,11 @@ import com.heypickler.common.result.PageResult;
 import com.heypickler.common.result.Result;
 import com.heypickler.dto.app.RegisterRequest;
 import com.heypickler.service.EventService;
+import com.heypickler.service.TeamService;
 import com.heypickler.vo.EventDetailVO;
 import com.heypickler.vo.EventResultVO;
 import com.heypickler.vo.EventVO;
+import com.heypickler.vo.TeamVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,6 +25,7 @@ import java.util.List;
 public class AppEventController {
 
     private final EventService eventService;
+    private final TeamService teamService;
 
     @GetMapping
     @Operation(summary = "赛事列表")
@@ -62,6 +65,15 @@ public class AppEventController {
         Long userId = (Long) request.getAttribute("userId");
         eventService.cancelRegistration(userId, id);
         return Result.ok();
+    }
+
+    @GetMapping("/{id}/my-team")
+    @Operation(summary = "查询当前用户在该赛事的队伍状态")
+    public Result<TeamVO> getMyTeam(
+            @PathVariable Long id,
+            HttpServletRequest request) {
+        Long userId = (Long) request.getAttribute("userId");
+        return Result.ok(teamService.toVO(teamService.getMyTeam(id, userId)));
     }
 
     @GetMapping("/{id}/results")

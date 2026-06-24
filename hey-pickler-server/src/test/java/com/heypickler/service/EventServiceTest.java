@@ -10,6 +10,7 @@ import com.heypickler.dto.app.RegisterRequest;
 import com.heypickler.entity.Event;
 import com.heypickler.entity.PointRecord;
 import com.heypickler.entity.Registration;
+import com.heypickler.entity.Team;
 import com.heypickler.entity.User;
 import com.heypickler.mapper.EventMapper;
 import com.heypickler.mapper.PointRecordMapper;
@@ -18,6 +19,7 @@ import com.heypickler.mapper.UserMapper;
 import com.heypickler.service.impl.EventServiceImpl;
 import com.heypickler.vo.EventResultVO;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,12 +42,11 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class EventServiceTest {
 
-    private static boolean tableInfoInitialized = false;
-
     @Mock private EventMapper eventMapper;
     @Mock private RegistrationMapper registrationMapper;
     @Mock private UserMapper userMapper;
     @Mock private PointRecordMapper pointRecordMapper;
+    @Mock private TeamService teamService;
 
     @InjectMocks
     private EventServiceImpl eventService;
@@ -53,13 +54,31 @@ class EventServiceTest {
     private Event testEvent;
     private LocalDateTime now;
 
+    /**
+     * MyBatis-Plus LambdaWrapper resolution (SFunction -> column) depends on the
+     * static TableInfo lambda cache, which is empty in pure Mockito tests (no Spring
+     * context / SqlSessionFactory). Register the entities EventServiceImpl builds
+     * lambda wrappers for so {@code register}/{@code cancel} don't throw
+     * "can not find lambda cache for this entity" at any test order.
+     */
+    @BeforeAll
+    static void warmLambdaCache() {
+        org.apache.ibatis.session.Configuration cfg = new org.apache.ibatis.session.Configuration();
+        // Each assistant's namespace locks after first initTableInfo, so use a fresh
+        // assistant per mapper namespace.
+        org.apache.ibatis.builder.MapperBuilderAssistant eventAssistant =
+                new org.apache.ibatis.builder.MapperBuilderAssistant(cfg, "");
+        eventAssistant.setCurrentNamespace("com.heypickler.mapper.EventMapper");
+        TableInfoHelper.initTableInfo(eventAssistant, Event.class);
+
+        org.apache.ibatis.builder.MapperBuilderAssistant regAssistant =
+                new org.apache.ibatis.builder.MapperBuilderAssistant(cfg, "");
+        regAssistant.setCurrentNamespace("com.heypickler.mapper.RegistrationMapper");
+        TableInfoHelper.initTableInfo(regAssistant, Registration.class);
+    }
+
     @BeforeEach
     void setUp() {
-        // Initialize MyBatis Plus table info cache for Event entity
-        if (!tableInfoInitialized) {
-            TableInfo tableInfo = TableInfoHelper.getTableInfo(Event.class);
-            tableInfoInitialized = true;
-        }
         now = LocalDateTime.now();
         testEvent = new Event();
         testEvent.setId(1L);
@@ -145,37 +164,116 @@ class EventServiceTest {
     }
 
     @Test
-    void register_doublesWithoutPartner_shouldThrow() {
+    void register_doublesWithoutPartnerOrTeam_shouldThrow() {
+        testEvent.setFormat("DOUBLES");
         when(eventMapper.selectById(1L)).thenReturn(testEvent);
-        when(registrationMapper.selectOne(any())).thenReturn(null);
 
         RegisterRequest request = new RegisterRequest();
         request.setMatchType("DOUBLES");
-        request.setPartnerId(null);
 
         BizException ex = assertThrows(BizException.class,
                 () -> eventService.register(100L, 1L, request));
         assertEquals(ErrorCode.PARAM_ERROR.getCode(), ex.getCode());
+        verify(teamService, never()).createTeam(anyLong(), anyLong(), anyLong());
     }
 
     @Test
-    void register_mixedWithPartner_success() {
+    void register_mixedCaptainInitiates_createsPendingTeam() {
+        testEvent.setFormat("MIXED");
         when(eventMapper.selectById(1L)).thenReturn(testEvent);
         when(registrationMapper.selectOne(any())).thenReturn(null);
         when(eventMapper.update(eq(null), any(LambdaUpdateWrapper.class))).thenReturn(1);
-        when(registrationMapper.insert(any(Registration.class))).thenAnswer(invocation -> {
-            Registration reg = invocation.getArgument(0);
-            reg.setId(1L);
-            return 1;
-        });
+        Team created = new Team();
+        created.setId(77L);
+        when(teamService.createTeam(1L, 100L, 200L)).thenReturn(created);
 
         RegisterRequest request = new RegisterRequest();
         request.setMatchType("MIXED");
-        request.setPartnerId(200L);
+        request.setPartnerUserId(200L);
 
         eventService.register(100L, 1L, request);
 
-        verify(registrationMapper).insert(any(Registration.class));
+        // Captain path delegates the registration insert to TeamService; EventServiceImpl
+        // only reserves the captain's slot and stamps matchType = MIXED.
+        verify(teamService).createTeam(1L, 100L, 200L);
+        verify(registrationMapper, never()).insert(any(Registration.class));
+    }
+
+    @Test
+    void register_singlesRejectsPartner_shouldThrow() {
+        testEvent.setFormat("SINGLES");
+        when(eventMapper.selectById(1L)).thenReturn(testEvent);
+
+        RegisterRequest request = new RegisterRequest();
+        request.setMatchType("SINGLES");
+        request.setPartnerUserId(200L);
+
+        BizException ex = assertThrows(BizException.class,
+                () -> eventService.register(100L, 1L, request));
+        assertEquals(ErrorCode.PARAM_ERROR.getCode(), ex.getCode());
+        verify(eventMapper, never()).update(eq(null), any(LambdaUpdateWrapper.class));
+    }
+
+    @Test
+    void register_doublesPartnerConfirms_callsConfirmTeam() {
+        testEvent.setFormat("DOUBLES");
+        when(eventMapper.selectById(1L)).thenReturn(testEvent);
+        when(registrationMapper.selectOne(any())).thenReturn(null);
+        when(eventMapper.update(eq(null), any(LambdaUpdateWrapper.class))).thenReturn(1);
+        Team confirmed = new Team();
+        confirmed.setId(77L);
+        when(teamService.confirmTeam(77L, 100L)).thenReturn(confirmed);
+
+        RegisterRequest request = new RegisterRequest();
+        request.setMatchType("DOUBLES");
+        request.setTeamId(77L);
+
+        eventService.register(100L, 1L, request);
+
+        verify(teamService).confirmTeam(77L, 100L);
+        verify(teamService, never()).createTeam(anyLong(), anyLong(), anyLong());
+    }
+
+    @Test
+    void register_groupingLocked_shouldThrow() {
+        testEvent.setFormat("SINGLES");
+        testEvent.setGroupingLocked(true);
+        when(eventMapper.selectById(1L)).thenReturn(testEvent);
+
+        RegisterRequest request = new RegisterRequest();
+        request.setMatchType("SINGLES");
+
+        BizException ex = assertThrows(BizException.class,
+                () -> eventService.register(100L, 1L, request));
+        assertEquals(ErrorCode.REGISTRATION_CLOSED.getCode(), ex.getCode());
+        verify(registrationMapper, never()).insert(any(Registration.class));
+    }
+
+    @Test
+    void cancelRegistration_teamMember_dissolvesTeam() {
+        testEvent.setFormat("DOUBLES");
+        Registration myReg = new Registration();
+        myReg.setId(1L);
+        myReg.setUserId(100L);
+        myReg.setEventId(1L);
+        myReg.setTeamId(77L);
+        myReg.setStatus("REGISTERED");
+        Registration partnerReg = new Registration();
+        partnerReg.setId(2L);
+        partnerReg.setUserId(200L);
+        partnerReg.setTeamId(77L);
+        partnerReg.setStatus("REGISTERED");
+
+        when(eventMapper.selectById(1L)).thenReturn(testEvent);
+        when(registrationMapper.selectOne(any())).thenReturn(myReg);
+        when(registrationMapper.selectList(any())).thenReturn(Arrays.asList(myReg, partnerReg));
+        when(eventMapper.update(eq(null), any(LambdaUpdateWrapper.class))).thenReturn(1);
+
+        eventService.cancelRegistration(100L, 1L);
+
+        // Both members' slots are released (CONFIRMED team => 2 active regs).
+        verify(teamService).dissolve(77L);
+        verify(eventMapper, times(2)).update(eq(null), any(LambdaUpdateWrapper.class));
     }
 
     @Test
