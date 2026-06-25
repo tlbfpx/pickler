@@ -11,6 +11,10 @@
       {{event.type === 'STAR' ? '竞技赛事' : '社交活动'}}
     </view>
 
+    <view wx:if="{{formatText}}" class="event-format-badge" style="background-color: {{formatColor}}">
+      {{formatText}}
+    </view>
+
     <view class="event-status-badge" style="background-color: {{util.getEventStatusColor(event.status)}}">
       {{util.formatEventStatus(event.status)}}
     </view>
@@ -92,6 +96,26 @@
     <view class="status-header">
       <text class="status-icon">✅</text>
       <text class="status-text">您已报名</text>
+    </view>
+  </view>
+
+  <!-- Team status (for doubles/mixed only) -->
+  <view class="team-card" wx:if="{{myTeam && (myTeam.status === 'PENDING' || myTeam.status === 'CONFIRMED')}}">
+    <view class="team-row">
+      <text class="team-label">我的队伍</text>
+      <text class="team-status {{myTeam.status === 'CONFIRMED' ? 'confirmed' : 'pending'}}">
+        {{myTeam.status === 'CONFIRMED' ? '已确认' : '待队友确认'}}
+      </text>
+    </view>
+    <view class="team-row" wx:if="{{myTeam.name}}">
+      <text class="team-value">队名：{{myTeam.name}}</text>
+    </view>
+    <view class="team-row">
+      <text class="team-value">{{myTeam.member1Name || '队友1'}} / {{myTeam.member2Name || '队友2'}}</text>
+    </view>
+    <view class="team-actions" wx:if="{{myTeam.status === 'PENDING' && isInvitee}}">
+      <button class="team-btn primary" bindtap="handleConfirmTeam">接受邀请</button>
+      <button class="team-btn danger" bindtap="handleDeclineTeam">拒绝邀请</button>
     </view>
   </view>
 

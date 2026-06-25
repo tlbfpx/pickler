@@ -2,6 +2,7 @@
 import request from '../../utils/request'
 import auth from '../../utils/auth'
 import util from '../../utils/util'
+import { FORMAT } from '../../utils/terms'
 
 Page({
   data: {
@@ -13,7 +14,11 @@ Page({
     action: null, // 'register' from navigation
     isRegistrationOpen: false,
     insufficientPoints: false,
-    pointsGap: 0
+    pointsGap: 0,
+    myTeam: null,
+    isInvitee: false,
+    formatText: '',
+    formatColor: '#9CA3AF'
   },
 
   onLoad(options) {
@@ -56,17 +61,22 @@ Page({
       if (res.code === 0) {
         const event = res.data
         const isRegistrationOpen = util.isRegistrationOpen(event)
+        const formatText = event.format && FORMAT[event.format] ? FORMAT[event.format].label : ''
+        const formatColor = event.format && FORMAT[event.format] ? FORMAT[event.format].color : '#9CA3AF'
 
         this.setData({
           event,
           loading: false,
-          isRegistrationOpen
+          isRegistrationOpen,
+          formatText,
+          formatColor
         })
 
         // Check if user is registered
         if (auth.isLoggedIn()) {
           await this.checkRegistration()
           await this.checkPointsEligibility(event)
+          await this.checkMyTeam(event)
         }
 
         // Handle action from navigation
@@ -103,6 +113,30 @@ Page({
       }
     } catch (error) {
       console.error('Check registration failed:', error)
+    }
+  },
+
+  // Load caller's team in this event (for doubles/mixed) and determine whether
+  // they're the invited partner (member2) so they can accept/decline.
+  async checkMyTeam(event) {
+    if (!event || event.format === 'SINGLES') {
+      this.setData({ myTeam: null, isInvitee: false })
+      return
+    }
+    try {
+      const res = await request.get(`/events/${this.data.eventId}/my-team`)
+      if (res.code === 0 && res.data) {
+        const team = res.data
+        const userId = auth.getUserId()
+        this.setData({
+          myTeam: team,
+          isInvitee: userId && team.member2UserId === userId && team.status === 'PENDING'
+        })
+      } else {
+        this.setData({ myTeam: null, isInvitee: false })
+      }
+    } catch (error) {
+      console.error('Check my-team failed:', error)
     }
   },
 
@@ -161,21 +195,35 @@ Page({
       return
     }
 
-    // Select match type
-    const matchType = await new Promise((resolve) => {
-      wx.showActionSheet({
-        itemList: ['单打', '双打', '混双'],
-        success: (res) => {
-          const types = ['SINGLES', 'DOUBLES', 'MIXED']
-          resolve(types[res.tapIndex])
-        },
-        fail: () => {
-          resolve(null)
-        }
-      })
-    })
+    // Format-driven flow: server forces matchType = event.format.
+    // SINGLES: direct. DOUBLES/MIXED: ask for teammate userId (captain initiates).
+    const format = this.data.event.format || 'SINGLES'
 
-    if (!matchType) return
+    let body = {}
+    if (format === 'DOUBLES' || format === 'MIXED') {
+      const partnerUserId = await new Promise((resolve) => {
+        wx.showModal({
+          title: '输入队友 userId',
+          content: `${format === 'DOUBLES' ? '双打' : '混打'}需要 2 人组队。请输入队友的用户 id（您将作为队长发起邀请，队友确认后成队）`,
+          editable: true,
+          placeholderText: '队友 userId',
+          success: (r) => {
+            if (!r.confirm) return resolve(null)
+            const id = parseInt(r.content, 10)
+            if (!id || isNaN(id)) return resolve(null)
+            resolve(id)
+          },
+          fail: () => resolve(null)
+        })
+      })
+      if (!partnerUserId) {
+        util.showError('请输入有效的队友 userId')
+        return
+      }
+      body = { partnerUserId }
+    } else {
+      body = { matchType: 'SINGLES' }
+    }
 
     // Confirm registration
     const confirmed = await util.showConfirm({
@@ -188,14 +236,16 @@ Page({
     util.showLoading('报名中...')
 
     try {
-      const res = await request.post(`/events/${this.data.eventId}/register`, {
-        matchType
-      })
+      const res = await request.post(`/events/${this.data.eventId}/register`, body)
 
       util.hideLoading()
 
       if (res.code === 0) {
-        util.showSuccess('报名成功')
+        if (format === 'DOUBLES' || format === 'MIXED') {
+          util.showSuccess('组队邀请已发出，等待队友确认')
+        } else {
+          util.showSuccess('报名成功')
+        }
 
         // Update state
         this.setData({
@@ -206,6 +256,8 @@ Page({
             currentParticipants: this.data.event.currentParticipants + 1
           }
         })
+        // Re-fetch my-team so the team card shows PENDING state
+        this.checkMyTeam(this.data.event)
 
         // Check if event is now full
         if (this.data.event.currentParticipants >= this.data.event.maxParticipants) {
@@ -223,6 +275,57 @@ Page({
     } catch (error) {
       util.hideLoading()
       util.showError(error.message || '报名失败')
+    }
+  },
+
+  // Partner accepts a pending team invite — registers as team member2.
+  async handleConfirmTeam() {
+    if (!this.data.myTeam) return
+    const confirmed = await util.showConfirm({
+      title: '接受邀请',
+      content: `确认加入「${this.data.myTeam.name || '该队伍'}」吗？`
+    })
+    if (!confirmed) return
+    util.showLoading('处理中...')
+    try {
+      const res = await request.post(`/events/${this.data.eventId}/register`, {
+        teamId: this.data.myTeam.id
+      })
+      util.hideLoading()
+      if (res.code === 0) {
+        util.showSuccess('已加入队伍')
+        await this.loadEventDetail()
+      } else {
+        util.showError(res.message || '加入失败')
+      }
+    } catch (e) {
+      util.hideLoading()
+      util.showError(e.message || '加入失败')
+    }
+  },
+
+  // Partner declines a pending team invite — server deletes the team + captain reg.
+  async handleDeclineTeam() {
+    if (!this.data.myTeam) return
+    const confirmed = await util.showConfirm({
+      title: '拒绝邀请',
+      content: '拒绝后将解散该队伍（队长需重新组队），是否继续？'
+    })
+    if (!confirmed) return
+    util.showLoading('处理中...')
+    try {
+      const res = await request.post(`/teams/${this.data.myTeam.id}/decline`)
+      util.hideLoading()
+      if (res.code === 0) {
+        util.showSuccess('已拒绝')
+        this.setData({ myTeam: null, isInvitee: false })
+        await this.loadEventDetail()
+      } else {
+        util.showError(res.message || '操作失败')
+      }
+    } catch (e) {
+      util.hideLoading()
+      util.showError(e.message || '操作失败')
     }
   },
 

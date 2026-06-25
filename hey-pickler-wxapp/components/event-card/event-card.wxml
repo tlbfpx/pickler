@@ -6,6 +6,11 @@
   <!-- Event type badge -->
   <view wx:if="{{showType}}" class="event-type-badge {{typeClass}}">{{typeText}}</view>
 
+  <!-- Event format badge (single/double/mixed) -->
+  <view wx:if="{{showFormat && formatText}}" class="event-format-badge" style="background-color: {{formatColor}}">
+    {{formatText}}
+  </view>
+
   <!-- Event status badge -->
   <view wx:if="{{showStatus}}" class="event-status-badge" style="background-color: {{statusColor}}">
     {{statusText}}
