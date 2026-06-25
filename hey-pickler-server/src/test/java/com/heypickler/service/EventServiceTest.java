@@ -1,7 +1,6 @@
 package com.heypickler.service;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.heypickler.common.exception.BizException;
 import com.heypickler.common.exception.ErrorCode;
