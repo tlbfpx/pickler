@@ -62,15 +62,20 @@ Open in WeChat DevTools. API base URL configured in `app.js` → `globalData.bas
 controller/
   admin/    → AdminAuthController, AdminUserController, AdminEventController,
               AdminBannerController, AdminRankingController, AdminAdminController,
-              AdminBanRecordController, AdminDashboardController, AdminOperationLogController
-  app/      → AppAuthController, AppEventController, ...
+              AdminBanRecordController, AdminDashboardController, AdminOperationLogController,
+              AdminGroupingController (match grouping lifecycle)
+  app/      → AppAuthController, AppEventController, AppTeamController (team decline)
 filter/     → AppAuthFilter, AdminAuthFilter, RateLimitFilter, XssFilter, SecurityHeadersFilter
-service/    → Interface definitions (incl. PointService 发分、PointWallet 商城预留、SeasonService 赛季管理)
-  impl/     → Service implementations (incl. OperationLogService, HeadBasedImageUrlValidator)
+service/    → Interface definitions (incl. PointService 发分、PointWallet 商城预留、SeasonService 赛季管理、
+              TeamService 队伍状态机、GroupingService 分组生命周期、GroupingStrategy 分组策略接口)
+  impl/     → Service implementations (incl. OperationLogService, HeadBasedImageUrlValidator,
+              TeamServiceImpl, GroupingServiceImpl, SerpentineStrategy, RandomStrategy)
 mapper/     → MyBatis-Plus mappers (one per entity)
-entity/     → User, Event, Registration, AdminUser, Banner, Ranking, BanRecord, PointRecord, OperationLog, Season
-dto/        → Request DTOs split by admin/ and app/; common/dto for shared (e.g. OperationLogQuery)
-vo/         → Response VOs (View Objects, e.g. OperationLogVO)
+entity/     → User, Event, Registration, AdminUser, Banner, Ranking, BanRecord, PointRecord, OperationLog, Season,
+              Team (双打/混打 2 人队), MatchGroup, GroupAssignment
+dto/        → Request DTOs split by admin/ and app/; common/dto for shared (e.g. OperationLogQuery);
+              Participant (grouping userId/teamId + rankScore)
+vo/         → Response VOs (View Objects, e.g. OperationLogVO, TeamVO, GroupVO, AssignmentVO)
 config/     → SecurityConfig, CorsConfig, RedisConfig, MyBatisPlusConfig, SwaggerConfig, AsyncConfig, AppConfig
 common/
   annotation/ → @RequireRole
@@ -92,7 +97,21 @@ listener/   → PointChangeListener (Spring event listener; PointChangeEvent 携
 - **Rate limiting**: `RateLimitFilter` uses Redis + Lua scripts, per-IP and per-user limits configured in `application.yml` under `hey-pickler.rate-limit`.
 - **Soft delete**: MyBatis-Plus logical delete via `deletedAt` field (NULL = not deleted, timestamp = deleted). **Exception**: `operation_log` is append-only (no `deleted_at`) — audit data must never be erased.
 - **CORS split**: `CorsConfig` applies different origins for `/api/admin` vs `/api/app` paths.
-- **Database migration**: Flyway scripts in `src/main/resources/db/migration/`. Always add new migrations as incremental versions (V9__, V10__, etc.). Current head: V11.
+- **Database migration**: Flyway scripts in `src/main/resources/db/migration/`. Always add new migrations as incremental versions (V9__, V10__, etc.). Current head: V12.
+
+### Match Grouping Lifecycle (Spec 1)
+
+Events carry a fixed `format` (SINGLES / DOUBLES / MIXED) plus a `groupingLocked` flag. Doubles/mixed participants build a `Team` via captain-invite → partner-confirm (PENDING → CONFIRMED); dissolution / decline / withdraw are **physical row deletes** to release the V12 UNIQUE KEY (`uk_event_member1` / `uk_event_member2`) so a user can re-form a team.
+
+- **Format-driven registration** — `EventServiceImpl.register` branches on `event.format`. `matchType` is forced to `event.format` server-side at registration creation (NOT NULL column).
+- **Lock freezes the roster** — `event.groupingLocked=true` rejects register / cancel / withdraw / re-group / reassign with `INVALID_STATUS_TRANSITION`.
+- **`GroupingStrategy` interface + Serpentine/Random** — ranked by `event.type` track (STAR→starPoints, PARTY→partyPoints; teams sum members). MANUAL just builds empty groups. Strategy output `groupId` is the group **index** (0..N-1); `GroupingService` resolves it to `match_group.id`.
+- **team status field** only carries `PENDING`/`CONFIRMED`. There is no DISSOLVED state — dissolution = row delete.
+- **MySQL ≥ 8.0.16** required (CHECK on `group_assignment.user_id`/`team_id` mutual exclusivity); on lower versions the constraint is dropped and `GroupingService.assign` enforces it at the application layer.
+
+### App Auth Filter Caveat
+
+`AppAuthFilter.shouldNotFilter` short-circuits all `GET` requests under `/api/app/{events,banners,rankings}` so event browsing works anonymously. User-scoped GETs under those prefixes (currently only `GET /api/app/events/{id}/my-team`) need to be explicitly **excluded from the bypass** so the JWT userId is bound — the filter handles this with an `endsWith("/my-team")` check. Don't add new user-scoped GETs under those prefixes without updating the filter.
 - **Async executors** (`AsyncConfig`): `rankingExecutor` (queue=100) for ranking refresh; `auditLogExecutor` (queue=500, `DiscardOldestPolicy`) for audit log writes — must never block an admin request.
 - **Audit log capture**: `OperationLogAspect` is an `@Around` aspect on `com.heypickler.controller.admin..*` that records every non-GET admin request to `operation_log`. Captures operator (from request attributes), IP (X-Forwarded-For first hop), params (Jackson-serialized + `SensitiveDataUtil.maskJson` + truncated to 2000 chars), status (1=success / 0=fail with errorCode/errorMsg), latency. Writes are fire-and-forget via `@Async("auditLogExecutor")` — any persistence failure is swallowed and logged.
 - **URL classification**: `OperationLogClassifier.classify(method, path)` maps `/api/admin/{resource}[/{id}][/{sub-action}]` to `(module, action, targetType, targetId)`. Unknown resources fall back to `module=RAW, action=RAW`; the full path is still preserved in the `path` column for forensics.
