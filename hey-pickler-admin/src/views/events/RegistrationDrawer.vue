@@ -203,6 +203,16 @@
         v-model:size="pagination.size"
         :total="pagination.total"
       />
+
+      <el-divider
+        v-if="event"
+        style="margin: 24px 0 0"
+      />
+      <GroupingPanel
+        v-if="event"
+        :key="`grouping-${event.id}-${event.groupingLocked}`"
+        :event="event"
+      />
     </div>
   </el-drawer>
 </template>
@@ -211,6 +221,7 @@
 import { ref, reactive, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Pagination from '@/components/common/Pagination.vue'
+import GroupingPanel from './GroupingPanel.vue'
 import { getEventRegistrations, updateRegistrationStatus } from '@/api/events'
 import { formatDate, formatEventType, formatEventStatus, getEventTypeColor, getEventStatusColor } from '@/utils'
 import type { Event, Registration } from '@/types'
