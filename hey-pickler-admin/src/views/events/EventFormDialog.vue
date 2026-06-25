@@ -31,6 +31,32 @@
         </el-select>
       </el-form-item>
       <el-form-item
+        label="比赛形式"
+        prop="format"
+      >
+        <el-select
+          v-model="formData.format"
+          placeholder="请选择比赛形式"
+          style="width: 100%"
+        >
+          <el-option
+            label="单打"
+            value="SINGLES"
+          />
+          <el-option
+            label="双打"
+            value="DOUBLES"
+          />
+          <el-option
+            label="混打"
+            value="MIXED"
+          />
+        </el-select>
+        <div class="form-tip">
+          双打/混打需要 2 人组队参赛（队长发起 → 队友确认）
+        </div>
+      </el-form-item>
+      <el-form-item
         label="标题"
         prop="title"
       >
@@ -176,6 +202,7 @@ const loading = ref(false)
 
 const formData = reactive<CreateEventRequest & { status?: string }>({
   type: 'STAR',
+  format: 'SINGLES',
   title: '',
   description: '',
   location: '',
@@ -217,6 +244,7 @@ const editStatusOptions = computed(() => {
 watch(() => props.event, (val) => {
   if (val) {
     formData.type = val.type
+    formData.format = val.format ?? 'SINGLES'
     formData.title = val.title
     formData.description = val.description
     formData.location = val.location

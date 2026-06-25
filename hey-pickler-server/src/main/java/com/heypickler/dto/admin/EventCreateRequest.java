@@ -42,5 +42,8 @@ public class EventCreateRequest {
     @Min(value = 0, message = "报名积分门槛不能为负数")
     private Integer minPoints = 0;
 
+    /** SINGLES | DOUBLES | MIXED; defaults to SINGLES on the server when null. */
+    private String format;
+
     private String status = "DRAFT";
 }

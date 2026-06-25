@@ -33,6 +33,8 @@ export interface Event {
   fee: number
   status: 'DRAFT' | 'OPEN' | 'FULL' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
   minPoints?: number
+  format?: 'SINGLES' | 'DOUBLES' | 'MIXED' | null
+  groupingLocked?: boolean
 }
 
 export interface CreateEventRequest {
@@ -48,6 +50,7 @@ export interface CreateEventRequest {
   fee: number
   prizes?: string
   minPoints?: number
+  format?: 'SINGLES' | 'DOUBLES' | 'MIXED'
   status?: 'DRAFT' | 'OPEN' | 'FULL' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 }
 

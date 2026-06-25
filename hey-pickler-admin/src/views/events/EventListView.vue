@@ -104,6 +104,25 @@
           </template>
         </el-table-column>
         <el-table-column
+          label="形式"
+          width="90"
+        >
+          <template #default="{ row }">
+            <el-tag
+              v-if="row.format"
+              :color="getEventFormatColor(row.format)"
+              effect="plain"
+              size="small"
+            >
+              {{ formatEventFormat(row.format) }}
+            </el-tag>
+            <span
+              v-else
+              style="color: #9ca3af"
+            >-</span>
+          </template>
+        </el-table-column>
+        <el-table-column
           prop="title"
           label="标题"
           width="200"
@@ -256,7 +275,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { getEventList, deleteEvent, changeEventStatus } from '@/api/events'
-import { formatDate, formatEventType, formatEventStatus, getEventTypeColor, getEventStatusColor } from '@/utils'
+import { formatDate, formatEventType, formatEventStatus, formatEventFormat, getEventTypeColor, getEventFormatColor, getEventStatusColor } from '@/utils'
 import { TERMS } from '@/constants/terms'
 import Pagination from '@/components/common/Pagination.vue'
 import EventFormDialog from './EventFormDialog.vue'

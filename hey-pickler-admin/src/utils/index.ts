@@ -76,6 +76,25 @@ export const getEventTypeColor = (type: string): string => {
   return colorMap[type] || '#6B7280'
 }
 
+export const formatEventFormat = (format: string | null | undefined): string => {
+  const formatMap: Record<string, string> = {
+    SINGLES: '单打',
+    DOUBLES: '双打',
+    MIXED: '混打'
+  }
+  if (!format) return '单打' // backend default
+  return formatMap[format] || format
+}
+
+export const getEventFormatColor = (format: string | null | undefined): string => {
+  const colorMap: Record<string, string> = {
+    SINGLES: '#3B82F6',
+    DOUBLES: '#10B981',
+    MIXED: '#EC4899'
+  }
+  return colorMap[format || 'SINGLES'] || '#6B7280'
+}
+
 export const getAdminRoleColor = (role: string): string => {
   const colorMap: Record<string, string> = {
     SUPER_ADMIN: '#EF4444',
