@@ -3,9 +3,11 @@ package com.heypickler.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.heypickler.common.exception.BizException;
 import com.heypickler.common.exception.ErrorCode;
+import com.heypickler.entity.Event;
 import com.heypickler.entity.Registration;
 import com.heypickler.entity.Team;
 import com.heypickler.entity.User;
+import com.heypickler.mapper.EventMapper;
 import com.heypickler.mapper.RegistrationMapper;
 import com.heypickler.mapper.TeamMapper;
 import com.heypickler.mapper.UserMapper;
@@ -31,6 +33,7 @@ class TeamServiceImplTest {
     @Mock TeamMapper teamMapper;
     @Mock RegistrationMapper registrationMapper;
     @Mock UserMapper userMapper;
+    @Mock EventMapper eventMapper;
 
     // ---------- createTeam ----------
 
@@ -38,6 +41,7 @@ class TeamServiceImplTest {
     void createTeam_captainInvites_createsPendingTeamAndCaptainReg() {
         // Neither captain (1) nor partner (2) is in any team of event 10.
         when(teamMapper.selectList(any())).thenReturn(java.util.Collections.emptyList());
+        when(eventMapper.selectById(10L)).thenReturn(eventWithFormat("DOUBLES"));
         when(teamMapper.insert(any(Team.class))).thenAnswer(inv -> {
             Team t = inv.getArgument(0);
             t.setId(99L);
@@ -65,6 +69,7 @@ class TeamServiceImplTest {
         assertEquals(10L, reg.getEventId());
         assertEquals(99L, reg.getTeamId());
         assertEquals("REGISTERED", reg.getStatus());
+        assertEquals("DOUBLES", reg.getMatchType()); // forced to event.format at creation
 
         assertEquals(99L, result.getId());
         assertEquals("PENDING", result.getStatus());
@@ -120,6 +125,7 @@ class TeamServiceImplTest {
         pending.setStatus("PENDING");
         when(teamMapper.selectById(99L)).thenReturn(pending);
         when(teamMapper.selectList(any())).thenReturn(java.util.Collections.emptyList());
+        when(eventMapper.selectById(10L)).thenReturn(eventWithFormat("DOUBLES"));
         when(registrationMapper.insert(any(Registration.class))).thenAnswer(inv -> {
             ((Registration) inv.getArgument(0)).setId(501L);
             return 1;
@@ -138,6 +144,7 @@ class TeamServiceImplTest {
         assertEquals(10L, reg.getEventId());
         assertEquals(99L, reg.getTeamId());
         assertEquals("REGISTERED", reg.getStatus());
+        assertEquals("DOUBLES", reg.getMatchType());
 
         assertEquals("CONFIRMED", result.getStatus());
     }
@@ -306,5 +313,12 @@ class TeamServiceImplTest {
         t.setMember2UserId(m2);
         t.setStatus(status);
         return t;
+    }
+
+    private Event eventWithFormat(String format) {
+        Event e = new Event();
+        e.setId(10L);
+        e.setFormat(format);
+        return e;
     }
 }

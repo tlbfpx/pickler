@@ -2,12 +2,15 @@ package com.heypickler.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.heypickler.common.enums.EventFormat;
 import com.heypickler.common.enums.TeamStatus;
 import com.heypickler.common.exception.BizException;
 import com.heypickler.common.exception.ErrorCode;
+import com.heypickler.entity.Event;
 import com.heypickler.entity.Registration;
 import com.heypickler.entity.Team;
 import com.heypickler.entity.User;
+import com.heypickler.mapper.EventMapper;
 import com.heypickler.mapper.RegistrationMapper;
 import com.heypickler.mapper.TeamMapper;
 import com.heypickler.mapper.UserMapper;
@@ -45,6 +48,7 @@ public class TeamServiceImpl implements TeamService {
     private final TeamMapper teamMapper;
     private final RegistrationMapper registrationMapper;
     private final UserMapper userMapper;
+    private final EventMapper eventMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -80,6 +84,7 @@ public class TeamServiceImpl implements TeamService {
         captainReg.setUserId(captainId);
         captainReg.setEventId(eventId);
         captainReg.setTeamId(team.getId());
+        captainReg.setMatchType(resolveMatchType(eventId));
         captainReg.setStatus(REG_REGISTERED);
         registrationMapper.insert(captainReg);
 
@@ -118,6 +123,7 @@ public class TeamServiceImpl implements TeamService {
         partnerReg.setUserId(userId);
         partnerReg.setEventId(team.getEventId());
         partnerReg.setTeamId(teamId);
+        partnerReg.setMatchType(resolveMatchType(team.getEventId()));
         partnerReg.setStatus(REG_REGISTERED);
         registrationMapper.insert(partnerReg);
 
@@ -198,6 +204,16 @@ public class TeamServiceImpl implements TeamService {
     }
 
     // ---------- helpers ----------
+
+    /** matchType is forced to the event's format (spec §5.4). Read at registration-creation
+     *  time so the NOT NULL match_type column is satisfied on insert (no late stamp). */
+    private String resolveMatchType(Long eventId) {
+        Event event = eventMapper.selectById(eventId);
+        if (event == null || event.getFormat() == null) {
+            return EventFormat.SINGLES.name();
+        }
+        return event.getFormat();
+    }
 
     private Team requireTeam(Long teamId) {
         Team team = teamMapper.selectById(teamId);

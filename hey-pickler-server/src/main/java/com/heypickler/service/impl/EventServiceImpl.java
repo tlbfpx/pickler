@@ -14,7 +14,6 @@ import com.heypickler.dto.app.RegisterRequest;
 import com.heypickler.entity.Event;
 import com.heypickler.entity.PointRecord;
 import com.heypickler.entity.Registration;
-import com.heypickler.entity.Team;
 import com.heypickler.entity.User;
 import com.heypickler.mapper.EventMapper;
 import com.heypickler.mapper.PointRecordMapper;
@@ -112,7 +111,7 @@ public class EventServiceImpl implements EventService {
         if (EventFormat.SINGLES.name().equals(format)) {
             registerSingles(userId, eventId, event, request);
         } else {
-            registerTeam(userId, eventId, event, request, format);
+            registerTeam(userId, eventId, event, request);
         }
     }
 
@@ -142,21 +141,20 @@ public class EventServiceImpl implements EventService {
      * Doubles/mixed registration, branch by intent:
      *   partnerUserId present -> captain initiates a PENDING team (createTeam)
      *   teamId present        -> invited partner confirms (confirmTeam)
-     * The chosen TeamService op inserts the member's registration; this method
-     * only gates capacity/dedup/eligibility and stamps matchType = event.format.
+     * The chosen TeamService op inserts the member's registration (with
+     * matchType = event.format set at creation); this method only gates
+     * capacity/dedup/eligibility.
      */
-    private void registerTeam(Long userId, Long eventId, Event event, RegisterRequest request, String format) {
+    private void registerTeam(Long userId, Long eventId, Event event, RegisterRequest request) {
         if (request.getTeamId() != null) {
             guardDuplicate(userId, eventId);
             reserveSlot(eventId, event);
-            Team team = teamService.confirmTeam(request.getTeamId(), userId);
-            stampTeamMatchType(team.getId(), format);
+            teamService.confirmTeam(request.getTeamId(), userId);
         } else if (request.getPartnerUserId() != null) {
             checkPointsEligibility(userId, event);
             guardDuplicate(userId, eventId);
             reserveSlot(eventId, event);
-            Team team = teamService.createTeam(eventId, userId, request.getPartnerUserId());
-            stampTeamMatchType(team.getId(), format);
+            teamService.createTeam(eventId, userId, request.getPartnerUserId());
         } else {
             throw new BizException(ErrorCode.PARAM_ERROR, "双打/混打需指定搭档(partnerUserId)或确认队伍(teamId)");
         }
@@ -581,14 +579,6 @@ public class EventServiceImpl implements EventService {
                                 .set(Event::getStatus, "OPEN"));
             }
         }
-    }
-
-    /** Force matchType = event.format on every registration of a team (spec §5.4). */
-    private void stampTeamMatchType(Long teamId, String format) {
-        registrationMapper.update(null,
-                new LambdaUpdateWrapper<Registration>()
-                        .eq(Registration::getTeamId, teamId)
-                        .set(Registration::getMatchType, format));
     }
 
     private EventVO convertToVO(Event event) {
