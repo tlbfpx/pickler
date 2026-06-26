@@ -161,4 +161,12 @@ public class AdminEventController {
         placementService.setPoints(id, override);
         return Result.ok();
     }
+
+    @DeleteMapping("/{id}/placement-points")
+    @Operation(summary = "清除赛事名次加分表，恢复为系统默认")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
+    public Result<Void> clearPlacementPoints(@PathVariable Long id) {
+        placementService.clearPoints(id);
+        return Result.ok();
+    }
 }

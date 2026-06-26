@@ -143,10 +143,28 @@ public class PlacementServiceImpl implements PlacementService {
                 throw new BizException(ErrorCode.PARAM_ERROR, "名次 " + e.getKey() + " 积分必须 >= 0");
             }
         }
+        // delete-then-insert so re-PUT on the same event updates instead of
+        // colliding on the event_id primary key.
+        pointsMapper.delete(
+                new LambdaQueryWrapper<EventPlacementPoints>()
+                        .eq(EventPlacementPoints::getEventId, eventId));
         EventPlacementPoints row = new EventPlacementPoints();
         row.setEventId(eventId);
         row.setPointsMap(override.getPointsMap());
         pointsMapper.insert(row);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void clearPoints(Long eventId) {
+        Event event = requireEvent(eventId);
+        if ("COMPLETED".equals(event.getStatus())) {
+            throw new BizException(ErrorCode.INVALID_STATUS_TRANSITION,
+                    "赛事已完成，不可修改积分表");
+        }
+        pointsMapper.delete(
+                new LambdaQueryWrapper<EventPlacementPoints>()
+                        .eq(EventPlacementPoints::getEventId, eventId));
     }
 
     private Map<Integer, Integer> resolveTable(Long eventId) {

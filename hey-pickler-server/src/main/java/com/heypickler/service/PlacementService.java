@@ -23,4 +23,8 @@ public interface PlacementService {
 
     /** Persists a per-event override. Rejects if event is COMPLETED. */
     void setPoints(Long eventId, EventPlacementPoints override);
+
+    /** Removes the per-event override so future GETs return the default table.
+     *  Rejects if event is COMPLETED. No-op if no override exists. */
+    void clearPoints(Long eventId);
 }

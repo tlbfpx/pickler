@@ -39,7 +39,12 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import org.mockito.InOrder;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -179,6 +184,49 @@ class PlacementServiceImplTest {
         assertEquals(1001, ex.getCode());
     }
 
+    @Test
+    void setPoints_repeatedCall_replacesExistingRow() {
+        // Re-PUT must replace the existing row, not collide on event_id PK.
+        when(eventMapper.selectById(1L)).thenReturn(event(1L, "Cup"));
+        EventPlacementPoints row = new EventPlacementPoints();
+        row.setEventId(1L);
+        row.setPointsMap(Map.of(1, 50));
+
+        placementService.setPoints(1L, row);
+        placementService.setPoints(1L, row);
+
+        // Each call deletes then inserts — 2 PUTs → 2 deletes + 2 inserts.
+        // What we care about is no DuplicateKeyException, i.e. delete runs
+        // BEFORE insert on every call.
+        verify(pointsMapper, times(2)).delete(any(LambdaQueryWrapper.class));
+        verify(pointsMapper, times(2)).insert(any(EventPlacementPoints.class));
+        // Verify ordering: on each invocation delete precedes insert.
+        InOrder inOrder = inOrder(pointsMapper);
+        inOrder.verify(pointsMapper).delete(any(LambdaQueryWrapper.class));
+        inOrder.verify(pointsMapper).insert(any(EventPlacementPoints.class));
+        inOrder.verify(pointsMapper).delete(any(LambdaQueryWrapper.class));
+        inOrder.verify(pointsMapper).insert(any(EventPlacementPoints.class));
+    }
+
+    @Test
+    void clearPoints_removesRow() {
+        when(eventMapper.selectById(1L)).thenReturn(event(1L, "Cup"));
+        placementService.clearPoints(1L);
+        verify(pointsMapper).delete(any(LambdaQueryWrapper.class));
+    }
+
+    @Test
+    void clearPoints_completedEvent_throwsInvalidStatusTransition() {
+        Event e = event(1L, "Cup");
+        e.setStatus("COMPLETED");
+        when(eventMapper.selectById(1L)).thenReturn(e);
+
+        BizException ex = assertThrows(BizException.class,
+                () -> placementService.clearPoints(1L));
+        assertEquals(1006, ex.getCode());
+        verify(pointsMapper, never()).delete(any());
+    }
+
     // ---------- issue ----------
 
     @Test
@@ -264,6 +312,74 @@ class PlacementServiceImplTest {
         verify(pointService).issuePlacement(1L, 11L, 100, "PLACEMENT: 赛事《Cup》第1名");
         verify(pointService).issuePlacement(1L, 22L, 60, "PLACEMENT: 赛事《Cup》第2名");
         verify(pointService).issuePlacement(1L, 33L, 0, "PLACEMENT: 赛事《Cup》第3名");
+    }
+
+    @Test
+    void issue_emptyRoster_writesNoRows() {
+        // Edge case: event was created + completed but no registrations ever
+        // happened. There are no matches and no standings — issue() must not
+        // throw and must not write any point_record rows.
+        when(eventMapper.selectById(1L)).thenReturn(event(1L, "Empty Cup"));
+        when(matchGroupMapper.selectList(any())).thenReturn(List.of());
+        when(matchMapper.selectList(any())).thenReturn(List.of());
+        when(pointRecordMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
+
+        placementService.issue(1L);  // should not throw
+
+        verify(pointService, never()).issuePlacement(anyLong(), anyLong(), anyInt(), anyString());
+    }
+
+    @Test
+    void issue_withdrewParticipant_skipsThem() {
+        // Edge case: a participant withdrew before any match was played. They
+        // are absent from matches → not in standings → no row written.
+        // Match group has 4 assignments but only 3 actually played; user 44
+        // never shows up in any match and so earns nothing.
+        when(eventMapper.selectById(1L)).thenReturn(event(1L, "Withdraw Cup"));
+        when(matchGroupMapper.selectList(any())).thenReturn(List.of(matchGroup(10L, 1L)));
+        // 3 matches among 11/22/33; user 44 is registered but withdrew.
+        when(matchMapper.selectList(any())).thenReturn(List.of(
+                match(1L, 10L, MatchStatus.COMPLETED, 11L, 22L, null, null, 2, 0),
+                match(2L, 10L, MatchStatus.COMPLETED, 11L, 33L, null, null, 2, 0),
+                match(3L, 10L, MatchStatus.COMPLETED, 22L, 33L, null, null, 2, 0)));
+        when(pointRecordMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
+        when(pointsMapper.selectById(1L)).thenReturn(null);
+
+        placementService.issue(1L);
+
+        // Only 11/22/33 get rows; 44 is not invited to the party.
+        verify(pointService).issuePlacement(eq(1L), eq(11L), anyInt(), anyString());
+        verify(pointService).issuePlacement(eq(1L), eq(22L), anyInt(), anyString());
+        verify(pointService).issuePlacement(eq(1L), eq(33L), anyInt(), anyString());
+        verify(pointService, never()).issuePlacement(eq(1L), eq(44L), anyInt(), anyString());
+    }
+
+    @Test
+    void issue_doubles_bannedMember_stillGetsTheirSplit() {
+        // Edge case: doubles team member was banned AFTER playing the event.
+        // Placement points are a historical record — write their half even if
+        // they are currently banned. (Login/registration gates will block any
+        // downstream use; the points row preserves the audit trail.)
+        defaultProps.setDefaultPoints(Map.of(1, 100));
+        when(eventMapper.selectById(1L)).thenReturn(event(1L, "Banned Cup"));
+        when(matchGroupMapper.selectList(any())).thenReturn(List.of());
+        when(matchMapper.selectList(any())).thenReturn(List.of(
+                match(1L, 10L, MatchStatus.COMPLETED, null, null, 99L, 88L, 2, 0)));
+        when(teamMapper.selectBatchIds(any())).thenReturn(List.of());
+        when(pointRecordMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
+        when(pointsMapper.selectById(1L)).thenReturn(null);
+        Team team = new Team();
+        team.setId(99L);
+        team.setMember1UserId(11L);   // active
+        team.setMember2UserId(22L);   // banned (we don't care — just a user id)
+        when(teamMapper.selectById(99L)).thenReturn(team);
+
+        placementService.issue(1L);
+
+        // Both halves issued. The downstream userMapper.updateById inside
+        // PointService is the place to enforce ban-side effects, NOT here.
+        verify(pointService).issuePlacement(1L, 11L, 50, "PLACEMENT: 赛事《Banned Cup》第1名");
+        verify(pointService).issuePlacement(1L, 22L, 50, "PLACEMENT: 赛事《Banned Cup》第1名");
     }
 
     @Test

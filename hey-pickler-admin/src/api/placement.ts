@@ -13,3 +13,9 @@ export const setPlacementPoints = (eventId: number, data: PlacementPointsRequest
     data
   )
 }
+
+export const clearPlacementPoints = (eventId: number) => {
+  return request.delete<any, ApiResponse<void>>(
+    `/events/${eventId}/placement-points`
+  )
+}

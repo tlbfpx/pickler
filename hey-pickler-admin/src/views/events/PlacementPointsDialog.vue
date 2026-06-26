@@ -94,6 +94,29 @@
       >
         增加名次
       </el-button>
+      <el-button
+        v-if="source === 'custom'"
+        type="warning"
+        size="small"
+        :icon="RefreshLeft"
+        @click="resetToDefault"
+      >
+        重置为默认
+      </el-button>
+      <el-button
+        size="small"
+        :icon="InfoFilled"
+        @click="previewTotal"
+      >
+        完赛发分预览
+      </el-button>
+    </div>
+
+    <div
+      v-if="previewText"
+      class="preview-banner"
+    >
+      {{ previewText }}
     </div>
 
     <template #footer>
@@ -114,9 +137,9 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Plus } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import { getPlacementPoints, setPlacementPoints } from '@/api/placement'
+import { Plus, RefreshLeft, InfoFilled } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { getPlacementPoints, setPlacementPoints, clearPlacementPoints } from '@/api/placement'
 import type { Event } from '@/types'
 
 interface Row {
@@ -137,6 +160,11 @@ const emit = defineEmits<{
 const rows = ref<Row[]>([])
 const source = ref<'default' | 'custom'>('default')
 const saving = ref(false)
+const previewText = ref('')
+
+/** "Default" fallback table — mirrors application.yml; we cache the last
+ *  fetched default into here so resetToDefault can restore it. */
+const lastSeenDefault = ref<Record<string, number> | null>(null)
 
 const readonly = computed(() => props.event?.status === 'COMPLETED')
 
@@ -150,12 +178,69 @@ const handleOpen = async () => {
       rows.value = Object.entries(res.data.points)
         .map(([k, v]) => ({ rank: Number(k), points: Number(v) }))
         .sort((a, b) => a.rank - b.rank)
+      // Cache the defaults so resetToDefault can restore them.
+      if (res.data.source === 'default') {
+        lastSeenDefault.value = { ...res.data.points }
+      }
     } else {
       ElMessage.error(res.message || '获取加分表失败')
     }
   } catch {
     ElMessage.error('获取加分表失败')
   }
+}
+
+const resetToDefault = async () => {
+  if (readonly.value || !props.event) return
+  try {
+    await ElMessageBox.confirm(
+      '确定要清除自定义加分表吗？完赛时将按 application.yml 默认值发分。',
+      '重置为默认',
+      { type: 'warning' }
+    )
+  } catch {
+    return  // user cancelled
+  }
+  try {
+    const res = await clearPlacementPoints(props.event.id)
+    if (res.code === 0) {
+      ElMessage.success('已恢复为系统默认')
+      source.value = 'default'
+      // Re-fetch the default table to repopulate rows for display.
+      const fresh = await getPlacementPoints(props.event.id)
+      if (fresh.code === 0 && fresh.data) {
+        rows.value = Object.entries(fresh.data.points)
+          .map(([k, v]) => ({ rank: Number(k), points: Number(v) }))
+          .sort((a, b) => a.rank - b.rank)
+        lastSeenDefault.value = { ...fresh.data.points }
+      }
+      previewText.value = ''
+      emit('saved')
+    } else {
+      ElMessage.error(res.message || '重置失败')
+    }
+  } catch {
+    ElMessage.error('重置失败')
+  }
+}
+
+const previewTotal = () => {
+  // Estimate: ∑ table[rank] for r in 1..participantCount.
+  // currentParticipants is a count of registered people. Doubles teams count
+  // as 1 row in match_group; use participants as proxy for placements.
+  if (!props.event) return
+  const participantCount = props.event.currentParticipants || 0
+  if (participantCount === 0) {
+    previewText.value = '当前赛事暂无参赛者，完赛发分为 0。'
+    return
+  }
+  const table = new Map<number, number>()
+  for (const r of rows.value) table.set(r.rank, r.points)
+  let total = 0
+  for (let rank = 1; rank <= participantCount; rank++) {
+    total += table.get(rank) ?? 0
+  }
+  previewText.value = `按当前 ${participantCount} 位参赛者 + ${rows.value.length} 名次规则，完赛预计共发 ${total} 积分。`
 }
 
 const addRow = () => {
@@ -262,6 +347,20 @@ watch(() => props.modelValue, (v) => {
 
 .add-row {
   margin-top: 12px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.preview-banner {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: #f0f9eb;
+  color: #67c23a;
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1.6;
   text-align: center;
 }
 </style>
