@@ -16,4 +16,10 @@ public class MyEventVO {
     private String location;
     private EventStatus status;
     private RegistrationStatus registrationStatus;
+    /**
+     * Total PLACEMENT points earned from this event (sum across all
+     * point_record rows with source='PLACEMENT' for this user+event).
+     * Null when the event is not COMPLETED or the user earned nothing.
+     */
+    private Integer earnedPoints;
 }

@@ -1,4 +1,22 @@
 /* My events page styles */
+.placement-badge {
+  position: absolute;
+  top: 70rpx;
+  right: 20rpx;
+  background: linear-gradient(135deg, #ff7e5f, #feb47b);
+  color: white;
+  border-radius: 32rpx;
+  padding: 6rpx 16rpx;
+  font-size: 22rpx;
+  box-shadow: 0 2rpx 8rpx rgba(255, 126, 95, 0.35);
+  z-index: 2;
+}
+
+.placement-text {
+  color: white;
+  font-weight: 500;
+}
+
 .tab-bar {
   position: sticky;
   top: 0;
