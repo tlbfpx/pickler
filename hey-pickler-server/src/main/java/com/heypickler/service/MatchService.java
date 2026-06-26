@@ -39,4 +39,7 @@ public interface MatchService {
 
     /** Admin-side read: all matches in the event, grouped by match_group. */
     List<List<MatchVO>> listEventMatches(Long eventId);
+
+    /** Convert a Match entity to its VO representation (display names unresolved). */
+    MatchVO toVO(Match match);
 }

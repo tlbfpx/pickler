@@ -100,6 +100,9 @@ public class EventServiceImpl implements EventService {
         if (Boolean.TRUE.equals(event.getGroupingLocked())) {
             throw new BizException(ErrorCode.REGISTRATION_CLOSED, "赛事已分组锁定，如需调整请先解锁");
         }
+        if ("IN_PROGRESS".equals(event.getStatus()) || "COMPLETED".equals(event.getStatus())) {
+            throw new BizException(ErrorCode.INVALID_STATUS_TRANSITION, "赛事已开始比赛，无法报名");
+        }
         if (!"OPEN".equals(event.getStatus())) {
             throw new BizException(ErrorCode.REGISTRATION_CLOSED);
         }
@@ -168,6 +171,9 @@ public class EventServiceImpl implements EventService {
 
         if (Boolean.TRUE.equals(event.getGroupingLocked())) {
             throw new BizException(ErrorCode.REGISTRATION_CLOSED, "赛事已分组锁定，如需调整请先解锁");
+        }
+        if ("IN_PROGRESS".equals(event.getStatus()) || "COMPLETED".equals(event.getStatus())) {
+            throw new BizException(ErrorCode.INVALID_STATUS_TRANSITION, "赛事已开始比赛，无法取消报名");
         }
         if (LocalDateTime.now().isAfter(event.getRegistrationDeadline())) {
             throw new BizException(ErrorCode.REGISTRATION_CLOSED);

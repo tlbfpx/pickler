@@ -5,7 +5,7 @@
 -- Score is stored as a JSON array of {game, a, b} (1..3 games per match).
 -- games_won_a / games_won_b are derived columns for fast ranking.
 
-CREATE TABLE `match` (
+CREATE TABLE match_record (
   id BIGINT NOT NULL AUTO_INCREMENT,
   event_id BIGINT NOT NULL,             -- redundant with group_id -> match_group.event_id, for fast lookup
   group_id BIGINT NOT NULL,             -- FK to match_group

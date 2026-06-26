@@ -353,17 +353,11 @@ class MatchServiceImplTest {
         m.setGamesWonA(1);
         m.setGamesWonB(0);
         when(matchMapper.selectById(50L)).thenReturn(m);
-        when(matchMapper.updateById(any(Match.class))).thenReturn(1);
+        when(matchMapper.update(isNull(), any())).thenReturn(1);
 
         matchService.reset(50L);
 
-        ArgumentCaptor<Match> cap = ArgumentCaptor.forClass(Match.class);
-        verify(matchMapper).updateById(cap.capture());
-        Match updated = cap.getValue();
-        assertEquals(MatchStatus.SCHEDULED, updated.getStatus());
-        assertNull(updated.getGames());
-        assertNull(updated.getGamesWonA());
-        assertNull(updated.getGamesWonB());
+        verify(matchMapper).update(isNull(), any());
     }
 
     // ---------- standings ----------

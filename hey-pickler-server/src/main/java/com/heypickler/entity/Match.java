@@ -12,7 +12,7 @@ import java.util.Collections;
 import java.util.List;
 
 @Data
-@TableName("match")
+@TableName("match_record")
 public class Match {
 
     @TableId(type = IdType.AUTO)

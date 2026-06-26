@@ -18,9 +18,9 @@ import com.heypickler.mapper.MatchGroupMapper;
 import com.heypickler.mapper.MatchMapper;
 import com.heypickler.mapper.TeamMapper;
 import com.heypickler.mapper.UserMapper;
+import com.heypickler.service.GameValidator;
 import com.heypickler.service.MatchService;
 import com.heypickler.service.RoundRobinGenerator;
-import com.heypickler.service.GameValidator;
 import com.heypickler.vo.MatchVO;
 import com.heypickler.vo.StandingVO;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +29,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -57,7 +56,6 @@ public class MatchServiceImpl implements MatchService {
     @Transactional(rollbackFor = Exception.class)
     public List<Match> generate(Long eventId) {
         Event event = requireEvent(eventId);
-        // Spec 2 §1: grouping must be locked before matches can be generated.
         if (!Boolean.TRUE.equals(event.getGroupingLocked())) {
             throw new BizException(ErrorCode.INVALID_STATUS_TRANSITION, "赛事尚未分组锁定");
         }
@@ -69,15 +67,12 @@ public class MatchServiceImpl implements MatchService {
                 new LambdaQueryWrapper<MatchGroup>().eq(MatchGroup::getEventId, eventId));
         List<Match> all = new ArrayList<>();
         for (MatchGroup g : groups) {
-            // Query by group_id only (not event_id, which would return assignments
-            // from sibling groups whose group_id the wrapper doesn't filter by).
             List<GroupAssignment> slots = groupAssignmentMapper.selectList(
                     new LambdaQueryWrapper<GroupAssignment>().eq(GroupAssignment::getGroupId, g.getId()));
-            // Convert assignments to Participants for the generator.
-            List<com.heypickler.dto.Participant> parts = slots.stream()
+            List<Participant> parts = slots.stream()
                     .map(s -> s.getUserId() != null
-                            ? com.heypickler.dto.Participant.singles(s.getUserId(), 0)
-                            : com.heypickler.dto.Participant.team(s.getTeamId(), 0))
+                            ? Participant.singles(s.getUserId(), 0)
+                            : Participant.team(s.getTeamId(), 0))
                     .collect(Collectors.toList());
             List<Match> matches = roundRobin.generate(parts, g.getId());
             for (Match m : matches) {
@@ -88,7 +83,6 @@ public class MatchServiceImpl implements MatchService {
             }
         }
 
-        // Transition OPEN -> IN_PROGRESS (only once, the first time).
         if (!"IN_PROGRESS".equals(event.getStatus())) {
             eventMapper.update(null, new LambdaUpdateWrapper<Event>()
                     .eq(Event::getId, eventId)
@@ -133,14 +127,17 @@ public class MatchServiceImpl implements MatchService {
     @Transactional(rollbackFor = Exception.class)
     public void reset(Long matchId) {
         Match match = requireMatch(matchId);
-        match.setStatus(MatchStatus.SCHEDULED);
-        match.setGames(null);
-        match.setGamesWonA(null);
-        match.setGamesWonB(null);
-        match.setSubmittedByUserId(null);
-        match.setSubmittedAt(null);
-        match.setCompletedAt(null);
-        matchMapper.updateById(match);
+        // updateById skips null fields (FieldStrategy.NOT_NULL default), so use a
+        // LambdaUpdateWrapper to force-clear every score field.
+        matchMapper.update(null, new LambdaUpdateWrapper<Match>()
+                .eq(Match::getId, matchId)
+                .set(Match::getStatus, MatchStatus.SCHEDULED)
+                .set(Match::getGames, null)
+                .set(Match::getGamesWonA, null)
+                .set(Match::getGamesWonB, null)
+                .set(Match::getSubmittedByUserId, null)
+                .set(Match::getSubmittedAt, null)
+                .set(Match::getCompletedAt, null));
     }
 
     @Override
@@ -155,10 +152,8 @@ public class MatchServiceImpl implements MatchService {
         List<Match> matches = matchMapper.selectList(
                 new LambdaQueryWrapper<Match>().eq(Match::getEventId, eventId));
 
-        // Determine doubles vs singles from the first slot column populated.
         boolean doubles = !matches.isEmpty() && matches.get(0).getSlotATeamId() != null;
 
-        // Resolve display names for participants (doubles needs team members).
         Set<Long> userIds = new HashSet<>();
         Set<Long> teamIds = new HashSet<>();
         if (doubles) {
@@ -183,7 +178,6 @@ public class MatchServiceImpl implements MatchService {
         Map<Long, Team> teamMap = doubles ? teamMapper.selectBatchIds(teamIds).stream()
                 .collect(Collectors.toMap(Team::getId, t -> t)) : Collections.emptyMap();
 
-        // Group matches by group_id.
         Map<Long, List<Match>> byGroup = matches.stream()
                 .collect(Collectors.groupingBy(Match::getGroupId));
 
@@ -196,8 +190,7 @@ public class MatchServiceImpl implements MatchService {
 
     private List<StandingVO> rankGroup(List<Match> matches, boolean doubles,
                                        Map<Long, User> users, Map<Long, Team> teamMap) {
-        // Aggregate per participant. wins/losses count MATCHES; gamesFor/gamesAgainst sum GAMES.
-        Map<Long, int[]> agg = new HashMap<>(); // key -> [wins, losses, gamesFor, gamesAgainst]
+        Map<Long, int[]> agg = new HashMap<>();
         for (Match m : matches) {
             if (m.getStatus() != MatchStatus.COMPLETED) continue;
             Long keyA = doubles ? m.getSlotATeamId() : m.getSlotAUserId();
@@ -207,15 +200,12 @@ public class MatchServiceImpl implements MatchService {
             int wb = m.getGamesWonB() == null ? 0 : m.getGamesWonB();
             int[] a = agg.computeIfAbsent(keyA, k -> new int[4]);
             int[] b = agg.computeIfAbsent(keyB, k -> new int[4]);
-            // wins/losses: count of matches won (1 per match, not games)
             if (wa > wb) a[0]++; else if (wb > wa) b[0]++;
             if (wa < wb) a[1]++; else if (wb < wa) b[1]++;
-            // gamesFor/gamesAgainst: sum of games won/lost across matches
             a[2] += wa; b[2] += wb;
             a[3] += wb; b[3] += wa;
         }
 
-        // Build list and sort: wins desc, then games-diff desc, then head-to-head.
         List<StandingVO> list = new ArrayList<>();
         for (Map.Entry<Long, int[]> e : agg.entrySet()) {
             StandingVO vo = new StandingVO();
@@ -228,53 +218,17 @@ public class MatchServiceImpl implements MatchService {
             list.add(vo);
         }
         list.sort(Comparator.<StandingVO>comparingInt(StandingVO::getWins).reversed()
-                .thenComparingInt(vo -> -(vo.getGamesFor() - vo.getGamesAgainst()))
-                .thenComparing(vo -> headToHeadWinner(vo, list, matches, doubles)));
+                .thenComparingInt(vo -> -(vo.getGamesFor() - vo.getGamesAgainst())));
         int rank = 0;
-        int prevWins = Integer.MIN_VALUE;
-        int prevDiff = Integer.MIN_VALUE;
-        int prevH2H = Integer.MIN_VALUE;
         for (int i = 0; i < list.size(); i++) {
-            StandingVO vo = list.get(i);
-            int diff = vo.getGamesFor() - vo.getGamesAgainst();
-            int h2h = computeHeadToHeadKey(vo, list, matches, doubles);
             boolean tiedPrev = i > 0
-                    && list.get(i - 1).getWins() == vo.getWins()
-                    && (list.get(i - 1).getGamesFor() - list.get(i - 1).getGamesAgainst()) == diff
-                    && computeHeadToHeadKey(list.get(i - 1), list, matches, doubles) == h2h;
+                    && list.get(i - 1).getWins() == list.get(i).getWins()
+                    && (list.get(i - 1).getGamesFor() - list.get(i - 1).getGamesAgainst())
+                       == (list.get(i).getGamesFor() - list.get(i).getGamesAgainst());
             if (!tiedPrev) rank = i + 1;
-            vo.setRank(rank);
+            list.get(i).setRank(rank);
         }
         return list;
-    }
-
-    /** Stable head-to-head sort key: lower comes first (1 = top seed). */
-    private int headToHeadWinner(StandingVO self, List<StandingVO> all, List<Match> matches, boolean doubles) {
-        // For now return 0 so sort is stable by index; finer head-to-head is computed in rankGroup.
-        return 0;
-    }
-
-    private int computeHeadToHeadKey(StandingVO self, List<StandingVO> all, List<Match> matches, boolean doubles) {
-        // Count how many of self's matches the participant beat another tied participant
-        // directly. Used as a tie-breaker signature: higher = better.
-        int h2h = 0;
-        for (StandingVO other : all) {
-            if (other == self || !other.getParticipantKey().equals(self.getParticipantKey())) continue;
-            for (Match m : matches) {
-                if (m.getStatus() != MatchStatus.COMPLETED) continue;
-                Long keyA = doubles ? m.getSlotATeamId() : m.getSlotAUserId();
-                Long keyB = doubles ? m.getSlotBTeamId() : m.getSlotBUserId();
-                if (keyA == null || keyB == null) continue;
-                if (keyA.equals(self.getParticipantKey()) && keyB.equals(other.getParticipantKey())) {
-                    if ((m.getGamesWonA() == null ? 0 : m.getGamesWonA())
-                            > (m.getGamesWonB() == null ? 0 : m.getGamesWonB())) h2h++;
-                } else if (keyB.equals(self.getParticipantKey()) && keyA.equals(other.getParticipantKey())) {
-                    if ((m.getGamesWonB() == null ? 0 : m.getGamesWonB())
-                            > (m.getGamesWonA() == null ? 0 : m.getGamesWonA())) h2h++;
-                }
-            }
-        }
-        return h2h;
     }
 
     @Override
@@ -286,8 +240,7 @@ public class MatchServiceImpl implements MatchService {
         long unfinished = all.stream()
                 .filter(m -> m.getStatus() != MatchStatus.COMPLETED).count();
         if (unfinished > 0) {
-            throw new BizException(ErrorCode.PARAM_ERROR,
-                    "还有 " + unfinished + " 场比赛未完成");
+            throw new BizException(ErrorCode.PARAM_ERROR, "还有 " + unfinished + " 场比赛未完成");
         }
         eventMapper.update(null, new LambdaUpdateWrapper<Event>()
                 .eq(Event::getId, eventId)
@@ -297,7 +250,6 @@ public class MatchServiceImpl implements MatchService {
     @Override
     public List<MatchVO> listMyMatches(Long eventId, Long userId) {
         requireEvent(eventId);
-        // Both single slot (user) and team slot (member) queries.
         List<Match> userMatches = matchMapper.selectList(
                 new LambdaQueryWrapper<Match>()
                         .eq(Match::getEventId, eventId)
@@ -312,11 +264,10 @@ public class MatchServiceImpl implements MatchService {
                         .eq(Match::getEventId, eventId)
                         .and(w -> w.in(Match::getSlotATeamId, teamIds)
                                 .or().in(Match::getSlotBTeamId, teamIds)));
-        // Dedupe by id.
         Map<Long, Match> dedup = new java.util.LinkedHashMap<>();
         for (Match m : userMatches) dedup.putIfAbsent(m.getId(), m);
         for (Match m : teamMatches) dedup.putIfAbsent(m.getId(), m);
-        return new ArrayList<>(dedup.values()).stream().map(this::toVO).collect(Collectors.toList());
+        return dedup.values().stream().map(this::toVO).collect(Collectors.toList());
     }
 
     @Override
@@ -333,6 +284,38 @@ public class MatchServiceImpl implements MatchService {
             List<MatchVO> vos = byGroup.getOrDefault(g.getId(), List.of()).stream()
                     .map(this::toVO).collect(Collectors.toList());
             out.add(vos);
+        }
+        return out;
+    }
+
+    @Override
+    public MatchVO toVO(Match m) {
+        MatchVO vo = new MatchVO();
+        vo.setId(m.getId());
+        vo.setEventId(m.getEventId());
+        vo.setGroupId(m.getGroupId());
+        vo.setSlotAUserId(m.getSlotAUserId());
+        vo.setSlotATeamId(m.getSlotATeamId());
+        vo.setSlotBUserId(m.getSlotBUserId());
+        vo.setSlotBTeamId(m.getSlotBTeamId());
+        vo.setStatus(m.getStatus() == null ? null : m.getStatus().name());
+        vo.setGames(toVOGames(m.getGameList()));
+        vo.setGamesWonA(m.getGamesWonA());
+        vo.setGamesWonB(m.getGamesWonB());
+        vo.setSubmittedAt(m.getSubmittedAt());
+        vo.setCompletedAt(m.getCompletedAt());
+        return vo;
+    }
+
+    private List<MatchVO.GameScore> toVOGames(List<Match.GameScore> source) {
+        if (source == null) return null;
+        List<MatchVO.GameScore> out = new ArrayList<>(source.size());
+        for (Match.GameScore g : source) {
+            MatchVO.GameScore v = new MatchVO.GameScore();
+            v.setGame(g.getGame());
+            v.setA(g.getA());
+            v.setB(g.getB());
+            out.add(v);
         }
         return out;
     }
@@ -365,37 +348,6 @@ public class MatchServiceImpl implements MatchService {
         Team t = teamMapper.selectById(teamId);
         if (t == null) return false;
         return userId.equals(t.getMember1UserId()) || userId.equals(t.getMember2UserId());
-    }
-
-    private MatchVO toVO(Match m) {
-        MatchVO vo = new MatchVO();
-        vo.setId(m.getId());
-        vo.setEventId(m.getEventId());
-        vo.setGroupId(m.getGroupId());
-        vo.setSlotAUserId(m.getSlotAUserId());
-        vo.setSlotATeamId(m.getSlotATeamId());
-        vo.setSlotBUserId(m.getSlotBUserId());
-        vo.setSlotBTeamId(m.getSlotBTeamId());
-        vo.setStatus(m.getStatus() == null ? null : m.getStatus().name());
-        vo.setGames(toVOGames(m.getGameList()));
-        vo.setGamesWonA(m.getGamesWonA());
-        vo.setGamesWonB(m.getGamesWonB());
-        vo.setSubmittedAt(m.getSubmittedAt());
-        vo.setCompletedAt(m.getCompletedAt());
-        return vo;
-    }
-
-    private List<MatchVO.GameScore> toVOGames(List<Match.GameScore> source) {
-        if (source == null) return null;
-        List<MatchVO.GameScore> out = new ArrayList<>(source.size());
-        for (Match.GameScore g : source) {
-            MatchVO.GameScore v = new MatchVO.GameScore();
-            v.setGame(g.getGame());
-            v.setA(g.getA());
-            v.setB(g.getB());
-            out.add(v);
-        }
-        return out;
     }
 
     private String resolveDisplayName(Long key, boolean doubles, Map<Long, User> users, Map<Long, Team> teamMap) {
