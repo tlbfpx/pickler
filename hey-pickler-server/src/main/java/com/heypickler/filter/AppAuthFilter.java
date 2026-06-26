@@ -45,6 +45,12 @@ public class AppAuthFilter extends OncePerRequestFilter {
         if (PUBLIC_PATHS.contains(path)) return true;
 
         if ("GET".equals(request.getMethod()) && PUBLIC_GET_PREFIXES.stream().anyMatch(path::startsWith)) {
+            // my-team is user-scoped: it must run through the auth filter to bind the
+            // caller's userId, even though it lives under the public /api/app/events prefix
+            // (event list/detail/results stay anonymously browsable).
+            if (path.endsWith("/my-team")) {
+                return false;
+            }
             return true;
         }
 

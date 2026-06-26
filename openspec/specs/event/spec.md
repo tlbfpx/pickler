@@ -116,3 +116,35 @@ The system SHALL enforce valid status transitions: DRAFT → OPEN → FULL/IN_PR
 - **WHEN** an admin attempts to change status from COMPLETED back to OPEN
 - **THEN** the system SHALL return `{ "code": 1001, "message": "无效的状态变更" }`
 
+### Requirement: Event transitions to IN_PROGRESS on first match generation
+
+The system SHALL transition `event.status` to `IN_PROGRESS` when matches are first generated for an event (via `POST /api/admin/events/{id}/matches/generate`). Once `IN_PROGRESS`, register/cancel/reassign operations SHALL be rejected with `INVALID_STATUS_TRANSITION` (the grouping is already locked at this point, but the contract is explicitly stated for downstream consumers).
+
+#### Scenario: Status moves to IN_PROGRESS on first match generation
+- **WHEN** admin generates matches on an event
+- **THEN** event status is `IN_PROGRESS`
+
+### Requirement: Event completion gates match operations
+
+Once `event.status = COMPLETED`, the system SHALL treat the event as final. No further match score submissions or admin resets are permitted.
+
+#### Scenario: No more score submission after COMPLETED
+- **WHEN** a participant tries to submit a score for a match in a COMPLETED event
+- **THEN** the system rejects with 1006 INVALID_STATUS_TRANSITION
+
+#### Scenario: No more resets after COMPLETED
+- **WHEN** admin tries to reset a match in a COMPLETED event
+- **THEN** the system rejects with 1006 INVALID_STATUS_TRANSITION
+
+### Requirement: Per-event placement table editable only before COMPLETED
+
+The admin endpoint for editing the placement table (`PUT /api/admin/events/{id}/placement-points`) MUST refuse updates once the event is COMPLETED.
+
+#### Scenario: Editing placement table on a non-completed event
+- **WHEN** admin PUTs a placement-points body on an event with status in {DRAFT, OPEN, FULL, IN_PROGRESS}
+- **THEN** the system persists the new table
+
+#### Scenario: Editing placement table on COMPLETED event
+- **WHEN** admin PUTs placement-points on a COMPLETED event
+- **THEN** the system returns 1006 INVALID_STATUS_TRANSITION
+

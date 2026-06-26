@@ -44,70 +44,106 @@ public class PointServiceImpl implements PointService, PointWallet {
     @Transactional
     public void enterPoints(Long eventId, String type, List<PointEntry> records,
                             PointSource source, Long operatorId) {
-        // 1. 解析赛事（若给出）→ type / 标题
-        String resolvedType = type;
-        String eventTitle = null;
+        if (records == null || records.isEmpty()) return;
+
+        ResolvedTarget target = resolveTarget(eventId, type);
+        Map<Long, User> userMap = batchLoadUsers(records.stream()
+                .map(PointEntry::getUserId).filter(Objects::nonNull).distinct().collect(Collectors.toList()));
+        // enterPoints requires a current season — fail-fast.
+        String seasonCode = requireCurrentSeasonCode(target.type());
+
+        for (PointEntry item : records) {
+            User user = userMap.get(item.getUserId());
+            if (user == null) continue;
+            String reason = target.title() != null
+                    ? "[" + target.title() + "] " + item.getReason()
+                    : item.getReason();
+            writeRecord(eventId, user, target, seasonCode, source.name(),
+                    item.getPoints(), reason, operatorId);
+        }
+        eventPublisher.publishEvent(new PointChangeListener.PointChangeEvent(target.type(), seasonCode));
+    }
+
+    @Override
+    @Transactional
+    public void issuePlacement(Long eventId, Long userId, int points, String reason) {
+        if (eventId == null || userId == null) return;
+        ResolvedTarget target = resolveTarget(eventId, null);
+        User user = userMapper.selectById(userId);
+        if (user == null) return;
+        // Placement tolerates a missing current season — rows still written.
+        String seasonCode = tryCurrentSeasonCode(target.type());
+        writeRecord(eventId, user, target, seasonCode, PointSource.PLACEMENT.name(),
+                points, reason, null);
+        eventPublisher.publishEvent(new PointChangeListener.PointChangeEvent(target.type(), seasonCode));
+    }
+
+    // ---------- internals ----------
+
+    private record ResolvedTarget(String type, String title) {}
+
+    private ResolvedTarget resolveTarget(Long eventId, String typeOverride) {
+        String resolvedType = typeOverride;
+        String title = null;
         if (eventId != null && eventId > 0) {
             Event event = eventMapper.selectById(eventId);
             if (event == null) {
                 throw new BizException(ErrorCode.NOT_FOUND, "赛事不存在");
             }
             resolvedType = event.getType();
-            eventTitle = event.getTitle();
+            title = event.getTitle();
         }
+        if (resolvedType == null) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "积分类型不能为空");
+        }
+        return new ResolvedTarget(resolvedType, title);
+    }
 
-        // 2. 取当前赛季 → seasonCode
+    /** Required-season lookup for enterPoints. */
+    private String requireCurrentSeasonCode(String type) {
         Season season = seasonMapper.selectOne(new LambdaQueryWrapper<Season>()
-                .eq(Season::getType, resolvedType)
+                .eq(Season::getType, type)
                 .eq(Season::getStatus, "CURRENT"));
         if (season == null) {
-            throw new BizException(ErrorCode.NOT_FOUND, "当前赛季不存在: " + resolvedType);
+            throw new BizException(ErrorCode.NOT_FOUND, "当前赛季不存在: " + type);
         }
-        String seasonCode = season.getCode();
+        return season.getCode();
+    }
 
-        // 3. 批量加载用户
-        List<Long> userIds = records.stream()
-                .map(PointEntry::getUserId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .collect(Collectors.toList());
-        Map<Long, User> userMap = batchLoadUsers(userIds);
+    /** Optional-season lookup for placement (null if missing). */
+    private String tryCurrentSeasonCode(String type) {
+        Season season = seasonMapper.selectOne(new LambdaQueryWrapper<Season>()
+                .eq(Season::getType, type)
+                .eq(Season::getStatus, "CURRENT"));
+        return season == null ? null : season.getCode();
+    }
 
-        // 4. 逐条发分：插 point_record → 累加余额 → 重算 tier → 更新 user
-        for (PointEntry item : records) {
-            User user = userMap.get(item.getUserId());
-            if (user == null) continue;
+    private void writeRecord(Long eventId, User user, ResolvedTarget target,
+                             String seasonCode, String sourceName, int points, String reason,
+                             Long operatorId) {
+        PointRecord record = new PointRecord();
+        record.setUserId(user.getId());
+        record.setEventId(eventId != null && eventId > 0 ? eventId : null);
+        record.setType(target.type());
+        record.setPoints(points);
+        record.setReason(reason);
+        record.setSource(sourceName);
+        record.setSeasonCode(seasonCode);
+        record.setOperatorId(operatorId);
+        pointRecordMapper.insert(record);
 
-            PointRecord record = new PointRecord();
-            record.setUserId(item.getUserId());
-            record.setEventId(eventId != null && eventId > 0 ? eventId : null);
-            record.setType(resolvedType);
-            record.setPoints(item.getPoints());
-            record.setReason(eventTitle != null
-                    ? "[" + eventTitle + "] " + item.getReason()
-                    : item.getReason());
-            record.setSource(source.name());
-            record.setSeasonCode(seasonCode);
-            record.setOperatorId(operatorId);
-            pointRecordMapper.insert(record);
-
-            int newPoints;
-            if ("STAR".equals(resolvedType)) {
-                int current = user.getStarPoints() != null ? user.getStarPoints() : 0;
-                newPoints = Math.max(0, current + item.getPoints());
-                user.setStarPoints(newPoints);
-                user.setStarTier(tierProperties.keyFor(newPoints, resolvedType));
-            } else {
-                int current = user.getPartyPoints() != null ? user.getPartyPoints() : 0;
-                newPoints = Math.max(0, current + item.getPoints());
-                user.setPartyPoints(newPoints);
-                user.setPartyTier(tierProperties.keyFor(newPoints, resolvedType));
-            }
-            userMapper.updateById(user);
+        if ("STAR".equals(target.type())) {
+            int current = user.getStarPoints() != null ? user.getStarPoints() : 0;
+            int newPoints = Math.max(0, current + points);
+            user.setStarPoints(newPoints);
+            user.setStarTier(tierProperties.keyFor(newPoints, target.type()));
+        } else {
+            int current = user.getPartyPoints() != null ? user.getPartyPoints() : 0;
+            int newPoints = Math.max(0, current + points);
+            user.setPartyPoints(newPoints);
+            user.setPartyTier(tierProperties.keyFor(newPoints, target.type()));
         }
-
-        // 5. 发布赛季维度事件（携 seasonCode）
-        eventPublisher.publishEvent(new PointChangeListener.PointChangeEvent(resolvedType, seasonCode));
+        userMapper.updateById(user);
     }
 
     @Override

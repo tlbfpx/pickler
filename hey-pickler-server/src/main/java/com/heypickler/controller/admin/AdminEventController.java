@@ -7,12 +7,16 @@ import com.heypickler.common.result.PageResult;
 import com.heypickler.common.result.Result;
 import com.heypickler.dto.admin.EventCreateRequest;
 import com.heypickler.dto.admin.EventUpdateRequest;
+import com.heypickler.dto.admin.PlacementPointsRequest;
 import com.heypickler.dto.admin.PointEntryRequest;
+import com.heypickler.entity.EventPlacementPoints;
 import com.heypickler.service.EventService;
+import com.heypickler.service.PlacementService;
 import com.heypickler.service.PointService;
 import com.heypickler.service.dto.PointEntry;
 import com.heypickler.vo.EventParticipantVO;
 import com.heypickler.vo.EventVO;
+import com.heypickler.vo.PlacementPointsVO;
 import com.heypickler.vo.RegistrationVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,6 +36,7 @@ public class AdminEventController {
 
     private final EventService eventService;
     private final PointService pointService;
+    private final PlacementService placementService;
 
     @GetMapping
     @Operation(summary = "赛事列表（管理后台）")
@@ -136,5 +141,32 @@ public class AdminEventController {
         return req.getRecords().stream()
                 .map(item -> new PointEntry(item.getUserId(), item.getPoints(), item.getReason()))
                 .collect(java.util.stream.Collectors.toList());
+    }
+
+    @GetMapping("/{id}/placement-points")
+    @Operation(summary = "查看赛事名次加分表（自定义或默认）")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
+    public Result<PlacementPointsVO> getPlacementPoints(@PathVariable Long id) {
+        return Result.ok(placementService.getPoints(id));
+    }
+
+    @PutMapping("/{id}/placement-points")
+    @Operation(summary = "配置赛事名次加分表（仅在赛事未完成时可设置）")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
+    public Result<Void> setPlacementPoints(
+            @PathVariable Long id,
+            @Valid @RequestBody PlacementPointsRequest req) {
+        EventPlacementPoints override = new EventPlacementPoints();
+        override.setPointsMap(req.getPoints());
+        placementService.setPoints(id, override);
+        return Result.ok();
+    }
+
+    @DeleteMapping("/{id}/placement-points")
+    @Operation(summary = "清除赛事名次加分表，恢复为系统默认")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
+    public Result<Void> clearPlacementPoints(@PathVariable Long id) {
+        placementService.clearPoints(id);
+        return Result.ok();
     }
 }

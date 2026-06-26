@@ -33,6 +33,8 @@ export interface Event {
   fee: number
   status: 'DRAFT' | 'OPEN' | 'FULL' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
   minPoints?: number
+  format?: 'SINGLES' | 'DOUBLES' | 'MIXED' | null
+  groupingLocked?: boolean
 }
 
 export interface CreateEventRequest {
@@ -48,6 +50,7 @@ export interface CreateEventRequest {
   fee: number
   prizes?: string
   minPoints?: number
+  format?: 'SINGLES' | 'DOUBLES' | 'MIXED'
   status?: 'DRAFT' | 'OPEN' | 'FULL' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 }
 
@@ -266,4 +269,17 @@ export interface PageParams {
 
 export interface FileUploadResponse {
   url: string
+}
+
+// ==================== Placement Points Types ====================
+
+export interface PlacementPointsVO {
+  /** 后端以 JSON 反序列化：{ 1: 100, 2: 60, ... }。前端用 Record<string, number> 表示。 */
+  points: Record<string, number>
+  /** 'default' = 用 application.yml 默认值；'custom' = 赛事已自定义。 */
+  source: 'default' | 'custom'
+}
+
+export interface PlacementPointsRequest {
+  points: Record<string, number>
 }

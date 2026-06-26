@@ -613,9 +613,20 @@ Flyway 自动管理数据库版本，迁移脚本位于 `hey-pickler-server/src/
 - 在管理后台「赛季管理」页面切换/归档赛季；归档后历史排名仍可查询。
 - 当前赛季编号写入 `point_record.season_code`，保证历史可追溯。
 
-### 数据迁移说明（V11）
+### 数据迁移说明（V12）
 
-V11 迁移引入了 `season` 表、`point_record.source` 与 `point_record.season_code` 字段，并**根据现有积分重算所有用户的段位（tier）**。升级到 V11 后请确认段位批量回算结果符合预期。
+V12 迁移引入了比赛形式与队伍分组功能：
+
+- `event.format` (SINGLES/DOUBLES/MIXED，默认 SINGLES)，并按 `registration.matchType` 多数回填存量数据
+- `event.grouping_locked` (TINYINT(1))，分组锁定后冻结名单
+- `team` 表（双打/混打 2 人一队，`status` PENDING/CONFIRMED；解散/拒邀 = 物理删行）
+- `match_group` / `group_assignment` 表（CHECK 约束要求 `user_id`/`team_id` 互斥）
+
+**前置 V11**：双积分体系与赛季机制。升级到 V12 后请确认存量赛事 `format` 回填结果符合预期，并通过分组管理页完成首轮手动分组。
+
+---
+
+## 七、本地开发快速启动
 
 ---
 

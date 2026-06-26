@@ -18,4 +18,5 @@ public class Registration {
     private LocalDateTime createdAt;
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt;
+    private Long teamId;
 }

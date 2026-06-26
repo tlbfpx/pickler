@@ -95,6 +95,20 @@ public class UserServiceImpl implements UserService {
         Map<Long, Event> eventMap = events.stream()
                 .collect(Collectors.toMap(Event::getId, e -> e));
 
+        // Batch query PLACEMENT point sums per event for this user (Spec 3
+        // UX — surface "已获 X 积分" on the user's event list).
+        LambdaQueryWrapper<PointRecord> prWrapper = new LambdaQueryWrapper<>();
+        prWrapper.eq(PointRecord::getUserId, userId)
+                .eq(PointRecord::getSource, "PLACEMENT")
+                .in(PointRecord::getEventId, eventIds)
+                .select(PointRecord::getEventId, PointRecord::getPoints);
+        List<PointRecord> placementRows = pointRecordMapper.selectList(prWrapper);
+        Map<Long, Integer> placementByEvent = new HashMap<>();
+        for (PointRecord pr : placementRows) {
+            if (pr.getEventId() == null || pr.getPoints() == null) continue;
+            placementByEvent.merge(pr.getEventId(), pr.getPoints(), Integer::sum);
+        }
+
         // Filter by type if specified
         List<MyEventVO> allVos = allRegs.stream()
                 .map(reg -> {
@@ -111,6 +125,7 @@ public class UserServiceImpl implements UserService {
                     vo.setLocation(event.getLocation());
                     vo.setStatus(com.heypickler.common.enums.EventStatus.valueOf(event.getStatus()));
                     vo.setRegistrationStatus(com.heypickler.common.enums.RegistrationStatus.valueOf(reg.getStatus()));
+                    vo.setEarnedPoints(placementByEvent.get(reg.getEventId()));
                     return vo;
                 })
                 .filter(Objects::nonNull)

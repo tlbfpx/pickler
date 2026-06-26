@@ -20,6 +20,11 @@ public class EventUpdateRequest {
     private BigDecimal fee;
     private String prizes;
     private Integer minPoints;
+
+    /** SINGLES | DOUBLES | MIXED; null = leave unchanged. */
+    @Pattern(regexp = "^(SINGLES|DOUBLES|MIXED)?$", message = "无效的比赛形式")
+    private String format;
+
     @Pattern(regexp = "^(DRAFT|OPEN|FULL|IN_PROGRESS|COMPLETED|CANCELLED)?$", message = "无效的赛事状态")
     private String status;
 }

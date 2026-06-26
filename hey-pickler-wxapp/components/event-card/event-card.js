@@ -1,6 +1,6 @@
 // Event card component
 import util from '../../utils/util'
-import { TERMS } from '../../utils/terms'
+import { TERMS, FORMAT } from '../../utils/terms'
 
 Component({
   properties: {
@@ -9,6 +9,10 @@ Component({
       value: null
     },
     showType: {
+      type: Boolean,
+      value: true
+    },
+    showFormat: {
       type: Boolean,
       value: true
     },
@@ -28,6 +32,8 @@ Component({
     isOpen: false,
     typeText: '赛事',
     typeClass: 'type-party',
+    formatText: '',
+    formatColor: '#9CA3AF',
     remainingTime: ''
   },
 
@@ -44,6 +50,13 @@ Component({
 
       var typeText = (TERMS[event.type] && TERMS[event.type].type) || '赛事'
       var typeClass = event.type === 'STAR' ? 'type-star' : 'type-party'
+
+      var formatText = ''
+      var formatColor = '#9CA3AF'
+      if (event.format && FORMAT[event.format]) {
+        formatText = FORMAT[event.format].label
+        formatColor = FORMAT[event.format].color
+      }
 
       // Reset fallback state when event changes; default to local image if bannerUrl missing
       var imgSrc = event.bannerUrl || '/images/default-event.png'
@@ -78,6 +91,8 @@ Component({
         isOpen: isOpen,
         typeText: typeText,
         typeClass: typeClass,
+        formatText: formatText,
+        formatColor: formatColor,
         remainingTime: remainingTime
       })
     }

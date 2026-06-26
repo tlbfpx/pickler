@@ -104,6 +104,25 @@
           </template>
         </el-table-column>
         <el-table-column
+          label="形式"
+          width="90"
+        >
+          <template #default="{ row }">
+            <el-tag
+              v-if="row.format"
+              :color="getEventFormatColor(row.format)"
+              effect="plain"
+              size="small"
+            >
+              {{ formatEventFormat(row.format) }}
+            </el-tag>
+            <span
+              v-else
+              style="color: #9ca3af"
+            >-</span>
+          </template>
+        </el-table-column>
+        <el-table-column
           prop="title"
           label="标题"
           width="200"
@@ -185,7 +204,7 @@
         </el-table-column>
         <el-table-column
           label="操作"
-          width="290"
+          width="350"
           fixed="right"
         >
           <template #default="{ row }">
@@ -195,6 +214,13 @@
               @click="handleViewRegistrations(row)"
             >
               报名
+            </el-button>
+            <el-button
+              type="info"
+              size="small"
+              @click="handleOpenPlacement(row)"
+            >
+              加分表
             </el-button>
             <el-button
               v-if="row.status === 'COMPLETED'"
@@ -248,6 +274,12 @@
       :preset-event="selectedEventForPoints"
       @success="fetchEvents"
     />
+
+    <PlacementPointsDialog
+      v-model="placementDialogVisible"
+      :event="selectedEventForPlacement"
+      @saved="fetchEvents"
+    />
   </div>
 </template>
 
@@ -256,12 +288,13 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { getEventList, deleteEvent, changeEventStatus } from '@/api/events'
-import { formatDate, formatEventType, formatEventStatus, getEventTypeColor, getEventStatusColor } from '@/utils'
+import { formatDate, formatEventType, formatEventStatus, formatEventFormat, getEventTypeColor, getEventFormatColor, getEventStatusColor } from '@/utils'
 import { TERMS } from '@/constants/terms'
 import Pagination from '@/components/common/Pagination.vue'
 import EventFormDialog from './EventFormDialog.vue'
 import RegistrationDrawer from './RegistrationDrawer.vue'
 import PointEntryDialog from '@/views/rankings/PointEntryDialog.vue'
+import PlacementPointsDialog from './PlacementPointsDialog.vue'
 import type { Event } from '@/types'
 
 const loading = ref(false)
@@ -284,6 +317,9 @@ const selectedEventForReg = ref<Event | null>(null)
 
 const pointDialogVisible = ref(false)
 const selectedEventForPoints = ref<Event | null>(null)
+
+const placementDialogVisible = ref(false)
+const selectedEventForPlacement = ref<Event | null>(null)
 
 const fetchEvents = async () => {
   loading.value = true
@@ -339,6 +375,11 @@ const handleViewRegistrations = (event: Event) => {
 const handleEnterResults = (event: Event) => {
   selectedEventForPoints.value = event
   pointDialogVisible.value = true
+}
+
+const handleOpenPlacement = (event: Event) => {
+  selectedEventForPlacement.value = event
+  placementDialogVisible.value = true
 }
 
 const handleDelete = async (event: Event) => {

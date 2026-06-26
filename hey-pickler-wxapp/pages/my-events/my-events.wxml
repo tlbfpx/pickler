@@ -58,6 +58,11 @@ function getRegistrationStatusColor(status) {
         {{helpers.getRegistrationStatus(item.registrationStatus)}}
       </view>
 
+      <!-- Placement points (only when event is COMPLETED and user earned something) -->
+      <view wx:if="{{item.earnedPoints && item.earnedPoints > 0}}" class="placement-badge">
+        <text class="placement-text">已获 {{item.earnedPoints}} 积分</text>
+      </view>
+
       <!-- Event info -->
       <view class="event-info">
         <view class="event-title">{{item.title}}</view>

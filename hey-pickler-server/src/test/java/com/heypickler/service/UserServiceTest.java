@@ -1,5 +1,6 @@
 package com.heypickler.service;
 
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.heypickler.common.enums.BanAction;
 import com.heypickler.common.enums.UserStatus;
@@ -13,6 +14,9 @@ import com.heypickler.entity.*;
 import com.heypickler.mapper.*;
 import com.heypickler.service.impl.UserServiceImpl;
 import com.heypickler.vo.*;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
+import org.apache.ibatis.session.Configuration;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,6 +49,18 @@ class UserServiceTest {
 
     @InjectMocks
     private UserServiceImpl userService;
+
+    @BeforeAll
+    static void warmLambdaCache() {
+        // Spec 3: getMyEvents now uses a LambdaQueryWrapper<PointRecord>; MyBatis-Plus
+        // needs the entity table-info cache primed before Mockito-driven calls.
+        Configuration cfg = new Configuration();
+        for (Class<?> c : List.of(PointRecord.class)) {
+            MapperBuilderAssistant a = new MapperBuilderAssistant(cfg, "");
+            a.setCurrentNamespace("com.heypickler.mapper." + c.getSimpleName() + "Mapper");
+            TableInfoHelper.initTableInfo(a, c);
+        }
+    }
 
     private User testUser;
 
