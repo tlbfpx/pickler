@@ -20,6 +20,7 @@ import com.heypickler.mapper.TeamMapper;
 import com.heypickler.mapper.UserMapper;
 import com.heypickler.service.GameValidator;
 import com.heypickler.service.MatchService;
+import com.heypickler.service.PlacementService;
 import com.heypickler.service.RoundRobinGenerator;
 import com.heypickler.vo.MatchVO;
 import com.heypickler.vo.StandingVO;
@@ -48,6 +49,7 @@ public class MatchServiceImpl implements MatchService {
     private final MatchMapper matchMapper;
     private final TeamMapper teamMapper;
     private final UserMapper userMapper;
+    private final PlacementService placementService;
 
     private final RoundRobinGenerator roundRobin = new RoundRobinGenerator();
     private final GameValidator gameValidator = new GameValidator();
@@ -235,6 +237,10 @@ public class MatchServiceImpl implements MatchService {
     @Transactional(rollbackFor = Exception.class)
     public void complete(Long eventId) {
         Event event = requireEvent(eventId);
+        // Idempotent re-completion: no-op.
+        if ("COMPLETED".equals(event.getStatus())) {
+            return;
+        }
         List<Match> all = matchMapper.selectList(
                 new LambdaQueryWrapper<Match>().eq(Match::getEventId, eventId));
         long unfinished = all.stream()
@@ -242,6 +248,9 @@ public class MatchServiceImpl implements MatchService {
         if (unfinished > 0) {
             throw new BizException(ErrorCode.PARAM_ERROR, "还有 " + unfinished + " 场比赛未完成");
         }
+        // Spec 3: issue placement points atomically. If this throws (e.g., duplicate),
+        // the COMPLETED status update rolls back.
+        placementService.issue(eventId);
         eventMapper.update(null, new LambdaUpdateWrapper<Event>()
                 .eq(Event::getId, eventId)
                 .set(Event::getStatus, "COMPLETED"));

@@ -49,6 +49,7 @@ class MatchServiceImplTest {
     @Mock private MatchMapper matchMapper;
     @Mock private TeamMapper teamMapper;
     @Mock private UserMapper userMapper;
+    @Mock private com.heypickler.service.PlacementService placementService;
 
     @InjectMocks private MatchServiceImpl matchService;
 

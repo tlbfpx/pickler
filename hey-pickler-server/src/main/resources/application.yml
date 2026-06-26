@@ -14,3 +14,12 @@ hey-pickler:
       thresholds: [0, 500, 1200, 2500, 5000, 10000]
     party:
       thresholds: [0, 200, 500, 1200, 2500, 5000]
+  placement:
+    # Default rank -> points map. Used when an event has no per-event override
+    # in event_placement_points. Ranks not in the map yield 0 points (audit row
+    # is still written). Override per event via PUT /api/admin/events/{id}/placement-points.
+    defaultPoints:
+      1: 100
+      2: 60
+      3: 30
+      4: 15

@@ -22,4 +22,11 @@ public interface PointService {
      */
     void enterPoints(Long eventId, String type, List<PointEntry> records,
                      PointSource source, Long operatorId);
+
+    /**
+     * Issue a single placement point row (Spec 3). Inserts a point_record with
+     * source=PLACEMENT, updates user balance + tier, and publishes a
+     * PointChangeEvent when the calling transaction commits.
+     */
+    void issuePlacement(Long eventId, Long userId, int points, String reason);
 }
