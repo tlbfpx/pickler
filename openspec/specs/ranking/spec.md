@@ -91,3 +91,9 @@ The system SHALL proactively DELETE ranking-related Redis keys after ranking ref
 - **WHEN** cache has not been invalidated for 5 minutes
 - **THEN** the TTL SHALL cause automatic expiration
 
+### Requirement: PLACEMENT source rows participate in ranking sums
+
+The ranking sum queries (`GET /api/admin/rankings/{type}`) aggregate all `point_record.points` rows for the season regardless of source. `point_record` rows written with `source = PLACEMENT` by `placement` capability SHALL be included in the per-user total alongside `REGISTRATION` / `CHECK_IN` / `MANUAL` rows. No change to ranking storage or aggregation logic is required beyond the placement issuance path writing the rows.
+
+See `specs/placement/spec.md` for the full contract on when PLACEMENT rows are written.
+
