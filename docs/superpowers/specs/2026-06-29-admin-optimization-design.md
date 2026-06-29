@@ -65,7 +65,7 @@ CANCELLED  → （终态）
 
 ### 2.3 自动状态流转
 
-- `EventStatusScheduler`：到 `eventTime` 的 OPEN 赛事自动转 `IN_PROGRESS`。
+- `EventStatusScheduler`：到 `eventTime` 的 **OPEN/FULL** 赛事自动转 `IN_PROGRESS`（`ACTIVE_STATUSES=[OPEN, FULL]`）。
 - 报名退赛（WITHDRAWN）使人数低于上限时，`FULL` 自动转回 `OPEN`。
 
 ---
@@ -140,7 +140,9 @@ CANCELLED  → （终态）
 
 > 列表行的状态徽章保留只读展示；状态变更统一收敛到详情页，避免两处入口不一致。
 
-**对阵/比赛阶段交互**：对阵表按组展示 round-robin 配对，每场显示双方 + 比分 + 状态。正常由用户在小程序自助提交比分；admin 端提供**代录 / 重置**作为兜底（用户未及时提交时运营兜底），并展示实时 standings（`GET /api/admin/events/{id}/matches` 已含比分）。
+**对阵/比赛阶段交互**：对阵表按组展示 round-robin 配对，每场显示双方 + 比分 + 状态。正常由用户在小程序自助提交比分；admin 端提供**代录 / 重置**作为兜底（用户未及时提交时运营兜底），并展示实时 standings。
+
+> ⚠ **实时排名来源**：admin 端目前**无 standings 接口**（仅小程序端 `GET /api/app/events/{id}/standings` 有，由 `matchService.standings` 计算）；admin `GET matches` 只返回逐场 `MatchVO`、**不含计算排名**。为保证 admin 看到的排名与用户端一致、避免在 TS 重算规则（胜场 desc → 净胜局 desc → 同分并列）导致漂移，**新增 admin standings endpoint**：`AdminMatchController` 加 `GET /events/{id}/standings`，复用 `matchService.standings(eventId)`。
 
 **发分阶段**：
 - 显示当前 `event_placement_points` 配置（`PlacementPointsDialog` 内嵌编辑）。
@@ -163,7 +165,9 @@ CANCELLED  → （终态）
 > STAR/PARTY 各拉一遍合并展示，按时间排序。
 
 #### 4.3.2 批量签到（RegistrationDrawer / 详情页报名阶段）
-报名表加多选 +「批量签到」：循环调 `updateRegistrationStatus(CHECKED_IN)`，**串行**执行 + 进度提示（规避 `RateLimitFilter` 的 per-user/per-IP 限流）。失败项汇总提示。
+报名表加多选 +「批量签到」：循环调 `updateRegistrationStatus(CHECKED_IN)`，**串行**执行 + 进度提示。失败项汇总提示。
+
+> 限流说明：批量调用来自单一 admin 会话/IP，串行可规避 `RateLimitFilter` 的 **per-IP** 限流；但 **per-admin-user** 限流仍可能成为瓶颈（admin 一次代签几十人）。第一版用串行 + 适度间隔；若实测触发限流，退路是后端加批量签到接口（见 Roadmap）。
 
 #### 4.3.3 名单导出（CSV）
 报名表加「导出名单」：分页循环拉全量报名数据，前端生成 CSV 下载。字段：昵称 / ID / 城市 / 比赛类型 / 搭档 / 状态 / 报名时间。大体量给 loading。
@@ -181,8 +185,8 @@ CANCELLED  → （终态）
 
 ## 5. 边界与依赖
 
-- **前端为主 + 1 处后端小改**（ranking `keyword`）。其余全部纯前端。
-- 详情页补齐的「对阵/比赛/完成发分」三块，**接的全是已存在的后端接口**，无新后端、无 DB 迁移。
+- **前端为主 + 2 处后端小改**：① ranking `keyword`（§4.3.4）；② admin `standings` endpoint（§4.2 阶段④，复用 `matchService.standings`）。两处都是轻量只读增强，无 DB 迁移。
+- 详情页补齐的「对阵/比赛/完成发分」三块，**接的全是已存在的后端接口**（standings 除外，需新增 endpoint 但复用已有 service），无新业务逻辑、无 DB 迁移。
 - 依赖现有：`api/grouping.ts`、`api/placement.ts`；**新建** `api/matches.ts` 封装 matches 系列接口。
 
 ---
