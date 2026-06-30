@@ -100,6 +100,13 @@ public class AdminEventController {
         return Result.ok(eventService.getParticipants(id));
     }
 
+    @GetMapping("/{id}")
+    @Operation(summary = "获取赛事详情（管理后台）")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
+    public Result<EventVO> detail(@PathVariable Long id) {
+        return Result.ok(eventService.getEventDetail(id));
+    }
+
     @PostMapping("/{id}/points")
     @Operation(summary = "录入积分")
     @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})

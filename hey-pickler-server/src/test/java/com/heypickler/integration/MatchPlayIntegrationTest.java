@@ -247,4 +247,18 @@ class MatchPlayIntegrationTest extends IntegrationTestConfig {
             cleanup(eventId);
         }
     }
+
+    @Test
+    void adminEventDetail_returnsEvent() {
+        Long eventId = createEvent("Detail IT", "SINGLES", "DRAFT");
+        try {
+            HttpEntity<Void> req = new HttpEntity<>(adminAuthHeaders());
+            ResponseEntity<Map> resp = restTemplate.exchange(
+                    "/api/admin/events/" + eventId, HttpMethod.GET, req, Map.class);
+            assertEquals(0, resultCode(resp));
+            assertEquals(eventId, ((Number) ((Map<String, Object>) resultData(resp)).get("id")).longValue());
+        } finally {
+            cleanup(eventId);
+        }
+    }
 }

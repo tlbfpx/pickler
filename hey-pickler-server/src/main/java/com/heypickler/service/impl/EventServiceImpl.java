@@ -93,6 +93,11 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
+    public EventVO getEventDetail(Long eventId) {
+        return convertToVO(requireEvent(eventId));
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void register(Long userId, Long eventId, RegisterRequest request) {
         Event event = requireEvent(eventId);
