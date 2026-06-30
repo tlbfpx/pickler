@@ -32,10 +32,10 @@
         <RegistrationDrawerEmbed :event="event" @changed="reload" />
       </el-tab-pane>
       <el-tab-pane label="分组" name="group">
-        <GroupingPanel :key="`g-${event.id}-${event.groupingLocked}`" :event="event" />
+        <GroupingPanel :key="`g-${event.id}-${event.groupingLocked}`" :event="event" @changed="reload" />
       </el-tab-pane>
       <el-tab-pane label="对阵/比赛" name="match">
-        <MatchesPanel :event="event" />
+        <MatchesPanel :event="event" @changed="reload" />
       </el-tab-pane>
       <el-tab-pane label="发分" name="issue">
         <IssuancePanel :event="event" @changed="reload" />
@@ -73,13 +73,19 @@ import RegistrationDrawerEmbed from './RegistrationDrawerEmbed.vue'
 import type { Event } from '@/types'
 
 const route = useRoute()
-const id = Number(route.params.id)
+const raw = route.params.id
+const id = Number(Array.isArray(raw) ? raw[0] : raw)
+if (!Number.isFinite(id)) {
+  ElMessage.error('无效的赛事 ID')
+}
+const validId = Number.isFinite(id)
 const loading = ref(false)
 const event = ref<Event | null>(null)
 const editOpen = ref(false)
 const activeTab = ref('info')
 
 const reload = async () => {
+  if (!validId) return
   loading.value = true
   try {
     const r = await getEventDetail(id)
@@ -87,7 +93,7 @@ const reload = async () => {
     else ElMessage.error(r.message || '加载失败')
   } finally { loading.value = false }
 }
-onMounted(reload)
+if (validId) onMounted(reload)
 
 const STAGE_ORDER: Record<string, number> = { DRAFT: 0, OPEN: 1, FULL: 1, IN_PROGRESS: 2, COMPLETED: 3, CANCELLED: 0 }
 const activeStepIndex = computed(() => {

@@ -55,7 +55,7 @@ import { generateMatches, getEventMatches, getEventStandings, submitMatchScore, 
 import type { Event, MatchItem, StandingRow, GameScore } from '@/types'
 
 const props = defineProps<{ event: Event }>()
-defineEmits<{ completed: [] }>()
+const emit = defineEmits<{ changed: [] }>()
 
 const loading = ref(false); const genLoading = ref(false)
 const matches = ref<MatchItem[][]>([])
@@ -75,7 +75,7 @@ const handleGenerate = async () => {
   genLoading.value = true
   try {
     const r = await generateMatches(props.event.id)
-    if (r.code === 0) { ElMessage.success('对阵已生成'); await fetchMatches(); await fetchStandings() }
+    if (r.code === 0) { ElMessage.success('对阵已生成'); emit('changed'); await fetchMatches(); await fetchStandings() }
     else ElMessage.error(r.message || '生成失败')
   } finally { genLoading.value = false }
 }
@@ -94,14 +94,14 @@ const handleSubmitScore = async () => {
   submitting.value = true
   try {
     const r = await submitMatchScore(currentMatch.value.id, scoreForm.value)
-    if (r.code === 0) { ElMessage.success('已录入'); scoreOpen.value = false; await fetchMatches(); await fetchStandings() }
+    if (r.code === 0) { ElMessage.success('已录入'); scoreOpen.value = false; emit('changed'); await fetchMatches(); await fetchStandings() }
     else ElMessage.error(r.message || '录入失败')
   } finally { submitting.value = false }
 }
 const handleReset = async (m: MatchItem) => {
   try { await ElMessageBox.confirm('确定重置该场比分？', '重置', { type: 'warning' }) } catch { return }
   const r = await resetMatch(m.id)
-  if (r.code === 0) { ElMessage.success('已重置'); await fetchMatches(); await fetchStandings() } else ElMessage.error(r.message)
+  if (r.code === 0) { ElMessage.success('已重置'); emit('changed'); await fetchMatches(); await fetchStandings() } else ElMessage.error(r.message)
 }
 
 const scoreText = (m: MatchItem) => m.games?.length ? m.games.map(g => `${g.a}:${g.b}`).join(' ') : (m.gamesWonA != null ? `${m.gamesWonA}:${m.gamesWonB}` : '-')

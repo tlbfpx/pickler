@@ -185,6 +185,8 @@ const props = defineProps<{
   event: Event
 }>()
 
+const emit = defineEmits<{ changed: [] }>()
+
 const groups = ref<Group[]>([])
 const strategy = ref<GroupingStrategy>('SERPENTINE')
 const groupCount = ref(2)
@@ -229,6 +231,7 @@ const handleGroup = async () => {
     if (res.code === 0) {
       groups.value = res.data || []
       ElMessage.success('分组完成')
+      emit('changed')
     } else {
       ElMessage.error(res.message || '分组失败')
     }
@@ -243,6 +246,7 @@ const handleLock = async () => {
     const res = await lockGroups(props.event.id)
     if (res.code === 0) {
       ElMessage.success('已锁定')
+      emit('changed')
     } else {
       ElMessage.error(res.message || '锁定失败')
     }
@@ -267,6 +271,7 @@ const handleUnlock = async () => {
     if (res.code === 0) {
       groups.value = []
       ElMessage.success('已解锁并清空分组')
+      emit('changed')
     } else {
       ElMessage.error(res.message || '解锁失败')
     }
@@ -294,6 +299,7 @@ const handleReassign = async () => {
     if (res.code === 0) {
       ElMessage.success('已调整')
       reassignOpen.value = false
+      emit('changed')
       await fetchGroups()
     } else {
       ElMessage.error(res.message || '调整失败')
