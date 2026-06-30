@@ -283,3 +283,20 @@ export interface PlacementPointsVO {
 export interface PlacementPointsRequest {
   points: Record<string, number>
 }
+
+// ==================== Match & Standing Types ====================
+
+export interface GameScore { game: number; a: number; b: number }
+export interface MatchItem {
+  id: number; eventId: number; groupId: number
+  slotAUserId: number | null; slotATeamId: number | null
+  slotBUserId: number | null; slotBTeamId: number | null
+  slotADisplayName: string | null; slotBDisplayName: string | null
+  status: 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED'
+  games: GameScore[]; gamesWonA: number | null; gamesWonB: number | null
+  submittedAt: string | null; completedAt: string | null
+}
+export interface StandingRow {
+  participantKey: number | null; rank: number | null; wins: number | null; losses: number | null
+  gamesFor: number | null; gamesAgainst: number | null; displayName: string | null
+}
