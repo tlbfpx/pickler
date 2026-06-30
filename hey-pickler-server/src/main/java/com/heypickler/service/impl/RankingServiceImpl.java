@@ -129,12 +129,8 @@ public class RankingServiceImpl implements RankingService {
 
         List<RankingVO> cached = (List<RankingVO>) redisTemplate.opsForValue().get(cacheKey);
         if (cached != null) {
-            int start = (page - 1) * size;
-            int end = Math.min(start + size, cached.size());
-            if (start >= cached.size()) {
-                return PageResult.of(cached.size(), page, size, Collections.emptyList());
-            }
-            return PageResult.of(cached.size(), page, size, cached.subList(start, end));
+            // 缓存存全量，命中时同样需按 keyword 过滤——否则搜索在热缓存下静默失效。不回写。
+            return filterAndPaginate(cached, query.getKeyword(), page, size);
         }
 
         LambdaQueryWrapper<Ranking> queryWrapper = new LambdaQueryWrapper<Ranking>()
@@ -169,12 +165,23 @@ public class RankingServiceImpl implements RankingService {
 
         redisTemplate.opsForValue().set(cacheKey, result, 5, TimeUnit.MINUTES);
 
-        int start = (page - 1) * size;
-        int end = Math.min(start + size, result.size());
-        if (start >= result.size()) {
-            return PageResult.of(result.size(), page, size, Collections.emptyList());
+        return filterAndPaginate(result, query.getKeyword(), page, size);
+    }
+
+    /** 按 keyword 在已含 nickname 的列表上内存过滤，再分页。keyword 为空时原样分页。 */
+    private PageResult<RankingVO> filterAndPaginate(List<RankingVO> source, String keyword, int page, int size) {
+        List<RankingVO> filtered = source;
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            String lower = keyword.trim().toLowerCase();
+            filtered = source.stream()
+                .filter(vo -> vo.getNickname() != null && vo.getNickname().toLowerCase().contains(lower))
+                .collect(Collectors.toList());
         }
-        return PageResult.of(result.size(), page, size, result.subList(start, end));
+        int start = (page - 1) * size;
+        int end = Math.min(start + size, filtered.size());
+        List<RankingVO> pageList = start >= filtered.size()
+            ? Collections.emptyList() : filtered.subList(start, end);
+        return PageResult.of(filtered.size(), page, size, pageList);
     }
 
     @Override
