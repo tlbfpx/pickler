@@ -1,15 +1,38 @@
 <template>
   <div class="issuance-panel">
-    <div class="panel-header"><h3>发分</h3></div>
-    <el-alert v-if="event.status === 'COMPLETED'" type="success" :closable="false" title="赛事已结束，名次积分已发放" />
+    <div class="panel-header">
+      <h3>发分</h3>
+    </div>
+    <el-alert
+      v-if="event.status === 'COMPLETED'"
+      type="success"
+      :closable="false"
+      title="赛事已结束，名次积分已发放"
+    />
     <template v-else>
-      <el-button type="primary" @click="openPlacement">配置加分表</el-button>
-      <el-button type="success" :loading="completing" :disabled="event.status !== 'IN_PROGRESS'" @click="handleComplete">
+      <el-button
+        type="primary"
+        @click="openPlacement"
+      >
+        配置加分表
+      </el-button>
+      <el-button
+        type="success"
+        :loading="completing"
+        :disabled="event.status !== 'IN_PROGRESS'"
+        @click="handleComplete"
+      >
         完成赛事并发分
       </el-button>
-      <div class="hint">完成后将按加分表自动发放名次积分（source=PLACEMENT）。需所有比赛已完成，否则会提示未完成场次。</div>
+      <div class="hint">
+        完成后将按加分表自动发放名次积分（source=PLACEMENT）。需所有比赛已完成，否则会提示未完成场次。
+      </div>
     </template>
-    <PlacementPointsDialog v-model="placementOpen" :event="event" @saved="emit('changed')" />
+    <PlacementPointsDialog
+      v-model="placementOpen"
+      :event="event"
+      @saved="emit('changed')"
+    />
   </div>
 </template>
 

@@ -1,11 +1,29 @@
 <template>
   <div class="sidebar">
-    <div class="sidebar-logo">Hey Pickler 管理后台</div>
-    <el-menu :default-active="activeMenu" class="sidebar-menu"
-      background-color="#001529" text-color="#fff" active-text-color="#409EFF" :router="true">
-      <el-sub-menu v-for="g in groups" :key="g.name" :index="g.name">
-        <template #title><span>{{ g.name }}</span></template>
-        <el-menu-item v-for="r in g.items" :key="r.path" :index="r.path">
+    <div class="sidebar-logo">
+      Hey Pickler 管理后台
+    </div>
+    <el-menu
+      :default-active="activeMenu"
+      class="sidebar-menu"
+      background-color="#001529"
+      text-color="#fff"
+      active-text-color="#409EFF"
+      :router="true"
+    >
+      <el-sub-menu
+        v-for="g in groups"
+        :key="g.name"
+        :index="g.name"
+      >
+        <template #title>
+          <span>{{ g.name }}</span>
+        </template>
+        <el-menu-item
+          v-for="r in g.items"
+          :key="r.path"
+          :index="r.path"
+        >
           <el-icon><component :is="iconMap[r.icon]" /></el-icon>
           <span>{{ r.title }}</span>
         </el-menu-item>

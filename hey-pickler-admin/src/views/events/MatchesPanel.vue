@@ -1,48 +1,167 @@
 <template>
-  <div v-loading="loading" class="matches-panel">
+  <div
+    v-loading="loading"
+    class="matches-panel"
+  >
     <div class="panel-header">
       <h3>对阵 / 比赛</h3>
       <div>
-        <el-button v-if="!hasMatches" type="primary" :loading="genLoading"
-          :disabled="!event.groupingLocked" @click="handleGenerate">生成对阵</el-button>
-        <el-button v-if="hasMatches" type="success" :loading="standingLoading" @click="fetchStandings">刷新排名</el-button>
+        <el-button
+          v-if="!hasMatches"
+          type="primary"
+          :loading="genLoading"
+          :disabled="!event.groupingLocked"
+          @click="handleGenerate"
+        >
+          生成对阵
+        </el-button>
+        <el-button
+          v-if="hasMatches"
+          type="success"
+          :loading="standingLoading"
+          @click="fetchStandings"
+        >
+          刷新排名
+        </el-button>
       </div>
     </div>
-    <el-alert v-if="!event.groupingLocked" type="info" :closable="false" title="需先锁定分组后才能生成对阵" />
-    <el-empty v-else-if="!hasMatches && !genLoading" description="尚未生成对阵" />
+    <el-alert
+      v-if="!event.groupingLocked"
+      type="info"
+      :closable="false"
+      title="需先锁定分组后才能生成对阵"
+    />
+    <el-empty
+      v-else-if="!hasMatches && !genLoading"
+      description="尚未生成对阵"
+    />
 
-    <div v-for="(group, gi) in matches" :key="gi" class="group-block">
-      <div class="group-title">第 {{ gi + 1 }} 组</div>
-      <el-table :data="group" size="small">
-        <el-table-column label="A" min-width="120"><template #default="{ row }">{{ row.slotADisplayName || '-' }}</template></el-table-column>
-        <el-table-column label="比分" width="120"><template #default="{ row }">{{ scoreText(row) }}</template></el-table-column>
-        <el-table-column label="B" min-width="120"><template #default="{ row }">{{ row.slotBDisplayName || '-' }}</template></el-table-column>
-        <el-table-column label="状态" width="100"><template #default="{ row }">
-          <el-tag size="small" :type="row.status === 'COMPLETED' ? 'success' : row.status === 'IN_PROGRESS' ? 'warning' : 'info'">{{ statusLabel(row.status) }}</el-tag>
-        </template></el-table-column>
-        <el-table-column label="操作" width="160" fixed="right"><template #default="{ row }">
-          <el-button link type="primary" size="small" @click="openScore(row)">代录</el-button>
-          <el-button v-if="row.status !== 'SCHEDULED'" link type="danger" size="small" @click="handleReset(row)">重置</el-button>
-        </template></el-table-column>
+    <div
+      v-for="(group, gi) in matches"
+      :key="gi"
+      class="group-block"
+    >
+      <div class="group-title">
+        第 {{ gi + 1 }} 组
+      </div>
+      <el-table
+        :data="group"
+        size="small"
+      >
+        <el-table-column
+          label="A"
+          min-width="120"
+        >
+          <template #default="{ row }">
+            {{ row.slotADisplayName || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="比分"
+          width="120"
+        >
+          <template #default="{ row }">
+            {{ scoreText(row) }}
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="B"
+          min-width="120"
+        >
+          <template #default="{ row }">
+            {{ row.slotBDisplayName || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="状态"
+          width="100"
+        >
+          <template #default="{ row }">
+            <el-tag
+              size="small"
+              :type="row.status === 'COMPLETED' ? 'success' : row.status === 'IN_PROGRESS' ? 'warning' : 'info'"
+            >
+              {{ statusLabel(row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="操作"
+          width="160"
+          fixed="right"
+        >
+          <template #default="{ row }">
+            <el-button
+              link
+              type="primary"
+              size="small"
+              @click="openScore(row)"
+            >
+              代录
+            </el-button>
+            <el-button
+              v-if="row.status !== 'SCHEDULED'"
+              link
+              type="danger"
+              size="small"
+              @click="handleReset(row)"
+            >
+              重置
+            </el-button>
+          </template>
+        </el-table-column>
       </el-table>
-      <div v-if="standings[gi]?.length" class="standings">
+      <div
+        v-if="standings[gi]?.length"
+        class="standings"
+      >
         <span class="standings-title">本组排名：</span>
-        <span v-for="s in standings[gi]" :key="s.participantKey ?? ''" class="standing-item">
+        <span
+          v-for="s in standings[gi]"
+          :key="s.participantKey ?? ''"
+          class="standing-item"
+        >
           #{{ s.rank ?? '-' }} {{ s.displayName ?? '-' }} ({{ s.wins ?? 0 }}胜{{ s.losses ?? 0 }}负)
         </span>
       </div>
     </div>
 
-    <el-dialog v-model="scoreOpen" title="代录比分（三局两胜）" width="520px">
-      <div v-for="(g, idx) in scoreForm" :key="idx" class="score-row">
+    <el-dialog
+      v-model="scoreOpen"
+      title="代录比分（三局两胜）"
+      width="520px"
+    >
+      <div
+        v-for="(g, idx) in scoreForm"
+        :key="idx"
+        class="score-row"
+      >
         <span>第{{ idx + 1 }}局</span>
-        <el-input-number v-model="g.a" :min="0" :max="30" />
-        <el-input-number v-model="g.b" :min="0" :max="30" />
+        <el-input-number
+          v-model="g.a"
+          :min="0"
+          :max="30"
+        />
+        <el-input-number
+          v-model="g.b"
+          :min="0"
+          :max="30"
+        />
       </div>
-      <div class="hint">规则：21 分起，净胜 2 分，单局 ≤30</div>
+      <div class="hint">
+        规则：21 分起，净胜 2 分，单局 ≤30
+      </div>
       <template #footer>
-        <el-button @click="scoreOpen = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="handleSubmitScore">提交</el-button>
+        <el-button @click="scoreOpen = false">
+          取消
+        </el-button>
+        <el-button
+          type="primary"
+          :loading="submitting"
+          @click="handleSubmitScore"
+        >
+          提交
+        </el-button>
       </template>
     </el-dialog>
   </div>

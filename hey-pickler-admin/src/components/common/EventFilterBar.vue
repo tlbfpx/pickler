@@ -1,23 +1,81 @@
 <template>
   <div class="filter-bar">
-    <el-input v-model="local.keyword" placeholder="搜索标题" clearable style="width: 220px" @keyup.enter="emitFilter" @clear="emitFilter" />
-    <el-select v-model="local.type" placeholder="按类型筛选" clearable style="width: 150px" @change="emitFilter">
-      <el-option :label="TERMS.STAR.type" value="STAR" />
-      <el-option :label="TERMS.PARTY.type" value="PARTY" />
+    <el-input
+      v-model="local.keyword"
+      placeholder="搜索标题"
+      clearable
+      style="width: 220px"
+      @keyup.enter="emitFilter"
+      @clear="emitFilter"
+    />
+    <el-select
+      v-model="local.type"
+      placeholder="按类型筛选"
+      clearable
+      style="width: 150px"
+      @change="emitFilter"
+    >
+      <el-option
+        :label="TERMS.STAR.type"
+        value="STAR"
+      />
+      <el-option
+        :label="TERMS.PARTY.type"
+        value="PARTY"
+      />
     </el-select>
-    <el-select v-model="local.status" placeholder="按状态筛选" clearable style="width: 150px" @change="emitFilter">
-      <el-option label="草稿" value="DRAFT" />
-      <el-option label="报名中" value="OPEN" />
-      <el-option label="名额已满" value="FULL" />
-      <el-option label="进行中" value="IN_PROGRESS" />
-      <el-option label="已结束" value="COMPLETED" />
-      <el-option label="已取消" value="CANCELLED" />
+    <el-select
+      v-model="local.status"
+      placeholder="按状态筛选"
+      clearable
+      style="width: 150px"
+      @change="emitFilter"
+    >
+      <el-option
+        label="草稿"
+        value="DRAFT"
+      />
+      <el-option
+        label="报名中"
+        value="OPEN"
+      />
+      <el-option
+        label="名额已满"
+        value="FULL"
+      />
+      <el-option
+        label="进行中"
+        value="IN_PROGRESS"
+      />
+      <el-option
+        label="已结束"
+        value="COMPLETED"
+      />
+      <el-option
+        label="已取消"
+        value="CANCELLED"
+      />
     </el-select>
-    <el-button type="primary" @click="emitFilter">查询</el-button>
-    <el-button @click="emitReset">重置</el-button>
+    <el-button
+      type="primary"
+      @click="emitFilter"
+    >
+      查询
+    </el-button>
+    <el-button @click="emitReset">
+      重置
+    </el-button>
     <div class="quick-chips">
-      <el-tag v-for="c in chips" :key="c.value" :type="local.status === c.value ? 'primary' : 'info'" effect="plain"
-        style="cursor: pointer; margin-left: 8px" @click="quick(c.value)">{{ c.label }}</el-tag>
+      <el-tag
+        v-for="c in chips"
+        :key="c.value"
+        :type="local.status === c.value ? 'primary' : 'info'"
+        effect="plain"
+        style="cursor: pointer; margin-left: 8px"
+        @click="quick(c.value)"
+      >
+        {{ c.label }}
+      </el-tag>
     </div>
   </div>
 </template>

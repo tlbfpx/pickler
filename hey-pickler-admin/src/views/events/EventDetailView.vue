@@ -1,59 +1,153 @@
 <template>
-  <div v-loading="loading" class="event-detail">
+  <div
+    v-loading="loading"
+    class="event-detail"
+  >
     <div class="page-header">
       <div class="title-area">
-        <el-button link @click="$router.back()"><el-icon><ArrowLeft /></el-icon>返回</el-button>
+        <el-button
+          link
+          @click="$router.back()"
+        >
+          <el-icon><ArrowLeft /></el-icon>返回
+        </el-button>
         <h1>{{ event?.title || '…' }}</h1>
-        <el-tag v-if="event" :color="statusColor(event.status)" effect="dark">{{ formatStatus(event.status) }}</el-tag>
-        <el-tag v-if="event?.format" size="small" effect="plain">{{ formatEventFormat(event.format) }}</el-tag>
-        <el-tag size="small" :color="getEventTypeColor(event?.type)" effect="dark">{{ formatEventType(event?.type) }}</el-tag>
+        <el-tag
+          v-if="event"
+          :color="statusColor(event.status)"
+          effect="dark"
+        >
+          {{ formatStatus(event.status) }}
+        </el-tag>
+        <el-tag
+          v-if="event?.format"
+          size="small"
+          effect="plain"
+        >
+          {{ formatEventFormat(event.format) }}
+        </el-tag>
+        <el-tag
+          size="small"
+          :color="getEventTypeColor(event?.type)"
+          effect="dark"
+        >
+          {{ formatEventType(event?.type) }}
+        </el-tag>
       </div>
       <div v-if="event">
-        <el-button size="small" @click="editOpen = true">编辑</el-button>
+        <el-button
+          size="small"
+          @click="editOpen = true"
+        >
+          编辑
+        </el-button>
       </div>
     </div>
 
-    <div v-if="event" class="summary">
+    <div
+      v-if="event"
+      class="summary"
+    >
       <span>{{ event.location || '-' }}</span> · <span>{{ formatDate(event.eventTime) }}</span> ·
       <span>报名 {{ event.currentParticipants }}/{{ event.maxParticipants ?? '∞' }}</span>
     </div>
 
     <!-- Stepper -->
-    <el-steps v-if="event" :active="activeStepIndex" finish-status="success" align-center class="stepper">
-      <el-step v-for="s in steps" :key="s.key" :title="s.title" :status="s.status" />
+    <el-steps
+      v-if="event"
+      :active="activeStepIndex"
+      finish-status="success"
+      align-center
+      class="stepper"
+    >
+      <el-step
+        v-for="s in steps"
+        :key="s.key"
+        :title="s.title"
+        :status="s.status"
+      />
     </el-steps>
 
     <!-- 阶段内容 -->
-    <el-tabs v-if="event" v-model="activeTab" class="stage-tabs">
-      <el-tab-pane label="基本信息" name="info">
-        <p class="muted">基本信息通过右上「编辑」修改。</p>
+    <el-tabs
+      v-if="event"
+      v-model="activeTab"
+      class="stage-tabs"
+    >
+      <el-tab-pane
+        label="基本信息"
+        name="info"
+      >
+        <p class="muted">
+          基本信息通过右上「编辑」修改。
+        </p>
       </el-tab-pane>
-      <el-tab-pane label="报名" name="reg">
-        <RegistrationDrawerEmbed :event="event" @changed="reload" />
+      <el-tab-pane
+        label="报名"
+        name="reg"
+      >
+        <RegistrationDrawerEmbed
+          :event="event"
+          @changed="reload"
+        />
       </el-tab-pane>
-      <el-tab-pane label="分组" name="group">
-        <GroupingPanel :key="`g-${event.id}-${event.groupingLocked}`" :event="event" @changed="reload" />
+      <el-tab-pane
+        label="分组"
+        name="group"
+      >
+        <GroupingPanel
+          :key="`g-${event.id}-${event.groupingLocked}`"
+          :event="event"
+          @changed="reload"
+        />
       </el-tab-pane>
-      <el-tab-pane label="对阵/比赛" name="match">
-        <MatchesPanel :event="event" @changed="reload" />
+      <el-tab-pane
+        label="对阵/比赛"
+        name="match"
+      >
+        <MatchesPanel
+          :event="event"
+          @changed="reload"
+        />
       </el-tab-pane>
-      <el-tab-pane label="发分" name="issue">
-        <IssuancePanel :event="event" @changed="reload" />
+      <el-tab-pane
+        label="发分"
+        name="issue"
+      >
+        <IssuancePanel
+          :event="event"
+          @changed="reload"
+        />
       </el-tab-pane>
     </el-tabs>
 
     <!-- 状态显式化：当前合法的下一阶段按钮 -->
-    <div v-if="event" class="status-actions">
+    <div
+      v-if="event"
+      class="status-actions"
+    >
       <span class="muted">状态推进：</span>
-      <el-button v-for="t in getAllowedTargets(event.status)" :key="t"
-        :type="t === 'CANCELLED' ? 'danger' : 'primary'" plain size="small"
-        @click="changeStatus(t)">
+      <el-button
+        v-for="t in getAllowedTargets(event.status)"
+        :key="t"
+        :type="t === 'CANCELLED' ? 'danger' : 'primary'"
+        plain
+        size="small"
+        @click="changeStatus(t)"
+      >
         → {{ formatStatus(t) }}
       </el-button>
-      <span v-if="!getAllowedTargets(event.status).length" class="muted">（终态，无可用转换）</span>
+      <span
+        v-if="!getAllowedTargets(event.status).length"
+        class="muted"
+      >（终态，无可用转换）</span>
     </div>
 
-    <EventFormDialog v-model="editOpen" :event="event" @success="reload" />
+    <EventFormDialog
+      v-model="editOpen"
+      :event="event"
+      @success="reload"
+    />
   </div>
 </template>
 

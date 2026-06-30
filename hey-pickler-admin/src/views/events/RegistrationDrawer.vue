@@ -205,8 +205,21 @@
 
       <div class="bulk-bar">
         <span class="muted">已选 {{ selected.length }} 项</span>
-        <el-button type="success" size="small" :disabled="!selected.length" :loading="bulkLoading" @click="handleBulkCheckIn">批量签到</el-button>
-        <el-button size="small" @click="handleExport">导出名单(CSV)</el-button>
+        <el-button
+          type="success"
+          size="small"
+          :disabled="!selected.length"
+          :loading="bulkLoading"
+          @click="handleBulkCheckIn"
+        >
+          批量签到
+        </el-button>
+        <el-button
+          size="small"
+          @click="handleExport"
+        >
+          导出名单(CSV)
+        </el-button>
       </div>
 
       <Pagination
