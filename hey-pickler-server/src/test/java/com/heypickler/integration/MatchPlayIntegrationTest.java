@@ -162,6 +162,45 @@ class MatchPlayIntegrationTest extends IntegrationTestConfig {
     }
 
     @Test
+    void adminStandings_returnsGroupedStandings() {
+        seedUser(8101L, 0);
+        seedUser(8102L, 0);
+        Long eventId = createEvent("Admin Standings IT", "SINGLES", "OPEN");
+        try {
+            assertEquals(0, register(eventId, 8101L));
+            assertEquals(0, register(eventId, 8102L));
+            jdbcTemplate.update("UPDATE event SET grouping_locked = 1 WHERE id = ?", eventId);
+            jdbcTemplate.update("INSERT INTO match_group (event_id, group_index, name) VALUES (?, 0, 'A')", eventId);
+            Long groupId = jdbcTemplate.queryForObject(
+                "SELECT id FROM match_group WHERE event_id = ? AND group_index = 0", Long.class, eventId);
+            jdbcTemplate.update("INSERT INTO group_assignment (group_id, event_id, user_id, seed) VALUES (?, ?, ?, ?)", groupId, eventId, 8101L, 1);
+            jdbcTemplate.update("INSERT INTO group_assignment (group_id, event_id, user_id, seed) VALUES (?, ?, ?, ?)", groupId, eventId, 8102L, 2);
+            assertEquals(0, generateMatches(eventId));
+
+            // rankGroup only aggregates participants from COMPLETED matches, so
+            // submit one score (8101 beats 8102) to populate the standings.
+            Long matchId = jdbcTemplate.queryForObject(
+                "SELECT id FROM match_record WHERE event_id = ?", Long.class, eventId);
+            Map<String, Object> twoZero = new HashMap<>();
+            twoZero.put("games", List.of(
+                Map.of("game", 1, "a", 21, "b", 15),
+                Map.of("game", 2, "a", 21, "b", 18)));
+            assertEquals(0, submitScore(matchId, 8101L, false, twoZero));
+
+            HttpEntity<Void> req = new HttpEntity<>(adminAuthHeaders());
+            ResponseEntity<Map> resp = restTemplate.exchange(
+                "/api/admin/events/" + eventId + "/standings", HttpMethod.GET, req, Map.class);
+            assertEquals(0, resultCode(resp));
+            @SuppressWarnings("unchecked")
+            List<List<Map<String, Object>>> byGroup = (List<List<Map<String, Object>>>) resultData(resp);
+            assertEquals(1, byGroup.size(), "应有 1 个组");
+            assertEquals(2, byGroup.get(0).size(), "该组应有 2 名参与者");
+        } finally {
+            cleanup(eventId);
+        }
+    }
+
+    @Test
     void resetMatch_clearsScoresAndReopened() {
         seedUser(8001L, 0);
         seedUser(8002L, 0);
