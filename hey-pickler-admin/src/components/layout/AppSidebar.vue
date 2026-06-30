@@ -1,56 +1,15 @@
 <template>
   <div class="sidebar">
-    <div class="sidebar-logo">
-      Hey Pickler 管理后台
-    </div>
-    <el-menu
-      :default-active="activeMenu"
-      class="sidebar-menu"
-      background-color="#001529"
-      text-color="#fff"
-      active-text-color="#409EFF"
-      :router="true"
-    >
-      <el-menu-item index="/">
-        <el-icon><DataBoard /></el-icon>
-        <span>首页</span>
-      </el-menu-item>
-      <el-menu-item index="/users">
-        <el-icon><User /></el-icon>
-        <span>用户管理</span>
-      </el-menu-item>
-      <el-menu-item index="/events">
-        <el-icon><Calendar /></el-icon>
-        <span>赛事管理</span>
-      </el-menu-item>
-      <el-menu-item index="/activities">
-        <el-icon><Football /></el-icon>
-        <span>活动管理</span>
-      </el-menu-item>
-      <el-menu-item index="/rankings">
-        <el-icon><Trophy /></el-icon>
-        <span>排名管理</span>
-      </el-menu-item>
-      <el-menu-item index="/seasons">
-        <el-icon><Timer /></el-icon>
-        <span>赛季管理</span>
-      </el-menu-item>
-      <el-menu-item index="/banners">
-        <el-icon><Picture /></el-icon>
-        <span>Banner管理</span>
-      </el-menu-item>
-      <el-menu-item index="/admins">
-        <el-icon><UserFilled /></el-icon>
-        <span>管理员管理</span>
-      </el-menu-item>
-      <el-menu-item index="/ban-records">
-        <el-icon><Document /></el-icon>
-        <span>用户日志</span>
-      </el-menu-item>
-      <el-menu-item index="/admin-logs">
-        <el-icon><List /></el-icon>
-        <span>操作日志</span>
-      </el-menu-item>
+    <div class="sidebar-logo">Hey Pickler 管理后台</div>
+    <el-menu :default-active="activeMenu" class="sidebar-menu"
+      background-color="#001529" text-color="#fff" active-text-color="#409EFF" :router="true">
+      <el-sub-menu v-for="g in groups" :key="g.name" :index="g.name">
+        <template #title><span>{{ g.name }}</span></template>
+        <el-menu-item v-for="r in g.items" :key="r.path" :index="r.path">
+          <el-icon><component :is="iconMap[r.icon]" /></el-icon>
+          <span>{{ r.title }}</span>
+        </el-menu-item>
+      </el-sub-menu>
     </el-menu>
   </div>
 </template>
@@ -58,9 +17,23 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import * as ElIcons from '@element-plus/icons-vue'
+import router from '@/router'
 
 const route = useRoute()
 const activeMenu = computed(() => route.path)
+const iconMap: Record<string, any> = ElIcons as any
+
+// 直接读静态路由表，避免 getRoutes() 返回 /login、/events/:id 等噪音
+// 布局路由（path:'/'）的 children 才是菜单项；meta.hidden 不进菜单
+const menuRoutes = (router.options.routes.find((r: any) => r.path === '/')?.children || [])
+  .filter((r: any) => r.meta?.group && !r.meta?.hidden)
+  .map((r: any) => ({ path: '/' + r.path, title: r.meta.title, icon: r.meta.icon, group: r.meta.group }))
+
+const GROUP_ORDER = ['运营管理', '积分与赛季', '内容运营', '系统']
+const groups = computed(() => GROUP_ORDER
+  .map(name => ({ name, items: menuRoutes.filter(r => r.group === name) }))
+  .filter(g => g.items.length))
 </script>
 
 <style scoped>
