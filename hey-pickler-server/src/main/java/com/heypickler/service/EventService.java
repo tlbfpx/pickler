@@ -23,6 +23,8 @@ public interface EventService {
 
     PageResult<EventVO> adminListEvents(String type, String status, String keyword, String location, String startTime, String endTime, int page, int size);
 
+    EventVO getEventDetail(Long eventId);
+
     Long createEvent(EventCreateRequest request, Long adminId);
 
     void updateEvent(Long eventId, EventUpdateRequest request);

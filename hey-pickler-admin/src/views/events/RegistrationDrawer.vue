@@ -97,7 +97,12 @@
         :data="registrationList"
         size="small"
         style="width: 100%"
+        @selection-change="onSelectionChange"
       >
+        <el-table-column
+          type="selection"
+          width="42"
+        />
         <el-table-column
           prop="id"
           label="ID"
@@ -198,6 +203,25 @@
         </el-table-column>
       </el-table>
 
+      <div class="bulk-bar">
+        <span class="muted">已选 {{ selected.length }} 项</span>
+        <el-button
+          type="success"
+          size="small"
+          :disabled="!selected.length"
+          :loading="bulkLoading"
+          @click="handleBulkCheckIn"
+        >
+          批量签到
+        </el-button>
+        <el-button
+          size="small"
+          @click="handleExport"
+        >
+          导出名单(CSV)
+        </el-button>
+      </div>
+
       <Pagination
         v-model:page="pagination.page"
         v-model:size="pagination.size"
@@ -242,6 +266,45 @@ const registrationList = ref<Registration[]>([])
 const filterStatus = ref('')
 const filterMatchType = ref('')
 const pagination = reactive({ page: 1, size: 10, total: 0 })
+const selected = ref<Registration[]>([])
+const bulkLoading = ref(false)
+
+const onSelectionChange = (rows: Registration[]) => { selected.value = rows }
+
+const handleBulkCheckIn = async () => {
+  if (!props.event) return
+  const targets = selected.value.filter(r => r.status === 'REGISTERED')
+  if (!targets.length) { ElMessage.info('无可签到的已报名项'); return }
+  bulkLoading.value = true
+  let ok = 0; const failed: string[] = []
+  for (const r of targets) {                       // 串行，规避 per-IP 限流
+    try {
+      const res = await updateRegistrationStatus(props.event!.id, r.id, 'CHECKED_IN')
+      if (res.code === 0) ok++; else failed.push(r.nickname || `#${r.id}`)
+    } catch { failed.push(r.nickname || `#${r.id}`) }
+  }
+  bulkLoading.value = false
+  ElMessage.success(`签到成功 ${ok} / ${targets.length}` + (failed.length ? `；失败 ${failed.length}` : ''))
+  await fetchRegistrations(); emit('changed')
+}
+
+const handleExport = async () => {
+  if (!props.event) return
+  // 拉全量
+  const all: Registration[] = []; let page = 1; let total = Infinity
+  while (all.length < total) {
+    const res = await getEventRegistrations(props.event.id, { page, size: 100 } as any)
+    if (res.code !== 0) break
+    all.push(...(res.data.list || [])); total = res.data.total || 0; page++
+  }
+  const header = ['ID', '昵称', '城市', '比赛类型', '搭档', '状态', '报名时间']
+  const rows = all.map(r => [r.id, r.nickname || '', r.city || '', r.matchType, r.partnerNickname || (r.partnerId ? 'ID:' + r.partnerId : ''), r.status, r.createdAt])
+  const csv = [header, ...rows].map(cols => cols.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a'); a.href = url; a.download = `event-${props.event.id}-registrations.csv`; a.click()
+  URL.revokeObjectURL(url)
+}
 
 watch(() => props.modelValue, (val) => { visible.value = val })
 watch(visible, (val) => { emit('update:modelValue', val) })
@@ -388,4 +451,6 @@ function formatRegStatus(status: string) {
   font-size: 13px;
   color: #374151;
 }
+
+.bulk-bar { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
 </style>

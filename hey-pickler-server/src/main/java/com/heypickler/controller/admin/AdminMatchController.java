@@ -37,6 +37,12 @@ public class AdminMatchController {
         return Result.ok(matchService.listEventMatches(eventId));
     }
 
+    @GetMapping("/events/{eventId}/standings")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
+    public Result<List<List<StandingVO>>> standings(@PathVariable Long eventId) {
+        return Result.ok(matchService.standings(eventId));
+    }
+
     @PostMapping("/matches/{matchId}/reset")
     @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
     public Result<Void> reset(@PathVariable Long matchId) {

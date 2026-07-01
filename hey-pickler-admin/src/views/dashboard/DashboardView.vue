@@ -7,6 +7,41 @@
       <h1>首页</h1>
     </div>
 
+    <!-- Todo panel -->
+    <div class="todo-panel">
+      <div class="panel-head">
+        <span>待办</span>
+      </div>
+      <div
+        v-if="!todos.length"
+        class="muted"
+      >
+        暂无待办
+      </div>
+      <div
+        v-for="t in todos"
+        :key="t.id"
+        class="todo-row"
+        @click="goDetail(t.id)"
+      >
+        <el-tag
+          size="small"
+          :type="t.tagType"
+        >
+          {{ t.label }}
+        </el-tag>
+        <span class="todo-title">{{ t.title }}</span>
+        <span class="muted">{{ formatDate(t.eventTime) }}</span>
+        <el-button
+          link
+          type="primary"
+          size="small"
+        >
+          {{ t.action }}
+        </el-button>
+      </div>
+    </div>
+
     <!-- KPI -->
     <div class="kpi-row">
       <div class="kpi-card">
@@ -295,8 +330,10 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, nextTick, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getDashboardStats } from '@/api/dashboard'
+import { getEventList } from '@/api/events'
 import * as echarts from 'echarts'
 import { TERMS, TIER_NAME, TIER_COLOR } from '@/constants/terms'
 import type { DashboardStats } from '@/types'
@@ -319,10 +356,46 @@ const stats = reactive<DashboardStats>({
   recentRegistrations: [], upcomingEvents: []
 })
 
+const router = useRouter()
+const todos = ref<Array<{ id: number; title: string; eventTime: string | null; label: string; action: string; tagType: string }>>([])
+
+const fetchBy = (status: string) =>
+  getEventList({ page: 1, size: 50, status })
+    .then(r => (r.code === 0 ? (r.data?.list || []) : []))
+    .catch(() => [])
+
+const buildTodos = async () => {
+  const [draft, open, prog, done] = await Promise.all([
+    fetchBy('DRAFT'),
+    fetchBy('OPEN'),
+    fetchBy('IN_PROGRESS'),
+    fetchBy('COMPLETED')
+  ])
+  const now = Date.now()
+  const list: { id: number; title: string; eventTime: string | null; label: string; action: string; tagType: string }[] = []
+  draft.forEach((e: any) => list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '待发布', action: '去发布', tagType: 'info' }))
+  open.forEach((e: any) => {
+    const t = e.eventTime ? new Date(e.eventTime).getTime() - now : Infinity
+    if (t < 3 * 86400000) list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '即将开赛', action: '去管理', tagType: 'warning' })
+  })
+  prog.forEach((e: any) => list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '进行中', action: '去完成', tagType: 'danger' }))
+  done.slice(0, 5).forEach((e: any) => list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '已结束', action: '查看发分', tagType: 'success' }))
+  todos.value = list
+    .sort((a, b) => new Date(a.eventTime || 0).getTime() - new Date(b.eventTime || 0).getTime())
+    .slice(0, 12)
+}
+
+const goDetail = (id: number) => router.push(`/events/${id}`)
+
 const fmtDate = (d: string | null) => {
   if (!d) return '-'
   const dt = new Date(d)
   return `${(dt.getMonth() + 1).toString().padStart(2, '0')}-${dt.getDate().toString().padStart(2, '0')}`
+}
+const formatDate = (d: string | null) => {
+  if (!d) return '-'
+  const dt = new Date(d)
+  return `${dt.getFullYear()}-${(dt.getMonth() + 1).toString().padStart(2, '0')}-${dt.getDate().toString().padStart(2, '0')}`
 }
 const sType = (s: string) => ({ OPEN: 'success', IN_PROGRESS: 'warning', FULL: 'danger', DRAFT: 'info' }[s] || 'info')
 const sLabel = (s: string) => ({ OPEN: '报名中', IN_PROGRESS: '进行中', FULL: '已满', DRAFT: '草稿', COMPLETED: '已结束', CANCELLED: '已取消' }[s] || s)
@@ -402,7 +475,7 @@ const fetchStats = async () => {
 
 const onResize = () => charts.forEach(c => c.resize())
 
-onMounted(() => { fetchStats(); window.addEventListener('resize', onResize) })
+onMounted(() => { fetchStats(); buildTodos(); window.addEventListener('resize', onResize) })
 onBeforeUnmount(() => { window.removeEventListener('resize', onResize); charts.forEach(c => c.dispose()) })
 </script>
 
@@ -458,6 +531,43 @@ onBeforeUnmount(() => { window.removeEventListener('resize', onResize); charts.f
   display: flex;
   gap: 16px;
   margin-bottom: 16px;
+}
+
+/* Todo panel */
+.todo-panel {
+  background: #fff;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.todo-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+}
+
+.todo-row:last-child {
+  border-bottom: none;
+}
+
+.todo-row:hover {
+  background: #f9fafb;
+}
+
+.todo-title {
+  flex: 1;
+  font-size: 13px;
+  color: #1f2937;
+}
+
+.muted {
+  font-size: 12px;
+  color: #9ca3af;
 }
 
 .panel {

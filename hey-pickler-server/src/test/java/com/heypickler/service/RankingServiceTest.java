@@ -329,4 +329,53 @@ class RankingServiceTest {
         assertEquals("青铜", result.get(0).getTierName(),
                 "getTop5 tierName 必须由 nameFor(tier) 装配；实际 tier=" + result.get(0).getTier());
     }
+
+    @Test
+    void getRankings_ShouldFilterByKeyword() {
+        Ranking r1 = new Ranking(); r1.setUserId(1L); r1.setType("STAR");
+        r1.setTier("BRONZE"); r1.setRank(1); r1.setPoints(100); r1.setChange(0);
+        Ranking r2 = new Ranking(); r2.setUserId(2L); r2.setType("STAR");
+        r2.setTier("BRONZE"); r2.setRank(2); r2.setPoints(80); r2.setChange(0);
+
+        User user2 = new User(); user2.setId(2L); user2.setNickname("Other User");
+
+        RankingQuery query = new RankingQuery();
+        query.setType("STAR"); query.setKeyword("Test"); query.setPage(1); query.setSize(20);
+
+        org.springframework.data.redis.core.ValueOperations<String, Object> valueOps =
+            mock(org.springframework.data.redis.core.ValueOperations.class);
+        when(valueOps.get(any())).thenReturn(null);                 // 未命中缓存
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        when(rankingMapper.selectList(any())).thenReturn(Arrays.asList(r1, r2));
+        when(userMapper.selectBatchIds(anyList())).thenReturn(Arrays.asList(testUser, user2));
+
+        com.heypickler.common.result.PageResult<RankingVO> result =
+            rankingService.getRankings(query);
+
+        assertEquals(1, result.getList().size(), "keyword='Test' 应只保留 Test User");
+        assertEquals(1L, result.getList().get(0).getUserId());
+        assertEquals("Test User", result.getList().get(0).getNickname());
+    }
+
+    @Test
+    void getRankings_ShouldFilterByKeyword_OnCacheHit() {
+        // 缓存命中分支也必须过滤——否则搜索在热缓存下失效
+        RankingVO vo1 = new RankingVO(); vo1.setUserId(1L); vo1.setNickname("Test User"); vo1.setPoints(100);
+        RankingVO vo2 = new RankingVO(); vo2.setUserId(2L); vo2.setNickname("Other User"); vo2.setPoints(80);
+
+        RankingQuery query = new RankingQuery();
+        query.setType("STAR"); query.setKeyword("Test"); query.setPage(1); query.setSize(20);
+
+        org.springframework.data.redis.core.ValueOperations<String, Object> valueOps =
+            mock(org.springframework.data.redis.core.ValueOperations.class);
+        when(valueOps.get(any())).thenReturn(Arrays.asList(vo1, vo2));   // 命中缓存
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+
+        com.heypickler.common.result.PageResult<RankingVO> result =
+            rankingService.getRankings(query);
+
+        assertEquals(1, result.getList().size(), "缓存命中时也必须按 keyword 过滤");
+        assertEquals(1L, result.getList().get(0).getUserId());
+        assertEquals("Test User", result.getList().get(0).getNickname());
+    }
 }

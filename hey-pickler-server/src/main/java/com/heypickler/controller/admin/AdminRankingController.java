@@ -42,9 +42,12 @@ public class AdminRankingController {
     @GetMapping("/{type}")
     @Operation(summary = "获取排名列表")
     @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
-    public Result<PageResult<RankingVO>> getRankings(@PathVariable String type) {
+    public Result<PageResult<RankingVO>> getRankings(
+            @PathVariable String type,
+            @RequestParam(required = false) String keyword) {
         RankingQuery query = new RankingQuery();
         query.setType(type.toUpperCase());
+        query.setKeyword(keyword);
         query.setPage(1);
         query.setSize(100);
         return Result.ok(rankingService.getRankings(query));

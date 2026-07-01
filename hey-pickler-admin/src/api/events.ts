@@ -14,6 +14,9 @@ export const getEventList = (params: PageParams) => {
   return request.get<any, ApiResponse<PageResult<Event>>>('/events', { params })
 }
 
+export const getEventDetail = (id: number) =>
+  request.get<any, ApiResponse<Event>>(`/events/${id}`)
+
 export const getEventParticipants = (eventId: number) => {
   return request.get<any, ApiResponse<EventParticipant[]>>(`/events/${eventId}/participants`)
 }

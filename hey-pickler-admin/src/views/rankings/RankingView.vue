@@ -25,6 +25,15 @@
       </div>
     </div>
 
+    <el-input
+      v-model="keyword"
+      placeholder="搜索昵称"
+      clearable
+      style="width: 220px; margin-bottom: 12px"
+      @keyup.enter="onSearch"
+      @clear="onSearch"
+    />
+
     <el-tabs
       v-model="activeTab"
       @tab-change="handleTabChange"
@@ -36,7 +45,7 @@
         <div class="card">
           <el-table
             v-loading="loading"
-            :data="starRankings"
+            :data="list"
             style="width: 100%"
           >
             <el-table-column
@@ -92,6 +101,13 @@
               </template>
             </el-table-column>
           </el-table>
+          <Pagination
+            v-model:page="page"
+            v-model:size="size"
+            :total="total"
+            @update:page="fetchOne"
+            @update:size="fetchOne"
+          />
         </div>
       </el-tab-pane>
 
@@ -102,7 +118,7 @@
         <div class="card">
           <el-table
             v-loading="loading"
-            :data="partyRankings"
+            :data="list"
             style="width: 100%"
           >
             <el-table-column
@@ -158,60 +174,74 @@
               </template>
             </el-table-column>
           </el-table>
+          <Pagination
+            v-model:page="page"
+            v-model:size="size"
+            :total="total"
+            @update:page="fetchOne"
+            @update:size="fetchOne"
+          />
         </div>
       </el-tab-pane>
     </el-tabs>
 
     <PointEntryDialog
       v-model="pointDialogVisible"
-      @success="fetchRankings"
+      @success="fetchOne"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getRankings, refreshRankings } from '@/api/rankings'
 import { getTierColor } from '@/utils'
 import { TERMS, formatTierName } from '@/constants/terms'
+import Pagination from '@/components/common/Pagination.vue'
 import PointEntryDialog from './PointEntryDialog.vue'
 import type { RankingEntry } from '@/types'
 
 const loading = ref(false)
-const activeTab = ref('STAR')
-const starRankings = ref<RankingEntry[]>([])
-const partyRankings = ref<RankingEntry[]>([])
+const activeTab = ref<'STAR' | 'PARTY'>('STAR')
+const list = ref<RankingEntry[]>([])
+const keyword = ref('')
+const page = ref(1)
+const size = ref(20)
+const total = ref(0)
 const pointDialogVisible = ref(false)
 
-const fetchRankings = async () => {
+const fetchOne = async () => {
   loading.value = true
   try {
-    const [starRes, partyRes] = await Promise.all([
-      getRankings({ type: 'STAR', page: 1, size: 100 }),
-      getRankings({ type: 'PARTY', page: 1, size: 100 })
-    ])
-
-    if (starRes.code === 0) {
-      starRankings.value = starRes.data.list || []
+    const res = await getRankings({
+      type: activeTab.value,
+      page: page.value,
+      size: size.value,
+      keyword: keyword.value || undefined
+    })
+    if (res.code === 0) {
+      list.value = res.data.list || []
+      total.value = res.data.total || 0
     } else {
-      ElMessage.error(starRes.message || `获取${TERMS.STAR.ranking}失败`)
-    }
-
-    if (partyRes.code === 0) {
-      partyRankings.value = partyRes.data.list || []
-    } else {
-      ElMessage.error(partyRes.message || `获取${TERMS.PARTY.ranking}失败`)
+      ElMessage.error(res.message || `获取${TERMS[activeTab.value].ranking}失败`)
     }
   } catch {
-    
+
   } finally {
     loading.value = false
   }
 }
 
-const handleTabChange = (tabName: string) => {
-  activeTab.value = tabName
+const onSearch = () => {
+  page.value = 1
+  fetchOne()
+}
+
+watch(activeTab, onSearch)
+
+const handleTabChange = (tabName: string | number) => {
+  activeTab.value = tabName as 'STAR' | 'PARTY'
 }
 
 const handleEnterPoints = () => {
@@ -223,17 +253,17 @@ const handleRefresh = async (type: 'STAR' | 'PARTY') => {
     const res = await refreshRankings(type)
     if (res.code === 0) {
       ElMessage.success(`${TERMS[type].ranking}刷新成功`)
-      fetchRankings()
+      fetchOne()
     } else {
       ElMessage.error(res.message || '刷新排名失败')
     }
   } catch {
-    
+
   }
 }
 
 onMounted(() => {
-  fetchRankings()
+  fetchOne()
 })
 </script>
 

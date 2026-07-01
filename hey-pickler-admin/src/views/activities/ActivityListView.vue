@@ -12,14 +12,12 @@
     </div>
     <div class="card">
       <div class="filter-bar">
-        <el-input
-          v-model="filterKeyword"
-          placeholder="搜索活动标题"
-          clearable
-          style="width: 200px"
-          :prefix-icon="Search"
-          @keyup.enter="handleFilter"
-          @clear="handleFilter"
+        <EventFilterBar
+          :keyword="filterKeyword"
+          :type="filterType"
+          :status="filterStatus"
+          @filter="onFilter"
+          @reset="onReset"
         />
         <el-input
           v-model="filterLocation"
@@ -39,47 +37,6 @@
           style="width: 260px"
           @change="handleFilter"
         />
-        <el-select
-          v-model="filterStatus"
-          placeholder="按状态筛选"
-          clearable
-          style="width: 150px"
-          @change="handleFilter"
-        >
-          <el-option
-            label="草稿"
-            value="DRAFT"
-          />
-          <el-option
-            label="报名中"
-            value="OPEN"
-          />
-          <el-option
-            label="名额已满"
-            value="FULL"
-          />
-          <el-option
-            label="进行中"
-            value="IN_PROGRESS"
-          />
-          <el-option
-            label="已结束"
-            value="COMPLETED"
-          />
-          <el-option
-            label="已取消"
-            value="CANCELLED"
-          />
-        </el-select>
-        <el-button
-          type="primary"
-          @click="handleFilter"
-        >
-          查询
-        </el-button>
-        <el-button @click="handleReset">
-          重置
-        </el-button>
       </div>
 
       <el-table
@@ -97,7 +54,16 @@
           label="标题"
           min-width="200"
           show-overflow-tooltip
-        />
+        >
+          <template #default="{ row }">
+            <router-link
+              :to="`/events/${row.id}`"
+              class="title-link"
+            >
+              {{ row.title }}
+            </router-link>
+          </template>
+        </el-table-column>
         <el-table-column
           prop="location"
           label="地点"
@@ -126,51 +92,32 @@
           width="70"
         />
         <el-table-column
-          prop="currentParticipants"
           label="已报名"
-          width="70"
-        />
+          width="140"
+        >
+          <template #default="{ row }">
+            <div class="registration-progress">
+              <span class="progress-text">
+                {{ row.currentParticipants ?? 0 }} / {{ row.maxParticipants ?? '∞' }}
+              </span>
+              <el-progress
+                :percentage="row.maxParticipants ? Math.round((row.currentParticipants ?? 0) / row.maxParticipants * 100) : 0"
+                :stroke-width="6"
+                :show-text="false"
+                :color="(row.currentParticipants ?? 0) >= (row.maxParticipants ?? Infinity) ? '#F59E0B' : '#10B981'"
+              />
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column
           label="状态"
           width="130"
         >
           <template #default="{ row }">
-            <el-popover
-              placement="bottom"
-              :width="160"
-              trigger="click"
-              :visible="row._statusPopoverVisible"
-              @update:visible="(val: boolean) => row._statusPopoverVisible = val"
-            >
-              <template #reference>
-                <span
-                  class="status-badge clickable"
-                  :style="{ backgroundColor: getEventStatusColor(row.status) }"
-                >
-                  {{ formatEventStatus(row.status) }} ▾
-                </span>
-              </template>
-              <div class="status-options">
-                <div
-                  v-for="target in getAllowedStatusTransitions(row.status)"
-                  :key="target.value"
-                  class="status-option"
-                  @click="handleChangeStatus(row, target.value)"
-                >
-                  <span
-                    class="status-dot"
-                    :style="{ backgroundColor: getEventStatusColor(target.value) }"
-                  />
-                  {{ target.label }}
-                </div>
-                <div
-                  v-if="getAllowedStatusTransitions(row.status).length === 0"
-                  class="status-option disabled"
-                >
-                  无可用转换
-                </div>
-              </div>
-            </el-popover>
+            <EventStatusBadge
+              :status="row.status"
+              @change="(t) => handleChangeStatus(row, t)"
+            />
           </template>
         </el-table-column>
         <el-table-column
@@ -238,19 +185,22 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search } from '@element-plus/icons-vue'
 import { getEventList, deleteEvent, changeEventStatus } from '@/api/events'
-import { formatDate, formatEventStatus, getEventStatusColor } from '@/utils'
+import { formatDate } from '@/utils'
+import { type EventStatus } from '@/constants/eventStatus'
 import Pagination from '@/components/common/Pagination.vue'
+import EventStatusBadge from '@/components/common/EventStatusBadge.vue'
+import EventFilterBar from '@/components/common/EventFilterBar.vue'
 import ActivityFormDialog from './ActivityFormDialog.vue'
 import RegistrationDrawer from '../events/RegistrationDrawer.vue'
 import type { Event } from '@/types'
 
 const loading = ref(false)
 const filterKeyword = ref('')
+const filterType = ref('PARTY')
+const filterStatus = ref('')
 const filterLocation = ref('')
 const filterDateRange = ref<string[]>([])
-const filterStatus = ref('')
 const activityList = ref<Event[]>([])
 
 const pagination = reactive({
@@ -296,13 +246,21 @@ const handleFilter = () => {
   fetchActivities()
 }
 
-const handleReset = () => {
+const onFilter = (payload: { keyword: string; type: string; status: string }) => {
+  filterKeyword.value = payload.keyword
+  filterType.value = payload.type || 'PARTY'
+  filterStatus.value = payload.status
+  handleFilter()
+}
+
+const onReset = () => {
   filterKeyword.value = ''
+  filterType.value = 'PARTY'
+  filterStatus.value = ''
   filterLocation.value = ''
   filterDateRange.value = []
-  filterStatus.value = ''
   pagination.page = 1
-  fetchActivities()
+  handleFilter()
 }
 
 const handleCreate = () => {
@@ -341,34 +299,17 @@ const handleDelete = async (activity: Event) => {
   }
 }
 
-const STATUS_TRANSITIONS: Record<string, { value: string; label: string }[]> = {
-  DRAFT: [{ value: 'OPEN', label: '报名中' }],
-  OPEN: [{ value: 'CANCELLED', label: '已取消' }],
-  FULL: [{ value: 'CANCELLED', label: '已取消' }],
-  IN_PROGRESS: [
-    { value: 'COMPLETED', label: '已结束' },
-    { value: 'CANCELLED', label: '已取消' }
-  ],
-  COMPLETED: [],
-  CANCELLED: []
-}
-
-const getAllowedStatusTransitions = (status: string) => {
-  return STATUS_TRANSITIONS[status] || []
-}
-
-const handleChangeStatus = async (activity: Event, targetStatus: string) => {
+const handleChangeStatus = async (activity: Event, targetStatus: EventStatus) => {
   try {
     const res = await changeEventStatus(activity.id, targetStatus)
     if (res.code === 0) {
       ElMessage.success('状态变更成功')
-      activity._statusPopoverVisible = false
       fetchActivities()
     } else {
       ElMessage.error(res.message || '状态变更失败')
     }
   } catch {
-    
+
   }
 }
 
@@ -387,41 +328,27 @@ onMounted(() => {
 .filter-bar {
   display: flex;
   gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
-.status-badge.clickable {
-  cursor: pointer;
+.title-link {
+  color: #409eff;
+  text-decoration: none;
 }
 
-.status-options {
+.title-link:hover {
+  text-decoration: underline;
+}
+
+.registration-progress {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.status-option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.status-option:hover {
-  background-color: #f5f7fa;
-}
-
-.status-option.disabled {
-  color: #c0c4cc;
-  cursor: default;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
+.progress-text {
+  font-size: 12px;
+  color: #606266;
 }
 </style>
