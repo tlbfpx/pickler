@@ -91,22 +91,22 @@ class GroupingIntegrationTest extends IntegrationTestConfig {
 
     @Test
     void doublesTeamFlow_serpentineLockUnlock() {
-        for (long id : new long[]{8001L, 8002L, 8003L, 8004L}) {
+        for (long id : new long[]{8201L, 8202L, 8203L, 8204L}) {
             seedUser(id, 0);
         }
         Long eventId = createEvent("Grouping Doubles IT", "DOUBLES", "OPEN");
         try {
-            // Team 1: 8001 (captain) invites 8002, partner confirms.
-            assertEquals(0, register(eventId, 8001L, body("DOUBLES", 8002L, null)));
-            Long team1 = myTeamId(eventId, 8001L);
+            // Team 1: 8201 (captain) invites 8202, partner confirms.
+            assertEquals(0, register(eventId, 8201L, body("DOUBLES", 8202L, null)));
+            Long team1 = myTeamId(eventId, 8201L);
             assertNotNull(team1, "captain should have a PENDING team");
-            assertEquals(0, register(eventId, 8002L, body("DOUBLES", null, team1)));
+            assertEquals(0, register(eventId, 8202L, body("DOUBLES", null, team1)));
 
-            // Team 2: 8003 invites 8004, partner confirms.
-            assertEquals(0, register(eventId, 8003L, body("DOUBLES", 8004L, null)));
-            Long team2 = myTeamId(eventId, 8003L);
+            // Team 2: 8203 invites 8204, partner confirms.
+            assertEquals(0, register(eventId, 8203L, body("DOUBLES", 8204L, null)));
+            Long team2 = myTeamId(eventId, 8203L);
             assertNotNull(team2);
-            assertEquals(0, register(eventId, 8004L, body("DOUBLES", null, team2)));
+            assertEquals(0, register(eventId, 8204L, body("DOUBLES", null, team2)));
 
             // Group the two confirmed teams into 2 groups.
             List<Map<String, Object>> groups = group(eventId, "SERPENTINE", 2);
@@ -142,19 +142,19 @@ class GroupingIntegrationTest extends IntegrationTestConfig {
 
     @Test
     void singlesFlow_groupsByUserIdIgnoringPartner() {
-        seedUser(8001L, 0);
-        seedUser(8002L, 0);
+        seedUser(8201L, 0);
+        seedUser(8202L, 0);
         Long eventId = createEvent("Grouping Singles IT", "SINGLES", "OPEN");
         try {
-            assertEquals(0, register(eventId, 8001L, Map.of("matchType", "SINGLES")));
-            assertEquals(0, register(eventId, 8002L, Map.of("matchType", "SINGLES")));
+            assertEquals(0, register(eventId, 8201L, Map.of("matchType", "SINGLES")));
+            assertEquals(0, register(eventId, 8202L, Map.of("matchType", "SINGLES")));
 
             List<Map<String, Object>> groups = group(eventId, "SERPENTINE", 2);
             assertEquals(2, groups.size());
             // assignments key on userId, never teamId
             assertTrue(allAssignments(groups).stream().allMatch(a -> a.get("teamId") == null));
-            assertTrue(allAssignments(groups).stream().anyMatch(a -> userIdOf(a) == 8001L));
-            assertTrue(allAssignments(groups).stream().anyMatch(a -> userIdOf(a) == 8002L));
+            assertTrue(allAssignments(groups).stream().anyMatch(a -> userIdOf(a) == 8201L));
+            assertTrue(allAssignments(groups).stream().anyMatch(a -> userIdOf(a) == 8202L));
         } finally {
             cleanup(eventId);
         }

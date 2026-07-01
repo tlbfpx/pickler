@@ -112,13 +112,13 @@ class PlacementIntegrationTest extends IntegrationTestConfig {
 
     @Test
     void singlesLifecycle_adminConfiguresPoints_completionWritesPlacementRecords() {
-        for (long id : new long[]{8001L, 8002L, 8003L}) seedUser(id, 0);
+        for (long id : new long[]{8301L, 8302L, 8303L}) seedUser(id, 0);
 
         Long eventId = createEvent("Placement Singles IT");
         try {
-            assertEquals(0, register(eventId, 8001L));
-            assertEquals(0, register(eventId, 8002L));
-            assertEquals(0, register(eventId, 8003L));
+            assertEquals(0, register(eventId, 8301L));
+            assertEquals(0, register(eventId, 8302L));
+            assertEquals(0, register(eventId, 8303L));
 
             // Lock + 1 group via direct SQL.
             jdbcTemplate.update("UPDATE event SET grouping_locked = 1 WHERE id = ?", eventId);
@@ -129,13 +129,13 @@ class PlacementIntegrationTest extends IntegrationTestConfig {
                     Long.class, eventId);
             jdbcTemplate.update(
                     "INSERT INTO group_assignment (group_id, event_id, user_id, seed) VALUES (?, ?, ?, ?)",
-                    groupId, eventId, 8001L, 1);
+                    groupId, eventId, 8301L, 1);
             jdbcTemplate.update(
                     "INSERT INTO group_assignment (group_id, event_id, user_id, seed) VALUES (?, ?, ?, ?)",
-                    groupId, eventId, 8002L, 2);
+                    groupId, eventId, 8302L, 2);
             jdbcTemplate.update(
                     "INSERT INTO group_assignment (group_id, event_id, user_id, seed) VALUES (?, ?, ?, ?)",
-                    groupId, eventId, 8003L, 3);
+                    groupId, eventId, 8303L, 3);
 
             // Configure placement points: 1st=100, 2nd=60, 3rd=30
             Map<String, Integer> table = new HashMap<>();
@@ -164,14 +164,14 @@ class PlacementIntegrationTest extends IntegrationTestConfig {
             // Find each match by its slot pair (RoundRobin output order is not
             // guaranteed to match registration order). The submitter must be a
             // participant in the match, otherwise submitScore returns 403.
-            Long match8001v8002 = findMatchId(matches, 8001L, 8002L);
-            Long match8001v8003 = findMatchId(matches, 8001L, 8003L);
-            Long match8002v8003 = findMatchId(matches, 8002L, 8003L);
+            Long match8301v8302 = findMatchId(matches, 8301L, 8302L);
+            Long match8301v8303 = findMatchId(matches, 8301L, 8303L);
+            Long match8302v8303 = findMatchId(matches, 8302L, 8303L);
 
-            // 8001 beats 8002 (2-0), 8001 beats 8003 (2-1), 8002 beats 8003 (2-0).
-            assertEquals(0, submitScore(match8001v8002, 8001L, twoZero));
-            assertEquals(0, submitScore(match8001v8003, 8001L, twoOne));
-            assertEquals(0, submitScore(match8002v8003, 8002L, twoZero));
+            // 8301 beats 8302 (2-0), 8301 beats 8303 (2-1), 8302 beats 8303 (2-0).
+            assertEquals(0, submitScore(match8301v8302, 8301L, twoZero));
+            assertEquals(0, submitScore(match8301v8303, 8301L, twoOne));
+            assertEquals(0, submitScore(match8302v8303, 8302L, twoZero));
 
             // Complete — should trigger placement issuance
             assertEquals(0, complete(eventId));
@@ -179,14 +179,14 @@ class PlacementIntegrationTest extends IntegrationTestConfig {
             List<Map<String, Object>> rows = placementRowsFor(eventId);
             assertEquals(3, rows.size());
 
-            // 8001 has 2 wins (rank 1) -> 100 pts
-            assertEquals(8001L, ((Number) rows.get(0).get("user_id")).longValue());
+            // 8301 has 2 wins (rank 1) -> 100 pts
+            assertEquals(8301L, ((Number) rows.get(0).get("user_id")).longValue());
             assertEquals(100, rows.get(0).get("points"));
-            // 8002 has 1 win (rank 2) -> 60 pts
-            assertEquals(8002L, ((Number) rows.get(1).get("user_id")).longValue());
+            // 8302 has 1 win (rank 2) -> 60 pts
+            assertEquals(8302L, ((Number) rows.get(1).get("user_id")).longValue());
             assertEquals(60, rows.get(1).get("points"));
-            // 8003 has 0 wins (rank 3) -> 30 pts
-            assertEquals(8003L, ((Number) rows.get(2).get("user_id")).longValue());
+            // 8303 has 0 wins (rank 3) -> 30 pts
+            assertEquals(8303L, ((Number) rows.get(2).get("user_id")).longValue());
             assertEquals(30, rows.get(2).get("points"));
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -199,11 +199,11 @@ class PlacementIntegrationTest extends IntegrationTestConfig {
     void defaultPlacementPoints_applyWhenNoOverride() {
         // Don't set per-event override -> falls back to application.yml
         // hey-pickler.placement.defaultPoints (1:100, 2:60, 3:30, 4:15).
-        for (long id : new long[]{8001L, 8002L}) seedUser(id, 0);
+        for (long id : new long[]{8301L, 8302L}) seedUser(id, 0);
         Long eventId = createEvent("Default Placement IT");
         try {
-            assertEquals(0, register(eventId, 8001L));
-            assertEquals(0, register(eventId, 8002L));
+            assertEquals(0, register(eventId, 8301L));
+            assertEquals(0, register(eventId, 8302L));
             jdbcTemplate.update("UPDATE event SET grouping_locked = 1 WHERE id = ?", eventId);
             jdbcTemplate.update(
                     "INSERT INTO match_group (event_id, group_index, name) VALUES (?, 0, 'A')", eventId);
@@ -212,10 +212,10 @@ class PlacementIntegrationTest extends IntegrationTestConfig {
                     Long.class, eventId);
             jdbcTemplate.update(
                     "INSERT INTO group_assignment (group_id, event_id, user_id, seed) VALUES (?, ?, ?, ?)",
-                    groupId, eventId, 8001L, 1);
+                    groupId, eventId, 8301L, 1);
             jdbcTemplate.update(
                     "INSERT INTO group_assignment (group_id, event_id, user_id, seed) VALUES (?, ?, ?, ?)",
-                    groupId, eventId, 8002L, 2);
+                    groupId, eventId, 8302L, 2);
 
             assertEquals(0, generateMatches(eventId));
             Long matchId = jdbcTemplate.queryForObject(
@@ -225,14 +225,14 @@ class PlacementIntegrationTest extends IntegrationTestConfig {
             twoZero.put("games", List.of(
                     Map.of("game", 1, "a", 21, "b", 15),
                     Map.of("game", 2, "a", 21, "b", 18)));
-            assertEquals(0, submitScore(matchId, 8001L, twoZero));
+            assertEquals(0, submitScore(matchId, 8301L, twoZero));
             assertEquals(0, complete(eventId));
 
             List<Map<String, Object>> rows = placementRowsFor(eventId);
             assertEquals(2, rows.size());
-            assertEquals(8001L, ((Number) rows.get(0).get("user_id")).longValue());
+            assertEquals(8301L, ((Number) rows.get(0).get("user_id")).longValue());
             assertEquals(100, rows.get(0).get("points"));
-            assertEquals(8002L, ((Number) rows.get(1).get("user_id")).longValue());
+            assertEquals(8302L, ((Number) rows.get(1).get("user_id")).longValue());
             assertEquals(60, rows.get(1).get("points"));
         } finally {
             cleanup(eventId);
