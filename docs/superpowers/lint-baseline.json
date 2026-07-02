@@ -1,0 +1,548 @@
+[
+  {
+    "file": "hey-pickler-admin/env.d.ts",
+    "line": 5,
+    "col": 36,
+    "rule": "@typescript-eslint/ban-types",
+    "message": "Don't use `{}` as a type. `{}` actually means \"any non-nullish value\". - If you want a type meaning \"any object\", you probably want `object` instead. - If you w"
+  },
+  {
+    "file": "hey-pickler-admin/env.d.ts",
+    "line": 5,
+    "col": 40,
+    "rule": "@typescript-eslint/ban-types",
+    "message": "Don't use `{}` as a type. `{}` actually means \"any non-nullish value\". - If you want a type meaning \"any object\", you probably want `object` instead. - If you w"
+  },
+  {
+    "file": "hey-pickler-admin/env.d.ts",
+    "line": 5,
+    "col": 44,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/scripts/check-lint-baseline.mjs",
+    "line": 27,
+    "col": 38,
+    "rule": "@typescript-eslint/no-unused-vars",
+    "message": "'join' is defined but never used."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/admins.ts",
+    "line": 5,
+    "col": 22,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/admins.ts",
+    "line": 9,
+    "col": 23,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/admins.ts",
+    "line": 13,
+    "col": 22,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/admins.ts",
+    "line": 17,
+    "col": 25,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/auth.ts",
+    "line": 5,
+    "col": 23,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/ban-records.ts",
+    "line": 5,
+    "col": 22,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/ban-records.ts",
+    "line": 9,
+    "col": 25,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/banners.ts",
+    "line": 5,
+    "col": 22,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/banners.ts",
+    "line": 9,
+    "col": 23,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/banners.ts",
+    "line": 13,
+    "col": 22,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/banners.ts",
+    "line": 17,
+    "col": 25,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/dashboard.ts",
+    "line": 5,
+    "col": 22,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/events.ts",
+    "line": 14,
+    "col": 22,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/events.ts",
+    "line": 18,
+    "col": 15,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/events.ts",
+    "line": 21,
+    "col": 22,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/events.ts",
+    "line": 25,
+    "col": 23,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/events.ts",
+    "line": 29,
+    "col": 22,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/events.ts",
+    "line": 33,
+    "col": 25,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/events.ts",
+    "line": 37,
+    "col": 24,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/events.ts",
+    "line": 41,
+    "col": 22,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/events.ts",
+    "line": 47,
+    "col": 24,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/files.ts",
+    "line": 7,
+    "col": 23,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/grouping.ts",
+    "line": 23,
+    "col": 23,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/grouping.ts",
+    "line": 30,
+    "col": 22,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/grouping.ts",
+    "line": 34,
+    "col": 22,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/grouping.ts",
+    "line": 41,
+    "col": 23,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/grouping.ts",
+    "line": 45,
+    "col": 23,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/matches.ts",
+    "line": 5,
+    "col": 16,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/matches.ts",
+    "line": 8,
+    "col": 15,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/matches.ts",
+    "line": 11,
+    "col": 15,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/matches.ts",
+    "line": 14,
+    "col": 16,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/matches.ts",
+    "line": 17,
+    "col": 16,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/matches.ts",
+    "line": 20,
+    "col": 16,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/placement.ts",
+    "line": 5,
+    "col": 22,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/placement.ts",
+    "line": 11,
+    "col": 22,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/placement.ts",
+    "line": 18,
+    "col": 25,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/rankings.ts",
+    "line": 13,
+    "col": 22,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/rankings.ts",
+    "line": 19,
+    "col": 23,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/rankings.ts",
+    "line": 23,
+    "col": 23,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/seasons.ts",
+    "line": 6,
+    "col": 22,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/seasons.ts",
+    "line": 17,
+    "col": 23,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/seasons.ts",
+    "line": 22,
+    "col": 23,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/seasons.ts",
+    "line": 30,
+    "col": 22,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/users.ts",
+    "line": 44,
+    "col": 22,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/users.ts",
+    "line": 48,
+    "col": 22,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/users.ts",
+    "line": 52,
+    "col": 22,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/users.ts",
+    "line": 56,
+    "col": 22,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/users.ts",
+    "line": 60,
+    "col": 23,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/api/users.ts",
+    "line": 64,
+    "col": 23,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/components/common/ImageUpload.vue",
+    "line": 71,
+    "col": 60,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/components/layout/AppSidebar.vue",
+    "line": 43,
+    "col": 31,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/components/layout/AppSidebar.vue",
+    "line": 43,
+    "col": 49,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/components/layout/AppSidebar.vue",
+    "line": 47,
+    "col": 52,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/components/layout/AppSidebar.vue",
+    "line": 48,
+    "col": 15,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/components/layout/AppSidebar.vue",
+    "line": 49,
+    "col": 12,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/views/activities/ActivityFormDialog.vue",
+    "line": 206,
+    "col": 36,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/views/activities/ActivityFormDialog.vue",
+    "line": 213,
+    "col": 34,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/views/activities/ActivityListView.vue",
+    "line": 295,
+    "col": 19,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/views/admins/AdminFormDialog.vue",
+    "line": 111,
+    "col": 25,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/views/admins/AdminFormDialog.vue",
+    "line": 111,
+    "col": 55,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/views/banners/BannerListView.vue",
+    "line": 143,
+    "col": 19,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/views/dashboard/DashboardView.vue",
+    "line": 376,
+    "col": 21,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/views/dashboard/DashboardView.vue",
+    "line": 377,
+    "col": 20,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/views/dashboard/DashboardView.vue",
+    "line": 381,
+    "col": 20,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/views/dashboard/DashboardView.vue",
+    "line": 382,
+    "col": 32,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/views/events/EventListView.vue",
+    "line": 335,
+    "col": 19,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/views/events/MatchesPanel.vue",
+    "line": 227,
+    "col": 98,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/views/events/RegistrationDrawer.vue",
+    "line": 296,
+    "col": 84,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/views/events/RegistrationDrawer.vue",
+    "line": 329,
+    "col": 10,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/views/events/RegistrationDrawerEmbed.vue",
+    "line": 231,
+    "col": 84,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/src/views/events/RegistrationDrawerEmbed.vue",
+    "line": 253,
+    "col": 10,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/tests/e2e/event-full-flow.spec.ts",
+    "line": 10,
+    "col": 15,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/tests/e2e/event-full-flow.spec.ts",
+    "line": 149,
+    "col": 19,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  },
+  {
+    "file": "hey-pickler-admin/tests/e2e/event-full-flow.spec.ts",
+    "line": 204,
+    "col": 19,
+    "rule": "@typescript-eslint/no-explicit-any",
+    "message": "Unexpected any. Specify a different type."
+  }
+]

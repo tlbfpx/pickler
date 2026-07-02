@@ -89,13 +89,19 @@ jobs:
         working-directory: hey-pickler-admin
         run: npm ci
 
-      # NOTE: lint:check currently surfaces ~72 pre-existing errors
-      # (no-explicit-any / no-empty / no-unused-vars) tracked as separate
-      # tech-debt cleanup. continue-on-error keeps CI green while making the
-      # debt visible in run logs. Remove continue-on-error once cleaned up.
+      # NOTE: lint:check currently surfaces ~78 pre-existing warnings
+      # (no-explicit-any / ban-types) tracked in docs/superpowers/lint-baseline.json
+      # as tech-debt. continue-on-error keeps CI green while making the debt
+      # visible in run logs. The strict regression check below enforces the
+      # "no new warnings" discipline.
       - name: Lint (no autofix)
         working-directory: hey-pickler-admin
         run: npm run lint:check
+        continue-on-error: true
+
+      - name: Lint baseline regression check (no new warnings)
+        working-directory: hey-pickler-admin
+        run: npm run lint:baseline:check
 
       - name: Build
         working-directory: hey-pickler-admin
