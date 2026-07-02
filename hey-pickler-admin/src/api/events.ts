@@ -1,5 +1,5 @@
 import request from './request'
-import type { Event, CreateEventRequest, UpdateEventRequest, Registration, ApiResponse, PageParams } from '@/types'
+import type { Event, CreateEventRequest, UpdateEventRequest, Registration, ApiResponse, PageParams, PageResult } from '@/types'
 
 export interface EventParticipant {
   userId: number
@@ -11,40 +11,40 @@ export interface EventParticipant {
 }
 
 export const getEventList = (params: PageParams) => {
-  return request.get<any, ApiResponse<PageResult<Event>>>('/events', { params })
+  return request.get<unknown, ApiResponse<PageResult<Event>>>('/events', { params })
 }
 
 export const getEventDetail = (id: number) =>
-  request.get<any, ApiResponse<Event>>(`/events/${id}`)
+  request.get<unknown, ApiResponse<Event>>(`/events/${id}`)
 
 export const getEventParticipants = (eventId: number) => {
-  return request.get<any, ApiResponse<EventParticipant[]>>(`/events/${eventId}/participants`)
+  return request.get<unknown, ApiResponse<EventParticipant[]>>(`/events/${eventId}/participants`)
 }
 
 export const createEvent = (data: CreateEventRequest) => {
-  return request.post<any, ApiResponse<void>>('/events', data)
+  return request.post<unknown, ApiResponse<void>>('/events', data)
 }
 
 export const updateEvent = (id: number, data: UpdateEventRequest) => {
-  return request.put<any, ApiResponse<void>>(`/events/${id}`, data)
+  return request.put<unknown, ApiResponse<void>>(`/events/${id}`, data)
 }
 
 export const deleteEvent = (id: number) => {
-  return request.delete<any, ApiResponse<void>>(`/events/${id}`)
+  return request.delete<unknown, ApiResponse<void>>(`/events/${id}`)
 }
 
 export const changeEventStatus = (id: number, status: string) => {
-  return request.patch<any, ApiResponse<void>>(`/events/${id}/status`, { status })
+  return request.patch<unknown, ApiResponse<void>>(`/events/${id}/status`, { status })
 }
 
 export const getEventRegistrations = (eventId: number, params: PageParams) => {
-  return request.get<any, ApiResponse<import('@/types').PageResult<Registration>>>(
+  return request.get<unknown, ApiResponse<PageResult<Registration>>>(
     `/events/${eventId}/registrations`, { params }
   )
 }
 
 export const updateRegistrationStatus = (eventId: number, registrationId: number, status: string) => {
-  return request.patch<any, ApiResponse<void>>(
+  return request.patch<unknown, ApiResponse<void>>(
     `/events/${eventId}/registrations/${registrationId}/status`, { status }
   )
 }

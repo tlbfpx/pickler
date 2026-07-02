@@ -20,27 +20,27 @@ export interface Group {
 export type GroupingStrategy = 'RANDOM' | 'SERPENTINE' | 'MANUAL'
 
 export const groupEvent = (eventId: number, strategy: GroupingStrategy, groupCount: number) => {
-  return request.post<any, ApiResponse<Group[]>>(`/events/${eventId}/grouping`, {
+  return request.post<unknown, ApiResponse<Group[]>>(`/events/${eventId}/grouping`, {
     strategy,
     groupCount
   })
 }
 
 export const getGroups = (eventId: number) => {
-  return request.get<any, ApiResponse<Group[]>>(`/events/${eventId}/grouping`)
+  return request.get<unknown, ApiResponse<Group[]>>(`/events/${eventId}/grouping`)
 }
 
 export const reassignParticipant = (eventId: number, assignmentId: number, targetGroupId: number) => {
-  return request.put<any, ApiResponse<void>>(
+  return request.put<unknown, ApiResponse<void>>(
     `/events/${eventId}/grouping/assignments/${assignmentId}`,
     { targetGroupId }
   )
 }
 
 export const lockGroups = (eventId: number) => {
-  return request.post<any, ApiResponse<void>>(`/events/${eventId}/grouping/lock`)
+  return request.post<unknown, ApiResponse<void>>(`/events/${eventId}/grouping/lock`)
 }
 
 export const unlockGroups = (eventId: number) => {
-  return request.post<any, ApiResponse<void>>(`/events/${eventId}/grouping/unlock`)
+  return request.post<unknown, ApiResponse<void>>(`/events/${eventId}/grouping/unlock`)
 }
