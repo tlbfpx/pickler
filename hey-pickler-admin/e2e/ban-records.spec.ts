@@ -1,17 +1,25 @@
 import { test, expect } from './fixtures/admin.fixture'
+import type { Page } from '@playwright/test'
 
-test.describe('操作日志', () => {
-  test('操作日志列表展示', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: '操作日志' }).click()
-    await adminPage.waitForTimeout(2000)
+// 适配 PR #20：封禁记录在折叠的「系统」子菜单下；h1 仍是「用户日志」（视图未迁）
+async function gotoBanRecords(adminPage: Page) {
+  const group = adminPage.locator('.el-sub-menu__title').filter({ hasText: '系统' }).first()
+  if (await group.isVisible()) {
+    await group.click()
+  }
+  await adminPage.locator('.el-menu-item').filter({ hasText: '封禁记录' }).click()
+  await adminPage.waitForURL(/\/ban-records$/)
+  await expect(adminPage.locator('h1')).toContainText('用户日志')
+}
 
-    await expect(adminPage.locator('h1')).toContainText('操作日志')
+test.describe('封禁记录', () => {
+  test('封禁记录列表展示', async ({ adminPage }) => {
+    await gotoBanRecords(adminPage)
     await expect(adminPage.locator('.el-table')).toBeVisible()
   })
 
   test('按操作类型筛选', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: '操作日志' }).click()
-    await adminPage.waitForTimeout(2000)
+    await gotoBanRecords(adminPage)
 
     // 找到操作类型筛选下拉框
     const actionSelect = adminPage.locator('.filter-bar .el-select').first()
@@ -29,8 +37,7 @@ test.describe('操作日志', () => {
   })
 
   test('分页切换', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: '操作日志' }).click()
-    await adminPage.waitForTimeout(2000)
+    await gotoBanRecords(adminPage)
 
     // 验证分页总数显示
     const pagination = adminPage.locator('.pagination-container')
@@ -47,8 +54,7 @@ test.describe('操作日志', () => {
   })
 
   test('手机号脱敏显示', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: '操作日志' }).click()
-    await adminPage.waitForTimeout(2000)
+    await gotoBanRecords(adminPage)
 
     // 检查表格中用户列是否包含脱敏手机号（格式: 138****5678）
     const userCells = adminPage.locator('.el-table__body-wrapper .user-sub')

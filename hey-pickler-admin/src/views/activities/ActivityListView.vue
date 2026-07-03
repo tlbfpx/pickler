@@ -292,7 +292,7 @@ const handleDelete = async (activity: Event) => {
     } else {
       ElMessage.error(res.message || '删除活动失败')
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error !== 'cancel') {
       // ignore
     }

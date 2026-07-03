@@ -52,8 +52,8 @@ test.describe('登录认证', () => {
 
     // Click user dropdown to open it
     await page.locator('.user-info').click()
-    // Wait for dropdown to appear and click Logout
-    await page.locator('.el-dropdown-menu__item').filter({ hasText: 'Logout' }).click()
+    // Wait for dropdown to appear and click 退出登录
+    await page.locator('.el-dropdown-menu__item').filter({ hasText: '退出登录' }).click()
 
     // Confirm — ElMessageBox uses Chinese locale "确定" button
     const confirmBtn = page.locator('.el-message-box__btns').getByRole('button', { name: '确定' })

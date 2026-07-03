@@ -1,15 +1,23 @@
 import { test, expect } from './fixtures/admin.fixture'
+import type { Page } from '@playwright/test'
+
+// 进入竞技赛事菜单：菜单改名为「竞技赛事」；页面 h1/dialog 仍是「赛事管理」（PR #20 没改视图文案）
+async function gotoEvents(adminPage: Page) {
+  await adminPage.locator('.el-menu-item').filter({ hasText: '竞技赛事' }).click()
+  await adminPage.waitForURL(/\/events$/)
+  await expect(adminPage.locator('h1')).toContainText('赛事管理')
+  // 用 .card 包裹的 .el-table 锁定本页（避开 dashboard 残留的 2 个表）
+  await expect(adminPage.locator('.card .el-table').first()).toBeVisible()
+}
 
 test.describe('赛事管理', () => {
   test('赛事列表展示', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: '赛事管理' }).click()
-    await expect(adminPage.locator('h1')).toContainText('赛事管理')
-    await expect(adminPage.locator('.el-table')).toBeVisible()
+    await gotoEvents(adminPage)
+    await expect(adminPage.locator('.card .el-table').first()).toBeVisible()
   })
 
   test('新建赛事', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: '赛事管理' }).click()
-    await expect(adminPage.locator('.el-table')).toBeVisible()
+    await gotoEvents(adminPage)
 
     await adminPage.getByRole('button', { name: '新建赛事' }).click()
     await expect(adminPage.locator('.el-dialog')).toBeVisible()
@@ -17,7 +25,7 @@ test.describe('赛事管理', () => {
 
     // 选择赛事类型: 明星赛
     await adminPage.locator('.el-dialog .el-form-item').filter({ hasText: '赛事类型' }).locator('.el-select').click()
-    await adminPage.getByRole('option', { name: '明星赛', exact: true }).click()
+    await adminPage.getByRole('option', { name: '竞技赛事', exact: true }).click()
 
     // 填写表单
     await adminPage.locator('.el-dialog .el-form-item').filter({ hasText: '标题' }).getByRole('textbox').fill('E2E测试锦标赛')
@@ -48,8 +56,7 @@ test.describe('赛事管理', () => {
   })
 
   test('编辑赛事', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: '赛事管理' }).click()
-    await expect(adminPage.locator('.el-table')).toBeVisible()
+    await gotoEvents(adminPage)
 
     const editBtn = adminPage.locator('.el-table__body-wrapper .el-table__row').first().getByRole('button', { name: '编辑' })
     if (await editBtn.isVisible()) {
@@ -67,8 +74,7 @@ test.describe('赛事管理', () => {
   })
 
   test('删除赛事', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: '赛事管理' }).click()
-    await expect(adminPage.locator('.el-table')).toBeVisible()
+    await gotoEvents(adminPage)
 
     const lastRow = adminPage.locator('.el-table__body-wrapper .el-table__row').last()
     const deleteBtn = lastRow.getByRole('button', { name: '删除' })
@@ -82,20 +88,18 @@ test.describe('赛事管理', () => {
   })
 
   test('按类型筛选', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: '赛事管理' }).click()
-    await expect(adminPage.locator('.el-table')).toBeVisible()
+    await gotoEvents(adminPage)
 
     const typeSelect = adminPage.locator('.filter-bar .el-select, .el-form-item').filter({ hasText: '赛事类型' }).locator('.el-select').first()
     if (await typeSelect.isVisible()) {
       await typeSelect.click()
-      await adminPage.getByRole('option', { name: '明星赛', exact: true }).click()
-      await expect(adminPage.locator('.el-table')).toBeVisible()
+      await adminPage.getByRole('option', { name: '竞技赛事', exact: true }).click()
+      await expect(adminPage.locator('.card .el-table').first()).toBeVisible()
     }
   })
 
   test('按状态筛选', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: '赛事管理' }).click()
-    await expect(adminPage.locator('.el-table')).toBeVisible()
+    await gotoEvents(adminPage)
 
     const statusSelect = adminPage.locator('.filter-bar .el-select, .el-form-item').filter({ hasText: '状态' }).locator('.el-select').first()
     if (await statusSelect.isVisible()) {
@@ -103,28 +107,26 @@ test.describe('赛事管理', () => {
       const firstOption = adminPage.getByRole('option').first()
       if (await firstOption.isVisible()) {
         await firstOption.click()
-        await expect(adminPage.locator('.el-table')).toBeVisible()
+        await expect(adminPage.locator('.card .el-table').first()).toBeVisible()
       }
     }
   })
 
   test('分页切换', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: '赛事管理' }).click()
-    await expect(adminPage.locator('.el-table')).toBeVisible()
+    await gotoEvents(adminPage)
 
     const pagination = adminPage.locator('.el-pagination')
     if (await pagination.isVisible()) {
       const nextBtn = pagination.locator('.btn-next')
       if (await nextBtn.isEnabled()) {
         await nextBtn.click()
-        await expect(adminPage.locator('.el-table')).toBeVisible()
+        await expect(adminPage.locator('.card .el-table').first()).toBeVisible()
       }
     }
   })
 
   test('必填字段验证', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: '赛事管理' }).click()
-    await expect(adminPage.locator('.el-table')).toBeVisible()
+    await gotoEvents(adminPage)
 
     await adminPage.getByRole('button', { name: '新建赛事' }).click()
     await expect(adminPage.locator('.el-dialog')).toBeVisible()
@@ -135,8 +137,7 @@ test.describe('赛事管理', () => {
   })
 
   test('查看参赛者列表', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: '赛事管理' }).click()
-    await expect(adminPage.locator('.el-table')).toBeVisible()
+    await gotoEvents(adminPage)
 
     const detailBtn = adminPage.locator('.el-table__body-wrapper .el-table__row').first().getByRole('button', { name: '详情' })
     if (await detailBtn.isVisible()) {
@@ -146,14 +147,13 @@ test.describe('赛事管理', () => {
   })
 
   test('活动类型选择 — 派对赛', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: '赛事管理' }).click()
-    await expect(adminPage.locator('.el-table')).toBeVisible()
+    await gotoEvents(adminPage)
 
     await adminPage.getByRole('button', { name: '新建赛事' }).click()
     await expect(adminPage.locator('.el-dialog')).toBeVisible()
 
     await adminPage.locator('.el-dialog .el-form-item').filter({ hasText: '赛事类型' }).locator('.el-select').click()
-    await adminPage.getByRole('option', { name: '派对赛', exact: true }).click()
+    await adminPage.getByRole('option', { name: '社交活动', exact: true }).click()
 
     await adminPage.locator('.el-dialog .el-form-item').filter({ hasText: '标题' }).getByRole('textbox').fill('E2E派对赛测试')
     await adminPage.locator('.el-dialog .el-form-item').filter({ hasText: '描述' }).getByRole('textbox').fill('派对赛类型测试赛事')

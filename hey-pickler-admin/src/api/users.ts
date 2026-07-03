@@ -41,25 +41,25 @@ export interface EventRecord {
 }
 
 export const getUserList = (params: PageParams & { city?: string }) => {
-  return request.get<any, ApiResponse<PageResult<User>>>('/users', { params })
+  return request.get<unknown, ApiResponse<PageResult<User>>>('/users', { params })
 }
 
 export const getUserDetail = (id: number) => {
-  return request.get<any, ApiResponse<User>>(`/users/${id}`)
+  return request.get<unknown, ApiResponse<User>>(`/users/${id}`)
 }
 
 export const getUserPoints = (id: number, params: { type?: string; page: number; size: number }) => {
-  return request.get<any, ApiResponse<PageResult<PointRecord>>>(`/users/${id}/points`, { params })
+  return request.get<unknown, ApiResponse<PageResult<PointRecord>>>(`/users/${id}/points`, { params })
 }
 
 export const getUserEvents = (id: number, params: { type?: string; page: number; size: number }) => {
-  return request.get<any, ApiResponse<PageResult<EventRecord>>>(`/users/${id}/events`, { params })
+  return request.get<unknown, ApiResponse<PageResult<EventRecord>>>(`/users/${id}/events`, { params })
 }
 
 export const banUser = (id: number, data: { reason: string; days?: number }) => {
-  return request.post<any, ApiResponse<void>>(`/users/${id}/ban`, data)
+  return request.post<unknown, ApiResponse<void>>(`/users/${id}/ban`, data)
 }
 
 export const unbanUser = (id: number) => {
-  return request.post<any, ApiResponse<void>>(`/users/${id}/unban`)
+  return request.post<unknown, ApiResponse<void>>(`/users/${id}/unban`)
 }

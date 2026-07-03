@@ -201,16 +201,17 @@ const editStatusOptions = computed(() => {
 
 watch(() => props.event, (val) => {
   if (val) {
+    const ext = val as Event & { description?: string; minPoints?: number }
     formData.type = 'PARTY'
     formData.title = val.title
-    formData.description = (val as any).description || ''
+    formData.description = ext.description || ''
     formData.bannerUrl = val.bannerUrl || ''
     formData.location = val.location || ''
     formData.eventTime = val.eventTime || ''
     formData.registrationDeadline = val.registrationDeadline || ''
     formData.maxParticipants = val.maxParticipants || 30
     formData.fee = val.fee || 0
-    formData.minPoints = (val as any).minPoints ?? 0
+    formData.minPoints = ext.minPoints ?? 0
     formData.status = val.status
   } else {
     formData.status = undefined

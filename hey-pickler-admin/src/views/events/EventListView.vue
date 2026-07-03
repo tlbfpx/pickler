@@ -332,7 +332,7 @@ const handleDelete = async (event: Event) => {
     } else {
       ElMessage.error(res.message || '删除赛事失败')
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error !== 'cancel') {
       // ignore
     }

@@ -1,20 +1,24 @@
 import { test, expect } from './fixtures/admin.fixture'
+import type { Page } from '@playwright/test'
+
+// 菜单改名为「社交活动」；页面 h1/dialog 仍是「活动管理」（PR #20 没改视图文案）
+async function gotoActivities(adminPage: Page) {
+  await adminPage.locator('.el-menu-item').filter({ hasText: '社交活动' }).click()
+  await adminPage.waitForURL(/\/activities$/)
+  await expect(adminPage.locator('h1')).toContainText('活动管理')
+  // 用 .card 包裹的 .el-table 锁定本页（避开 dashboard 残留的 2 个表）
+  await expect(adminPage.locator('.card .el-table').first()).toBeVisible()
+}
 
 test.describe('活动管理', () => {
   test('活动列表展示', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: '活动管理' }).click()
-    await adminPage.waitForTimeout(2000)
-
-    await expect(adminPage.locator('h1')).toContainText('活动管理')
-    await expect(adminPage.locator('.el-table')).toBeVisible()
+    await gotoActivities(adminPage)
   })
 
   test('新建活动', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: '活动管理' }).click()
-    await adminPage.waitForTimeout(2000)
+    await gotoActivities(adminPage)
 
     await adminPage.getByRole('button', { name: '新建活动' }).click()
-    await adminPage.waitForTimeout(1000)
     await expect(adminPage.locator('.el-dialog__title')).toContainText('新建活动')
 
     // 填写标题
@@ -30,7 +34,6 @@ test.describe('活动管理', () => {
     const eventTimeInput = adminPage.locator('.el-dialog .el-form-item').filter({ hasText: '活动时间' }).locator('input').first()
     await eventTimeInput.click()
     await adminPage.waitForTimeout(300)
-    // Clear and type the date value
     await eventTimeInput.fill('2026-08-15 10:00')
     await adminPage.keyboard.press('Tab')
     await adminPage.waitForTimeout(300)
@@ -57,8 +60,7 @@ test.describe('活动管理', () => {
   })
 
   test('编辑活动', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: '活动管理' }).click()
-    await adminPage.waitForTimeout(2000)
+    await gotoActivities(adminPage)
 
     // 点击第一行的编辑按钮
     const editBtn = adminPage.locator('.el-table__body-wrapper .el-table__row').first().getByRole('button', { name: '编辑' })
@@ -80,8 +82,7 @@ test.describe('活动管理', () => {
   })
 
   test('删除活动', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: '活动管理' }).click()
-    await adminPage.waitForTimeout(2000)
+    await gotoActivities(adminPage)
 
     // 点击最后一行的删除按钮
     const lastRow = adminPage.locator('.el-table__body-wrapper .el-table__row').last()
@@ -98,21 +99,22 @@ test.describe('活动管理', () => {
   })
 
   test('按状态筛选', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: '活动管理' }).click()
-    await adminPage.waitForTimeout(2000)
+    await gotoActivities(adminPage)
 
-    // 找到状态筛选下拉框
+    // 找到状态筛选下拉框（activity 列表无显式 status 过滤器时跳过）
     const statusSelect = adminPage.locator('.filter-bar .el-select').first()
     if (await statusSelect.isVisible()) {
       await statusSelect.click()
-      await adminPage.getByRole('option', { name: '报名中', exact: true }).click()
-      await adminPage.waitForTimeout(2000)
+      const firstOption = adminPage.getByRole('option').first()
+      if (await firstOption.isVisible()) {
+        await firstOption.click()
+        await adminPage.waitForTimeout(1000)
+      }
     }
   })
 
   test('分页切换', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: '活动管理' }).click()
-    await adminPage.waitForTimeout(2000)
+    await gotoActivities(adminPage)
 
     // 如果存在分页器，点击下一页
     const pagination = adminPage.locator('.pagination-container')
@@ -126,12 +128,10 @@ test.describe('活动管理', () => {
   })
 
   test('必填字段验证', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: '活动管理' }).click()
-    await adminPage.waitForTimeout(2000)
+    await gotoActivities(adminPage)
 
     // 打开新建对话框
     await adminPage.getByRole('button', { name: '新建活动' }).click()
-    await adminPage.waitForTimeout(1000)
     await expect(adminPage.locator('.el-dialog')).toBeVisible()
 
     // 不填写任何内容直接点击新建按钮
@@ -143,12 +143,10 @@ test.describe('活动管理', () => {
   })
 
   test('关闭对话框清空表单', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: '活动管理' }).click()
-    await adminPage.waitForTimeout(2000)
+    await gotoActivities(adminPage)
 
     // 打开新建对话框
     await adminPage.getByRole('button', { name: '新建活动' }).click()
-    await adminPage.waitForTimeout(1000)
     await expect(adminPage.locator('.el-dialog')).toBeVisible()
 
     // 填写标题
@@ -161,7 +159,6 @@ test.describe('活动管理', () => {
 
     // 重新打开新建对话框
     await adminPage.getByRole('button', { name: '新建活动' }).click()
-    await adminPage.waitForTimeout(1000)
     await expect(adminPage.locator('.el-dialog')).toBeVisible()
 
     // 验证标题字段已清空

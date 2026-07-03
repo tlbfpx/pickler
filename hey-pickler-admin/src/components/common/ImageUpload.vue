@@ -68,12 +68,13 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
   return true
 }
 
-const handleSuccess: UploadProps['onSuccess'] = (response: any) => {
-  if (response.code === 0) {
-    emit('update:modelValue', response.data.url)
+const handleSuccess: UploadProps['onSuccess'] = (response) => {
+  const r = response as { code: number; data?: { url: string }; message?: string } | undefined
+  if (r && r.code === 0 && r.data) {
+    emit('update:modelValue', r.data.url)
     ElMessage.success('图片上传成功！')
   } else {
-    ElMessage.error(response.message || '上传失败')
+    ElMessage.error(r?.message || '上传失败')
   }
 }
 

@@ -33,20 +33,22 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, type Component } from 'vue'
+import { useRoute, type RouteRecordRaw } from 'vue-router'
 import * as ElIcons from '@element-plus/icons-vue'
 import router from '@/router'
 
 const route = useRoute()
 const activeMenu = computed(() => route.path)
-const iconMap: Record<string, any> = ElIcons as any
+const iconMap: Record<string, Component> = ElIcons as Record<string, Component>
 
 // 直接读静态路由表，避免 getRoutes() 返回 /login、/events/:id 等噪音
 // 布局路由（path:'/'）的 children 才是菜单项；meta.hidden 不进菜单
-const menuRoutes = (router.options.routes.find((r: any) => r.path === '/')?.children || [])
-  .filter((r: any) => r.meta?.group && !r.meta?.hidden)
-  .map((r: any) => ({ path: '/' + r.path, title: r.meta.title, icon: r.meta.icon, group: r.meta.group }))
+const menuRoutes = (router.options.routes.find((r: RouteRecordRaw) => r.path === '/')?.children || [])
+  .filter((r): r is RouteRecordRaw & { meta: { group: string; hidden?: boolean; title?: string; icon?: string } } =>
+    Boolean(r.meta?.group) && !r.meta?.hidden
+  )
+  .map(r => ({ path: '/' + r.path, title: r.meta.title, icon: r.meta.icon, group: r.meta.group }))
 
 const GROUP_ORDER = ['运营管理', '积分与赛季', '内容运营', '系统']
 const groups = computed(() => GROUP_ORDER

@@ -140,7 +140,7 @@ const handleDelete = async (banner: Banner) => {
     } else {
       ElMessage.error(res.message || '删除Banner失败')
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error !== 'cancel') {
       // ignore
     }

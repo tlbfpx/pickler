@@ -108,7 +108,7 @@ const rules: FormRules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   password: [
     {
-      validator: (rule: any, value: string, callback: any) => {
+      validator: (_rule, value, callback) => {
         if (!props.admin && !value) {
           callback(new Error('请输入密码'))
         } else if (!props.admin && value.length < 8) {
