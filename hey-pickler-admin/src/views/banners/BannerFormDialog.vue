@@ -111,7 +111,8 @@ const rules: FormRules = {
   imageUrl: [
     { required: true, message: '请输入图片地址', trigger: 'blur' },
     {
-      pattern: /^https:\/\/[^/]+\/.*\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i,
+      // 允许末尾带 ?query 和 #fragment，扩展名大小写不敏感
+      pattern: /^https:\/\/[^/]+\/.*\.(jpg|jpeg|png|webp|gif)(\?|#|$).*/i,
       message: '图片地址必须为 https 开头且以 .jpg/.jpeg/.png/.webp/.gif 结尾',
       trigger: 'blur'
     }
