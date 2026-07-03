@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -97,10 +98,11 @@ public class MatchServiceImpl implements MatchService {
     @Transactional(rollbackFor = Exception.class)
     public void submitScore(Long matchId, Long userId, List<Match.GameScore> games, boolean isAdmin) {
         Match match = requireMatch(matchId);
-        Event event = requireEvent(match.getEventId());
-        if ("COMPLETED".equals(event.getStatus())) {
-            throw new BizException(ErrorCode.INVALID_STATUS_TRANSITION, "赛事已结束，比分不能再修改");
-        }
+        requireEvent(match.getEventId());  // 404 if event is gone (sanity)
+        // No event-status check: a match reset back to SCHEDULED must be re-recordable
+        // even if the event is COMPLETED (fix-data path). Placement points are NOT
+        // re-issued on a re-record — the operator accepts that the leaderboard will
+        // lag until the next event if they re-record post-completion.
         if (match.getStatus() == MatchStatus.COMPLETED) {
             throw new BizException(ErrorCode.INVALID_STATUS_TRANSITION, "比赛已结束");
         }
@@ -292,6 +294,7 @@ public class MatchServiceImpl implements MatchService {
         for (MatchGroup g : groups) {
             List<MatchVO> vos = byGroup.getOrDefault(g.getId(), List.of()).stream()
                     .map(this::toVO).collect(Collectors.toList());
+            populateDisplayNames(vos);
             out.add(vos);
         }
         return out;
@@ -314,6 +317,54 @@ public class MatchServiceImpl implements MatchService {
         vo.setSubmittedAt(m.getSubmittedAt());
         vo.setCompletedAt(m.getCompletedAt());
         return vo;
+    }
+
+    /**
+     * Batch-resolve slotADisplayName / slotBDisplayName for the given match VOs.
+     *
+     * <p>SINGLES: slotAUserId / slotBUserId → user.nickname.
+     * DOUBLES/MIXED: slotATeamId / slotBTeamId → "m1Nick / m2Nick" via teamMember join.
+     */
+    private void populateDisplayNames(List<MatchVO> vos) {
+        if (vos == null || vos.isEmpty()) return;
+        Set<Long> userIds = new HashSet<>();
+        Set<Long> teamIds = new HashSet<>();
+        for (MatchVO vo : vos) {
+            if (vo.getSlotAUserId() != null) userIds.add(vo.getSlotAUserId());
+            if (vo.getSlotBUserId() != null) userIds.add(vo.getSlotBUserId());
+            if (vo.getSlotATeamId() != null) teamIds.add(vo.getSlotATeamId());
+            if (vo.getSlotBTeamId() != null) teamIds.add(vo.getSlotBTeamId());
+        }
+        // SINGLES path: direct user lookup.
+        Map<Long, String> userNicknames = userIds.isEmpty()
+                ? Map.of()
+                : userMapper.selectBatchIds(userIds).stream()
+                        .filter(u -> u.getId() != null && u.getNickname() != null)
+                        .collect(Collectors.toMap(u -> u.getId(), u -> u.getNickname(), (a, b) -> a));
+        // DOUBLES/MIXED path: build "m1Nick / m2Nick" via Team.member1UserId + member2UserId.
+        Map<Long, String> teamDisplayNames = new HashMap<>();
+        if (!teamIds.isEmpty()) {
+            for (Team team : teamMapper.selectBatchIds(teamIds)) {
+                String m1 = userNicknames.get(team.getMember1UserId());
+                String m2 = userNicknames.get(team.getMember2UserId());
+                String joined = Stream.of(m1, m2)
+                        .filter(s -> s != null && !s.isEmpty())
+                        .collect(Collectors.joining(" / "));
+                if (!joined.isEmpty()) teamDisplayNames.put(team.getId(), joined);
+            }
+        }
+        for (MatchVO vo : vos) {
+            if (vo.getSlotAUserId() != null) {
+                vo.setSlotADisplayName(userNicknames.get(vo.getSlotAUserId()));
+            } else if (vo.getSlotATeamId() != null) {
+                vo.setSlotADisplayName(teamDisplayNames.get(vo.getSlotATeamId()));
+            }
+            if (vo.getSlotBUserId() != null) {
+                vo.setSlotBDisplayName(userNicknames.get(vo.getSlotBUserId()));
+            } else if (vo.getSlotBTeamId() != null) {
+                vo.setSlotBDisplayName(teamDisplayNames.get(vo.getSlotBTeamId()));
+            }
+        }
     }
 
     private List<MatchVO.GameScore> toVOGames(List<Match.GameScore> source) {
