@@ -11,10 +11,12 @@ import com.heypickler.common.util.StatusTransitionValidator;
 import com.heypickler.dto.admin.EventCreateRequest;
 import com.heypickler.dto.admin.EventUpdateRequest;
 import com.heypickler.dto.app.RegisterRequest;
+import com.heypickler.entity.AdminUser;
 import com.heypickler.entity.Event;
 import com.heypickler.entity.PointRecord;
 import com.heypickler.entity.Registration;
 import com.heypickler.entity.User;
+import com.heypickler.mapper.AdminUserMapper;
 import com.heypickler.mapper.EventMapper;
 import com.heypickler.mapper.PointRecordMapper;
 import com.heypickler.mapper.RegistrationMapper;
@@ -43,6 +45,7 @@ public class EventServiceImpl implements EventService {
     private final RegistrationMapper registrationMapper;
     private final UserMapper userMapper;
     private final PointRecordMapper pointRecordMapper;
+    private final AdminUserMapper adminUserMapper;
     private final TeamService teamService;
 
     @Override
@@ -61,9 +64,7 @@ public class EventServiceImpl implements EventService {
 
         Page<Event> eventPage = eventMapper.selectPage(new Page<>(page, size), wrapper);
 
-        List<EventVO> voList = eventPage.getRecords().stream()
-                .map(this::convertToVO)
-                .collect(Collectors.toList());
+        List<EventVO> voList = convertAllToVO(eventPage.getRecords());
 
         return PageResult.of(eventPage.getTotal(), (int) eventPage.getCurrent(), size, voList);
     }
@@ -242,9 +243,7 @@ public class EventServiceImpl implements EventService {
 
         Page<Event> eventPage = eventMapper.selectPage(new Page<>(page, size), wrapper);
 
-        List<EventVO> voList = eventPage.getRecords().stream()
-                .map(this::convertToVO)
-                .collect(Collectors.toList());
+        List<EventVO> voList = convertAllToVO(eventPage.getRecords());
 
         return PageResult.of(eventPage.getTotal(), (int) eventPage.getCurrent(), size, voList);
     }
@@ -595,7 +594,52 @@ public class EventServiceImpl implements EventService {
     private EventVO convertToVO(Event event) {
         EventVO vo = new EventVO();
         BeanUtils.copyProperties(event, vo);
+        if (event.getCreatedBy() != null) {
+            vo.setCreatedByUsername(loadOrganizerName(event.getCreatedBy()));
+        }
         return vo;
+    }
+
+    /**
+     * Convert a list of events to VOs, batch-loading admin usernames for
+     * {@code createdBy} to avoid N+1. Used by the paginated list endpoints
+     * (admin list, app list) which can include many events created by the
+     * same admin.
+     */
+    private List<EventVO> convertAllToVO(List<Event> events) {
+        if (events == null || events.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Set<Long> adminIds = events.stream()
+                .map(Event::getCreatedBy)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, String> organizerCache = adminIds.isEmpty()
+                ? Collections.emptyMap()
+                : adminUserMapper.selectBatchIds(adminIds).stream()
+                        .filter(a -> a.getId() != null && a.getUsername() != null)
+                        .collect(Collectors.toMap(AdminUser::getId, AdminUser::getUsername, (a, b) -> a));
+        return events.stream()
+                .map(e -> {
+                    EventVO vo = new EventVO();
+                    BeanUtils.copyProperties(e, vo);
+                    if (e.getCreatedBy() != null) {
+                        vo.setCreatedByUsername(organizerCache.get(e.getCreatedBy()));
+                    }
+                    return vo;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Single-event organizer lookup. Used by {@link #getEventDetail(Long)} /
+     * {@link #convertToDetailVO(Event)} paths where a batched fetch would
+     * over-fetch. Safe to call repeatedly — one row per admin id.
+     */
+    private String loadOrganizerName(Long adminId) {
+        if (adminId == null) return null;
+        AdminUser admin = adminUserMapper.selectById(adminId);
+        return admin != null ? admin.getUsername() : null;
     }
 
     private EventDetailVO convertToDetailVO(Event event) {

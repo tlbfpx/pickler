@@ -21,4 +21,5 @@ public class EventVO {
     private Integer minPoints;
     private String format;
     private Boolean groupingLocked;
+    private String createdByUsername;
 }
