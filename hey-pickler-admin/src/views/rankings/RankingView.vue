@@ -4,13 +4,6 @@
       <h1>排名管理</h1>
       <div class="header-actions">
         <el-button
-          type="primary"
-          @click="handleEnterPoints"
-        >
-          <el-icon><Plus /></el-icon>
-          录入积分
-        </el-button>
-        <el-button
           type="success"
           @click="handleRefresh('STAR')"
         >
@@ -184,11 +177,6 @@
         </div>
       </el-tab-pane>
     </el-tabs>
-
-    <PointEntryDialog
-      v-model="pointDialogVisible"
-      @success="fetchOne"
-    />
   </div>
 </template>
 
@@ -199,7 +187,6 @@ import { getRankings, refreshRankings } from '@/api/rankings'
 import { getTierColor } from '@/utils'
 import { TERMS, formatTierName } from '@/constants/terms'
 import Pagination from '@/components/common/Pagination.vue'
-import PointEntryDialog from './PointEntryDialog.vue'
 import type { RankingEntry } from '@/types'
 
 const loading = ref(false)
@@ -209,8 +196,6 @@ const keyword = ref('')
 const page = ref(1)
 const size = ref(20)
 const total = ref(0)
-const pointDialogVisible = ref(false)
-
 const fetchOne = async () => {
   loading.value = true
   try {
@@ -242,10 +227,6 @@ watch(activeTab, onSearch)
 
 const handleTabChange = (tabName: string | number) => {
   activeTab.value = tabName as 'STAR' | 'PARTY'
-}
-
-const handleEnterPoints = () => {
-  pointDialogVisible.value = true
 }
 
 const handleRefresh = async (type: 'STAR' | 'PARTY') => {
