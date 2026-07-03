@@ -1,16 +1,20 @@
 <template>
   <div>
-    <div class="page-header">
-      <h1>赛事管理</h1>
-      <el-button
-        type="primary"
-        @click="handleCreate"
-      >
-        <el-icon><Plus /></el-icon>
-        新建赛事
-      </el-button>
-    </div>
-    <div class="card">
+    <el-card
+      shadow="never"
+      class="page-card"
+      :body-style="{ padding: '20px 24px' }"
+    >
+      <div class="page-header">
+        <h1>赛事管理</h1>
+        <el-button
+          type="primary"
+          @click="handleCreate"
+        >
+          <el-icon><Plus /></el-icon>
+          新建赛事
+        </el-button>
+      </div>
       <EventFilterBar
         :keyword="filterKeyword"
         :type="filterType"
@@ -184,7 +188,7 @@
         @update:page="fetchEvents"
         @update:size="fetchEvents"
       />
-    </div>
+    </el-card>
 
     <EventFormDialog
       v-model="formDialogVisible"
@@ -363,10 +367,19 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.page-header h1 {
+  font-size: 22px;
+  font-weight: 600;
+  color: #111827;
 }
 
 .title-link {
-  color: #409eff;
+  color: #6366f1;
   text-decoration: none;
 }
 

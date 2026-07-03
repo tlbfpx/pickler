@@ -8,7 +8,11 @@
     </div>
 
     <!-- Todo panel -->
-    <div class="todo-panel">
+    <el-card
+      shadow="never"
+      class="page-card"
+      :body-style="{ padding: '20px 24px' }"
+    >
       <div class="panel-head">
         <span>待办</span>
       </div>
@@ -40,291 +44,315 @@
           {{ t.action }}
         </el-button>
       </div>
-    </div>
+    </el-card>
 
     <!-- KPI -->
-    <div class="kpi-row">
-      <div class="kpi-card">
-        <div
-          class="kpi-top"
-          style="background:#667eea;"
-        />
-        <div class="kpi-body">
-          <div class="kpi-value">
-            {{ stats.totalUsers }}
+    <el-card
+      shadow="never"
+      class="page-card"
+      :body-style="{ padding: '20px 24px' }"
+    >
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div
+            class="kpi-top"
+            style="background:#6366f1;"
+          />
+          <div class="kpi-body">
+            <div class="kpi-value">
+              {{ stats.totalUsers }}
+            </div>
+            <div class="kpi-label">
+              总用户
+            </div>
           </div>
-          <div class="kpi-label">
-            总用户
+          <div class="kpi-delta">
+            本周 +{{ stats.newUsersWeek }}
           </div>
         </div>
-        <div class="kpi-delta">
-          本周 +{{ stats.newUsersWeek }}
+        <div class="kpi-card">
+          <div
+            class="kpi-top"
+            style="background:#f5576c;"
+          />
+          <div class="kpi-body">
+            <div class="kpi-value">
+              {{ stats.totalEvents }}
+            </div>
+            <div class="kpi-label">
+              总赛事
+            </div>
+          </div>
+          <div class="kpi-delta">
+            报名中 {{ stats.openEvents }}
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div
+            class="kpi-top"
+            style="background:#43e97b;"
+          />
+          <div class="kpi-body">
+            <div class="kpi-value">
+              {{ stats.recentRegistrationsCount }}
+            </div>
+            <div class="kpi-label">
+              本周报名
+            </div>
+          </div>
+          <div class="kpi-delta">
+            累计 {{ stats.totalRegistrations }} 笔
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div
+            class="kpi-top"
+            style="background:#fa8231;"
+          />
+          <div class="kpi-body">
+            <div class="kpi-value">
+              ¥{{ stats.totalRevenue }}
+            </div>
+            <div class="kpi-label">
+              报名收入
+            </div>
+          </div>
+          <div class="kpi-delta">
+            本周 ¥{{ stats.weeklyRevenue }}
+          </div>
         </div>
       </div>
-      <div class="kpi-card">
-        <div
-          class="kpi-top"
-          style="background:#f5576c;"
-        />
-        <div class="kpi-body">
-          <div class="kpi-value">
-            {{ stats.totalEvents }}
-          </div>
-          <div class="kpi-label">
-            总赛事
-          </div>
-        </div>
-        <div class="kpi-delta">
-          报名中 {{ stats.openEvents }}
-        </div>
-      </div>
-      <div class="kpi-card">
-        <div
-          class="kpi-top"
-          style="background:#43e97b;"
-        />
-        <div class="kpi-body">
-          <div class="kpi-value">
-            {{ stats.recentRegistrationsCount }}
-          </div>
-          <div class="kpi-label">
-            本周报名
-          </div>
-        </div>
-        <div class="kpi-delta">
-          累计 {{ stats.totalRegistrations }} 笔
-        </div>
-      </div>
-      <div class="kpi-card">
-        <div
-          class="kpi-top"
-          style="background:#fa8231;"
-        />
-        <div class="kpi-body">
-          <div class="kpi-value">
-            ¥{{ stats.totalRevenue }}
-          </div>
-          <div class="kpi-label">
-            报名收入
-          </div>
-        </div>
-        <div class="kpi-delta">
-          本周 ¥{{ stats.weeklyRevenue }}
-        </div>
-      </div>
-    </div>
+    </el-card>
 
     <!-- Trends: full-width row -->
-    <div class="row">
-      <div
-        class="panel"
-        style="flex:1.2"
-      >
-        <div class="panel-head">
-          <span>用户增长趋势</span>
-          <span class="panel-tag">近 30 天</span>
+    <el-card
+      shadow="never"
+      class="page-card"
+      :body-style="{ padding: '20px 24px' }"
+    >
+      <div class="row">
+        <div
+          class="panel-cell"
+          style="flex:1.2"
+        >
+          <div class="panel-head">
+            <span>用户增长趋势</span>
+            <span class="panel-tag">近 30 天</span>
+          </div>
+          <div
+            ref="userChartRef"
+            class="chart-lg"
+          />
         </div>
         <div
-          ref="userChartRef"
-          class="chart-lg"
-        />
-      </div>
-      <div
-        class="panel"
-        style="flex:0.8"
-      >
-        <div class="panel-head">
-          <span>报名趋势</span>
-          <span class="panel-tag">近 30 天</span>
+          class="panel-cell"
+          style="flex:0.8"
+        >
+          <div class="panel-head">
+            <span>报名趋势</span>
+            <span class="panel-tag">近 30 天</span>
+          </div>
+          <div
+            ref="regChartRef"
+            class="chart-lg"
+          />
         </div>
-        <div
-          ref="regChartRef"
-          class="chart-lg"
-        />
       </div>
-    </div>
+    </el-card>
 
     <!-- Distribution -->
-    <div class="row">
-      <div
-        class="panel"
-        style="flex:1"
-      >
-        <div class="panel-head">
-          <span>赛事类型分布</span>
+    <el-card
+      shadow="never"
+      class="page-card"
+      :body-style="{ padding: '20px 24px' }"
+    >
+      <div class="row">
+        <div
+          class="panel-cell"
+          style="flex:1"
+        >
+          <div class="panel-head">
+            <span>赛事类型分布</span>
+          </div>
+          <div
+            ref="eventTypeRef"
+            class="chart-sm"
+          />
         </div>
         <div
-          ref="eventTypeRef"
-          class="chart-sm"
-        />
-      </div>
-      <div
-        class="panel"
-        style="flex:1"
-      >
-        <div class="panel-head">
-          <span>{{ TERMS.STAR.tier }}分布</span>
+          class="panel-cell"
+          style="flex:1"
+        >
+          <div class="panel-head">
+            <span>{{ TERMS.STAR.tier }}分布</span>
+          </div>
+          <div
+            ref="starTierRef"
+            class="chart-sm"
+          />
         </div>
         <div
-          ref="starTierRef"
-          class="chart-sm"
-        />
-      </div>
-      <div
-        class="panel"
-        style="flex:1"
-      >
-        <div class="panel-head">
-          <span>{{ TERMS.PARTY.tier }}分布</span>
+          class="panel-cell"
+          style="flex:1"
+        >
+          <div class="panel-head">
+            <span>{{ TERMS.PARTY.tier }}分布</span>
+          </div>
+          <div
+            ref="partyTierRef"
+            class="chart-sm"
+          />
         </div>
-        <div
-          ref="partyTierRef"
-          class="chart-sm"
-        />
       </div>
-    </div>
+    </el-card>
 
     <!-- Tables -->
-    <div class="row">
-      <div
-        class="panel"
-        style="flex:1"
-      >
-        <div class="panel-head">
-          <span>即将开始的赛事</span>
-        </div>
-        <el-table
-          :data="stats.upcomingEvents"
-          size="small"
-          stripe
+    <el-card
+      shadow="never"
+      class="page-card"
+      :body-style="{ padding: '20px 24px' }"
+    >
+      <div class="row">
+        <div
+          class="panel-cell"
+          style="flex:1"
         >
-          <el-table-column
-            prop="title"
-            label="赛事"
-            min-width="150"
-            show-overflow-tooltip
+          <div class="panel-head">
+            <span>即将开始的赛事</span>
+          </div>
+          <el-table
+            :data="stats.upcomingEvents"
+            size="small"
+            stripe
+          >
+            <el-table-column
+              prop="title"
+              label="赛事"
+              min-width="150"
+              show-overflow-tooltip
+            />
+            <el-table-column
+              label="类型"
+              width="70"
+              align="center"
+            >
+              <template #default="{ row }">
+                <el-tag
+                  :type="row.type === 'STAR' ? 'warning' : 'danger'"
+                  size="small"
+                  round
+                >
+                  {{ row.type === 'STAR' ? TERMS.STAR.type : TERMS.PARTY.type }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column
+              label="时间"
+              width="90"
+              align="center"
+            >
+              <template #default="{ row }">
+                {{ fmtDate(row.eventTime) }}
+              </template>
+            </el-table-column>
+            <el-table-column
+              label="报名"
+              width="80"
+              align="center"
+            >
+              <template #default="{ row }">
+                {{ row.currentParticipants }}/{{ row.maxParticipants ?? '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column
+              label="状态"
+              width="76"
+              align="center"
+            >
+              <template #default="{ row }">
+                <el-tag
+                  :type="sType(row.status)"
+                  size="small"
+                  round
+                >
+                  {{ sLabel(row.status) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-empty
+            v-if="!stats.upcomingEvents?.length"
+            :image-size="40"
           />
-          <el-table-column
-            label="类型"
-            width="70"
-            align="center"
-          >
-            <template #default="{ row }">
-              <el-tag
-                :type="row.type === 'STAR' ? 'warning' : 'danger'"
-                size="small"
-                round
-              >
-                {{ row.type === 'STAR' ? TERMS.STAR.type : TERMS.PARTY.type }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column
-            label="时间"
-            width="90"
-            align="center"
-          >
-            <template #default="{ row }">
-              {{ fmtDate(row.eventTime) }}
-            </template>
-          </el-table-column>
-          <el-table-column
-            label="报名"
-            width="80"
-            align="center"
-          >
-            <template #default="{ row }">
-              {{ row.currentParticipants }}/{{ row.maxParticipants ?? '-' }}
-            </template>
-          </el-table-column>
-          <el-table-column
-            label="状态"
-            width="76"
-            align="center"
-          >
-            <template #default="{ row }">
-              <el-tag
-                :type="sType(row.status)"
-                size="small"
-                round
-              >
-                {{ sLabel(row.status) }}
-              </el-tag>
-            </template>
-          </el-table-column>
-        </el-table>
-        <el-empty
-          v-if="!stats.upcomingEvents?.length"
-          :image-size="40"
-        />
-      </div>
-      <div
-        class="panel"
-        style="flex:1"
-      >
-        <div class="panel-head">
-          <span>最新报名</span>
         </div>
-        <el-table
-          :data="stats.recentRegistrations"
-          size="small"
-          stripe
+        <div
+          class="panel-cell"
+          style="flex:1"
         >
-          <el-table-column
-            label="用户"
-            width="80"
-            show-overflow-tooltip
+          <div class="panel-head">
+            <span>最新报名</span>
+          </div>
+          <el-table
+            :data="stats.recentRegistrations"
+            size="small"
+            stripe
           >
-            <template #default="{ row }">
-              {{ row.nickname || '未知' }}
-            </template>
-          </el-table-column>
-          <el-table-column
-            prop="eventTitle"
-            label="赛事"
-            min-width="150"
-            show-overflow-tooltip
+            <el-table-column
+              label="用户"
+              width="80"
+              show-overflow-tooltip
+            >
+              <template #default="{ row }">
+                {{ row.nickname || '未知' }}
+              </template>
+            </el-table-column>
+            <el-table-column
+              prop="eventTitle"
+              label="赛事"
+              min-width="150"
+              show-overflow-tooltip
+            />
+            <el-table-column
+              label="类型"
+              width="56"
+              align="center"
+            >
+              <template #default="{ row }">
+                {{ row.matchType === 'SINGLES' ? '单打' : row.matchType === 'DOUBLES' ? '双打' : '混双' }}
+              </template>
+            </el-table-column>
+            <el-table-column
+              label="状态"
+              width="70"
+              align="center"
+            >
+              <template #default="{ row }">
+                <el-tag
+                  :type="rType(row.status)"
+                  size="small"
+                  round
+                >
+                  {{ rLabel(row.status) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column
+              label="时间"
+              width="90"
+              align="center"
+            >
+              <template #default="{ row }">
+                {{ fmtDate(row.createdAt) }}
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-empty
+            v-if="!stats.recentRegistrations?.length"
+            :image-size="40"
           />
-          <el-table-column
-            label="类型"
-            width="56"
-            align="center"
-          >
-            <template #default="{ row }">
-              {{ row.matchType === 'SINGLES' ? '单打' : row.matchType === 'DOUBLES' ? '双打' : '混双' }}
-            </template>
-          </el-table-column>
-          <el-table-column
-            label="状态"
-            width="70"
-            align="center"
-          >
-            <template #default="{ row }">
-              <el-tag
-                :type="rType(row.status)"
-                size="small"
-                round
-              >
-                {{ rLabel(row.status) }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column
-            label="时间"
-            width="90"
-            align="center"
-          >
-            <template #default="{ row }">
-              {{ fmtDate(row.createdAt) }}
-            </template>
-          </el-table-column>
-        </el-table>
-        <el-empty
-          v-if="!stats.recentRegistrations?.length"
-          :image-size="40"
-        />
+        </div>
       </div>
-    </div>
+    </el-card>
   </div>
 </template>
 
@@ -486,19 +514,28 @@ onBeforeUnmount(() => { window.removeEventListener('resize', onResize); charts.f
   max-width: 1360px;
 }
 
+.dashboard .page-header {
+  margin-bottom: 16px;
+
+  h1 {
+    font-size: 24px;
+    font-weight: 600;
+    color: #111827;
+  }
+}
+
 /* KPI */
 .kpi-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
-  margin-bottom: 16px;
 }
 
 .kpi-card {
   background: #fff;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1px solid #f3f4f6;
 }
 
 .kpi-top {
@@ -532,18 +569,9 @@ onBeforeUnmount(() => { window.removeEventListener('resize', onResize); charts.f
 .row {
   display: flex;
   gap: 16px;
-  margin-bottom: 16px;
 }
 
 /* Todo panel */
-.todo-panel {
-  background: #fff;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-}
-
 .todo-row {
   display: flex;
   align-items: center;
@@ -572,11 +600,11 @@ onBeforeUnmount(() => { window.removeEventListener('resize', onResize); charts.f
   color: #9ca3af;
 }
 
-.panel {
+.panel-cell {
   background: #fff;
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1px solid #f3f4f6;
 }
 
 .panel-head {
@@ -623,6 +651,6 @@ onBeforeUnmount(() => { window.removeEventListener('resize', onResize); charts.f
 @media (max-width: 1100px) {
   .kpi-row { grid-template-columns: repeat(2, 1fr); }
   .row { flex-wrap: wrap; }
-  .panel { flex: 1 1 45% !important; min-width: 300px; }
+  .panel-cell { flex: 1 1 45% !important; min-width: 300px; }
 }
 </style>

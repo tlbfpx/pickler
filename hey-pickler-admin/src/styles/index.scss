@@ -69,6 +69,40 @@ body,
   }
 }
 
+/* Card-based visual design for list/detail pages (matches EventDetailView). */
+.page-card {
+  margin-bottom: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.page-card:first-of-type {
+  margin-top: 0;
+}
+
+.page-card :deep(.el-card__body) {
+  padding: 20px 24px;
+}
+
+.page-card .page-header {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f3f4f6;
+
+  h1 {
+    font-size: 22px;
+    font-weight: 600;
+    color: #111827;
+  }
+}
+
+.page-card .kpi-card,
+.page-card .panel-cell {
+  background: #ffffff;
+  border: 1px solid #f3f4f6;
+  border-radius: 8px;
+}
+
 .card {
   background: #fff;
   border-radius: 8px;
