@@ -46,7 +46,7 @@
         </el-table-column>
         <el-table-column
           label="操作"
-          width="180"
+          width="260"
           fixed="right"
         >
           <template #default="{ row }">
@@ -56,6 +56,13 @@
               @click="handleEdit(row)"
             >
               编辑
+            </el-button>
+            <el-button
+              type="warning"
+              size="small"
+              @click="handleResetPassword(row)"
+            >
+              重置密码
             </el-button>
             <el-button
               v-if="row.role !== 'SUPER_ADMIN'"
@@ -75,6 +82,12 @@
       :admin="selectedAdmin"
       @success="fetchAdmins"
     />
+
+    <AdminResetPasswordDialog
+      v-model="resetPasswordDialogVisible"
+      :admin="selectedAdmin"
+      @success="fetchAdmins"
+    />
   </div>
 </template>
 
@@ -84,12 +97,14 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { getAdminList, deleteAdmin } from '@/api/admins'
 import { formatDate, formatAdminRole } from '@/utils'
 import AdminFormDialog from './AdminFormDialog.vue'
+import AdminResetPasswordDialog from './AdminResetPasswordDialog.vue'
 import type { Admin } from '@/types'
 
 const loading = ref(false)
 const adminList = ref<Admin[]>([])
 
 const formDialogVisible = ref(false)
+const resetPasswordDialogVisible = ref(false)
 const selectedAdmin = ref<Admin | null>(null)
 
 const fetchAdmins = async () => {
@@ -116,6 +131,11 @@ const handleCreate = () => {
 const handleEdit = (admin: Admin) => {
   selectedAdmin.value = admin
   formDialogVisible.value = true
+}
+
+const handleResetPassword = (admin: Admin) => {
+  selectedAdmin.value = admin
+  resetPasswordDialogVisible.value = true
 }
 
 const handleDelete = async (admin: Admin) => {

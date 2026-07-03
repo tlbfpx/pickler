@@ -90,14 +90,52 @@ test.describe('管理员管理', () => {
   test('重置密码', async ({ adminPage }) => {
     await gotoAdmins(adminPage)
 
-    // 当前 AdminListView 没有「重置密码」按钮；该入口位于编辑弹窗。
-    // 软断言：UI 未暴露该功能时只校验页面 OK 即可。
-    const resetBtn = adminPage
+    // Backend refuses to reset password for current logged-in admin (admin/admin).
+    // Create a fresh non-admin user first, then target them.
+    const targetName = `e2e_reset_${Date.now()}`
+    await adminPage.getByRole('button', { name: '新建管理员' }).click()
+    await expect(adminPage.locator('.el-dialog:visible')).toBeVisible()
+    await adminPage
+      .locator('.el-dialog:visible .el-form-item')
+      .filter({ hasText: '用户名' })
+      .getByRole('textbox')
+      .fill(targetName)
+    await adminPage
+      .locator('.el-dialog:visible .el-form-item')
+      .filter({ hasText: '密码' })
+      .getByRole('textbox')
+      .fill('Test1234')
+    await adminPage
+      .locator('.el-dialog:visible .el-form-item')
+      .filter({ hasText: '角色' })
+      .locator('.el-select')
+      .click()
+    await adminPage.getByRole('option', { name: '管理员', exact: true }).click()
+    await adminPage.locator('.el-dialog:visible .el-dialog__footer').getByRole('button', { name: '新建' }).click()
+    await expect(adminPage.getByText('管理员创建成功')).toBeVisible({ timeout: 10000 })
+
+    // Re-navigate to refresh list
+    await gotoAdmins(adminPage)
+
+    // Locate the freshly created row by username, then click 重置密码
+    const targetRow = adminPage
       .locator('.el-table__body-wrapper .el-table__row')
+      .filter({ hasText: targetName })
       .first()
-      .getByRole('button', { name: '重置密码' })
-    const hasReset = await resetBtn.isVisible().catch(() => false)
-    expect(hasReset || true).toBeTruthy()
+    await expect(targetRow).toBeVisible({ timeout: 5000 })
+    const resetBtn = targetRow.getByRole('button', { name: '重置密码' })
+    await expect(resetBtn).toBeVisible()
+    await resetBtn.click()
+    await expect(adminPage.locator('.el-dialog:visible .el-dialog__title')).toContainText('重置密码')
+
+    await adminPage
+      .locator('.el-dialog:visible .el-form-item')
+      .filter({ hasText: '新密码' })
+      .getByRole('textbox')
+      .fill('Reset1234')
+
+    await adminPage.locator('.el-dialog:visible .el-dialog__footer').getByRole('button', { name: '确定' }).click()
+    await expect(adminPage.getByText('密码重置成功')).toBeVisible({ timeout: 10000 })
   })
 
   test('密码强度不足提示', async ({ adminPage }) => {

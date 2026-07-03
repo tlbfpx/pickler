@@ -13,6 +13,10 @@ export const updateAdmin = (id: number, data: UpdateAdminRequest) => {
   return request.put<unknown, ApiResponse<void>>(`/admin-users/${id}`, data)
 }
 
+export const resetAdminPassword = (id: number, newPassword: string) => {
+  return request.post<unknown, ApiResponse<void>>(`/admin-users/${id}/reset-password`, { newPassword })
+}
+
 export const deleteAdmin = (id: number) => {
   return request.delete<unknown, ApiResponse<void>>(`/admin-users/${id}`)
 }
