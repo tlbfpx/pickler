@@ -74,12 +74,66 @@
       v-model="activeTab"
       class="stage-tabs"
     >
-      <el-tab-pane
-        label="基本信息"
-        name="info"
-      >
-        <p class="muted">
-          基本信息通过右上「编辑」修改。
+      <el-tab-pane label="基本信息" name="info">
+        <el-descriptions
+          v-if="event"
+          :column="2"
+          border
+          size="default"
+        >
+          <el-descriptions-item label="赛事标题">
+            {{ event.title }}
+          </el-descriptions-item>
+          <el-descriptions-item label="类型">
+            <el-tag :color="getEventTypeColor(event.type)" effect="dark" size="small">
+              {{ formatEventType(event.type) }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item v-if="event.format" label="比赛形式">
+            <el-tag size="small" effect="plain">{{ formatEventFormat(event.format) }}</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="状态">
+            <el-tag :color="statusColor(event.status)" effect="dark" size="small">
+              {{ formatStatus(event.status) }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="比赛时间">
+            {{ event.eventTime ? formatDate(event.eventTime) : '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="报名截止">
+            {{ event.registrationDeadline ? formatDate(event.registrationDeadline) : '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="地点">
+            {{ event.location || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="报名人数">
+            {{ event.currentParticipants }} / {{ event.maxParticipants ?? '∞' }}
+            <el-progress
+              v-if="event.maxParticipants"
+              :percentage="Math.round(event.currentParticipants / event.maxParticipants * 100)"
+              :stroke-width="4"
+              :show-text="false"
+              style="display: inline-block; width: 80px; margin-left: 8px; vertical-align: middle;"
+            />
+          </el-descriptions-item>
+          <el-descriptions-item label="报名费">
+            <span v-if="event.fee > 0" style="color: #d97706; font-weight: 600">¥{{ event.fee }}</span>
+            <span v-else style="color: #16a34a">免费</span>
+          </el-descriptions-item>
+          <el-descriptions-item v-if="event.minPoints" label="积分门槛">
+            <span style="color: #d97706">{{ event.minPoints }}+ 战力</span>
+          </el-descriptions-item>
+          <el-descriptions-item v-if="event.bannerUrl" label="封面图" :span="2">
+            <el-image
+              :src="event.bannerUrl"
+              fit="cover"
+              style="width: 100%; max-width: 400px; border-radius: 4px"
+              :preview-src-list="[event.bannerUrl]"
+            />
+          </el-descriptions-item>
+        </el-descriptions>
+        <p class="muted" style="margin-top: 12px">
+          提示：基本信息通过右上「编辑」修改。
         </p>
       </el-tab-pane>
       <el-tab-pane
