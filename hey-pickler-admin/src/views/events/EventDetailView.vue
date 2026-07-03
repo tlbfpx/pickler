@@ -3,199 +3,238 @@
     v-loading="loading"
     class="event-detail"
   >
-    <div class="page-header">
-      <div class="title-area">
-        <el-button
-          link
-          @click="$router.back()"
-        >
-          <el-icon><ArrowLeft /></el-icon>返回
-        </el-button>
-        <h1>{{ event?.title || '…' }}</h1>
-        <el-tag
-          v-if="event"
-          :color="statusColor(event.status)"
-          effect="dark"
-        >
-          {{ formatStatus(event.status) }}
-        </el-tag>
-        <el-tag
-          v-if="event?.format"
-          size="small"
-          effect="plain"
-        >
-          {{ formatEventFormat(event.format) }}
-        </el-tag>
-        <el-tag
-          size="small"
-          :color="getEventTypeColor(event?.type)"
-          effect="dark"
-        >
-          {{ formatEventType(event?.type) }}
-        </el-tag>
-      </div>
-      <div v-if="event">
-        <el-button
-          size="small"
-          @click="editOpen = true"
-        >
-          编辑
-        </el-button>
-      </div>
-    </div>
-
-    <div
+    <!-- Hero: 标题 + 状态/类型/形式 tags + 编辑按钮 -->
+    <el-card
       v-if="event"
-      class="summary"
+      shadow="never"
+      class="hero-card"
+      :body-style="{ padding: '20px 24px' }"
     >
-      <span>{{ event.location || '-' }}</span> · <span>{{ formatDate(event.eventTime) }}</span> ·
-      <span>报名 {{ event.currentParticipants }}/{{ event.maxParticipants ?? '∞' }}</span>
-    </div>
-
-    <!-- Stepper -->
-    <el-steps
-      v-if="event"
-      :active="activeStepIndex"
-      finish-status="success"
-      align-center
-      class="stepper"
-    >
-      <el-step
-        v-for="s in steps"
-        :key="s.key"
-        :title="s.title"
-        :status="s.status"
-      />
-    </el-steps>
-
-    <!-- 阶段内容 -->
-    <el-tabs
-      v-if="event"
-      v-model="activeTab"
-      class="stage-tabs"
-    >
-      <el-tab-pane label="基本信息" name="info">
-        <el-descriptions
-          v-if="event"
-          :column="2"
-          border
-          size="default"
-        >
-          <el-descriptions-item label="赛事标题">
-            {{ event.title }}
-          </el-descriptions-item>
-          <el-descriptions-item label="类型">
-            <el-tag :color="getEventTypeColor(event.type)" effect="dark" size="small">
-              {{ formatEventType(event.type) }}
-            </el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item v-if="event.format" label="比赛形式">
-            <el-tag size="small" effect="plain">{{ formatEventFormat(event.format) }}</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="状态">
-            <el-tag :color="statusColor(event.status)" effect="dark" size="small">
+      <div class="hero-top">
+        <div class="hero-title-block">
+          <div class="hero-back-row">
+            <el-button link size="small" @click="$router.back()">
+              <el-icon><ArrowLeft /></el-icon>返回赛事列表
+            </el-button>
+          </div>
+          <h1 class="hero-title">{{ event.title }}</h1>
+          <div class="hero-tags">
+            <el-tag :color="statusColor(event.status)" effect="dark" size="large" round>
               {{ formatStatus(event.status) }}
             </el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="比赛时间">
-            {{ event.eventTime ? formatDate(event.eventTime) : '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="报名截止">
-            {{ event.registrationDeadline ? formatDate(event.registrationDeadline) : '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="地点">
-            {{ event.location || '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="报名人数">
-            {{ event.currentParticipants }} / {{ event.maxParticipants ?? '∞' }}
-            <el-progress
-              v-if="event.maxParticipants"
-              :percentage="Math.round(event.currentParticipants / event.maxParticipants * 100)"
-              :stroke-width="4"
-              :show-text="false"
-              style="display: inline-block; width: 80px; margin-left: 8px; vertical-align: middle;"
-            />
-          </el-descriptions-item>
-          <el-descriptions-item label="报名费">
-            <span v-if="event.fee > 0" style="color: #d97706; font-weight: 600">¥{{ event.fee }}</span>
-            <span v-else style="color: #16a34a">免费</span>
-          </el-descriptions-item>
-          <el-descriptions-item v-if="event.minPoints" label="积分门槛">
-            <span style="color: #d97706">{{ event.minPoints }}+ 战力</span>
-          </el-descriptions-item>
-          <el-descriptions-item v-if="event.bannerUrl" label="封面图" :span="2">
-            <el-image
-              :src="event.bannerUrl"
-              fit="cover"
-              style="width: 100%; max-width: 400px; border-radius: 4px"
-              :preview-src-list="[event.bannerUrl]"
-            />
-          </el-descriptions-item>
-        </el-descriptions>
-        <p class="muted" style="margin-top: 12px">
-          提示：基本信息通过右上「编辑」修改。
-        </p>
-      </el-tab-pane>
-      <el-tab-pane
-        label="报名"
-        name="reg"
-      >
-        <RegistrationDrawerEmbed
-          :event="event"
-          @changed="reload"
-        />
-      </el-tab-pane>
-      <el-tab-pane
-        label="分组"
-        name="group"
-      >
-        <GroupingPanel
-          :key="`g-${event.id}-${event.groupingLocked}`"
-          :event="event"
-          @changed="reload"
-        />
-      </el-tab-pane>
-      <el-tab-pane
-        label="对阵/比赛"
-        name="match"
-      >
-        <MatchesPanel
-          :event="event"
-          @changed="reload"
-        />
-      </el-tab-pane>
-      <el-tab-pane
-        label="发分"
-        name="issue"
-      >
-        <IssuancePanel
-          :event="event"
-          @changed="reload"
-        />
-      </el-tab-pane>
-    </el-tabs>
+            <el-tag :color="getEventTypeColor(event.type)" effect="dark" size="default" round>
+              {{ formatEventType(event.type) }}
+            </el-tag>
+            <el-tag v-if="event.format" effect="plain" size="default">
+              {{ formatEventFormat(event.format) }}
+            </el-tag>
+            <el-tag v-if="event.fee > 0" type="warning" size="default" effect="plain">
+              ¥{{ event.fee }}
+            </el-tag>
+            <el-tag v-else type="success" size="default" effect="plain">
+              免费
+            </el-tag>
+          </div>
+        </div>
+        <el-button type="primary" :icon="Edit" plain @click="editOpen = true">
+          编辑信息
+        </el-button>
+      </div>
+      <el-divider class="hero-divider" />
+      <div class="hero-stats">
+        <div class="stat-cell">
+          <el-icon class="stat-icon"><Location /></el-icon>
+          <div class="stat-content">
+            <div class="stat-label">比赛地点</div>
+            <div class="stat-value">{{ event.location || '未设置' }}</div>
+          </div>
+        </div>
+        <div class="stat-cell">
+          <el-icon class="stat-icon"><Clock /></el-icon>
+          <div class="stat-content">
+            <div class="stat-label">比赛时间</div>
+            <div class="stat-value">{{ event.eventTime ? formatDate(event.eventTime) : '未设置' }}</div>
+          </div>
+        </div>
+        <div class="stat-cell">
+          <el-icon class="stat-icon"><Calendar /></el-icon>
+          <div class="stat-content">
+            <div class="stat-label">报名截止</div>
+            <div class="stat-value">{{ event.registrationDeadline ? formatDate(event.registrationDeadline) : '未设置' }}</div>
+          </div>
+        </div>
+        <div class="stat-cell stat-cell-registration">
+          <el-icon class="stat-icon"><User /></el-icon>
+          <div class="stat-content">
+            <div class="stat-label">报名人数</div>
+            <div class="stat-value">
+              <span class="big-num">{{ event.currentParticipants }}</span>
+              <span class="small-num"> / {{ event.maxParticipants ?? '∞' }}</span>
+              <el-progress
+                v-if="event.maxParticipants"
+                :percentage="Math.round(event.currentParticipants / event.maxParticipants * 100)"
+                :stroke-width="6"
+                :show-text="false"
+                class="stat-progress"
+                :color="event.currentParticipants >= event.maxParticipants ? '#f59e0b' : '#10b981'"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </el-card>
 
-    <!-- 状态显式化：当前合法的下一阶段按钮 -->
-    <div
+    <!-- Stepper -->
+    <el-card
       v-if="event"
-      class="status-actions"
+      shadow="never"
+      class="stage-card"
+      :body-style="{ padding: '24px 24px' }"
     >
-      <span class="muted">状态推进：</span>
-      <el-button
-        v-for="t in getAllowedTargets(event.status)"
-        :key="t"
-        :type="t === 'CANCELLED' ? 'danger' : 'primary'"
-        plain
-        size="small"
-        @click="changeStatus(t)"
+      <el-steps
+        :active="activeStepIndex"
+        finish-status="success"
+        align-center
       >
-        → {{ formatStatus(t) }}
-      </el-button>
-      <span
-        v-if="!getAllowedTargets(event.status).length"
-        class="muted"
-      >（终态，无可用转换）</span>
-    </div>
+        <el-step
+          v-for="s in steps"
+          :key="s.key"
+          :title="s.title"
+          :description="stepDescription(s.key)"
+          :status="s.status"
+        />
+      </el-steps>
+    </el-card>
+
+    <!-- 状态显式化：当前合法的下一阶段按钮（粘底） -->
+    <transition name="slide-up">
+      <div
+        v-if="event && getAllowedTargets(event.status).length"
+        class="status-action-floating"
+      >
+        <div class="status-action-inner">
+          <div class="status-action-label">
+            <el-icon><Promotion /></el-icon>
+            <span>推进到下一阶段</span>
+          </div>
+          <div class="status-action-buttons">
+            <el-button
+              v-for="t in getAllowedTargets(event.status)"
+              :key="t"
+              :type="t === 'CANCELLED' ? 'danger' : 'primary'"
+              :icon="t === 'CANCELLED' ? CircleClose : Right"
+              @click="changeStatus(t)"
+            >
+              {{ formatStatus(t) }}
+            </el-button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- 阶段内容 -->
+    <el-card
+      v-if="event"
+      shadow="never"
+      class="stage-card"
+      :body-style="{ padding: '12px 24px 24px' }"
+    >
+      <el-tabs
+        v-model="activeTab"
+        class="stage-tabs"
+      >
+        <el-tab-pane label="基本信息" name="info">
+          <el-descriptions
+            :column="2"
+            border
+            size="default"
+          >
+            <el-descriptions-item label="赛事标题">
+              {{ event.title }}
+            </el-descriptions-item>
+            <el-descriptions-item label="类型">
+              <el-tag :color="getEventTypeColor(event.type)" effect="dark" size="small">
+                {{ formatEventType(event.type) }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item v-if="event.format" label="比赛形式">
+              <el-tag size="small" effect="plain">{{ formatEventFormat(event.format) }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="状态">
+              <el-tag :color="statusColor(event.status)" effect="dark" size="small">
+                {{ formatStatus(event.status) }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="比赛时间">
+              {{ event.eventTime ? formatDate(event.eventTime) : '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="报名截止">
+              {{ event.registrationDeadline ? formatDate(event.registrationDeadline) : '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="地点">
+              {{ event.location || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="报名人数">
+              {{ event.currentParticipants }} / {{ event.maxParticipants ?? '∞' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="报名费">
+              <span v-if="event.fee > 0" style="color: #d97706; font-weight: 600">¥{{ event.fee }}</span>
+              <span v-else style="color: #16a34a">免费</span>
+            </el-descriptions-item>
+            <el-descriptions-item v-if="event.minPoints" label="积分门槛">
+              <span style="color: #d97706">{{ event.minPoints }}+ 战力</span>
+            </el-descriptions-item>
+            <el-descriptions-item v-if="event.bannerUrl" label="封面图" :span="2">
+              <el-image
+                :src="event.bannerUrl"
+                fit="cover"
+                style="width: 100%; max-width: 400px; border-radius: 4px"
+                :preview-src-list="[event.bannerUrl]"
+              />
+            </el-descriptions-item>
+          </el-descriptions>
+        </el-tab-pane>
+        <el-tab-pane
+          label="报名"
+          name="reg"
+        >
+          <RegistrationDrawerEmbed
+            :event="event"
+            @changed="reload"
+          />
+        </el-tab-pane>
+        <el-tab-pane
+          label="分组"
+          name="group"
+        >
+          <GroupingPanel
+            :key="`g-${event.id}-${event.groupingLocked}`"
+            :event="event"
+            @changed="reload"
+          />
+        </el-tab-pane>
+        <el-tab-pane
+          label="对阵/比赛"
+          name="match"
+        >
+          <MatchesPanel
+            :event="event"
+            @changed="reload"
+          />
+        </el-tab-pane>
+        <el-tab-pane
+          label="发分"
+          name="issue"
+        >
+          <IssuancePanel
+            :event="event"
+            @changed="reload"
+          />
+        </el-tab-pane>
+      </el-tabs>
+    </el-card>
+
+    <div class="bottom-spacer" />
 
     <EventFormDialog
       v-model="editOpen"
@@ -209,7 +248,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft } from '@element-plus/icons-vue'
+import {
+  ArrowLeft, Edit, Location, Clock, Calendar, User, Promotion, Right, CircleClose
+} from '@element-plus/icons-vue'
 import { getEventDetail, changeEventStatus } from '@/api/events'
 import { formatStatus, statusColor, getAllowedTargets, type EventStatus } from '@/constants/eventStatus'
 import { formatDate, formatEventType, formatEventFormat, getEventTypeColor } from '@/utils'
@@ -267,6 +308,15 @@ const steps = computed(() => {
   return base
 })
 
+const STEP_DESCRIPTIONS: Record<string, string> = {
+  draft: '创建并完善赛事信息',
+  reg: '选手报名与签到',
+  group: '按策略分组（随机/蛇形/手动）',
+  match: '生成对阵 + 录入比分',
+  issue: '配置加分表 + 自动发分'
+}
+const stepDescription = (k: string) => STEP_DESCRIPTIONS[k] || ''
+
 const changeStatus = async (t: EventStatus) => {
   if (!event.value) return
   const r = await changeEventStatus(event.value.id, t)
@@ -276,10 +326,124 @@ const changeStatus = async (t: EventStatus) => {
 </script>
 
 <style scoped>
-.title-area { display: flex; align-items: center; gap: 12px; }
-.summary { color: #6b7280; font-size: 13px; margin: 8px 0 16px; }
-.stepper { margin-bottom: 16px; }
-.stage-tabs { margin-bottom: 16px; }
-.status-actions { display: flex; gap: 8px; align-items: center; padding: 12px; background: #f9fafb; border-radius: 8px; flex-wrap: wrap; }
-.muted { color: #9ca3af; font-size: 13px; }
+.event-detail {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-bottom: 24px;
+}
+
+/* Hero card */
+.hero-card {
+  margin-bottom: 16px;
+  border: 1px solid #e5e7eb;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+}
+.hero-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+.hero-title-block { flex: 1; min-width: 0; }
+.hero-back-row { margin-bottom: 4px; }
+.hero-back-row :deep(.el-button) { font-size: 13px; color: #6b7280; padding: 0; }
+.hero-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #111827;
+  margin: 4px 0 12px;
+  line-height: 1.3;
+  word-break: break-word;
+}
+.hero-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.hero-divider { margin: 16px 0 !important; }
+.hero-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+.stat-cell { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+.stat-icon {
+  font-size: 18px;
+  color: #6366f1;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.stat-content { flex: 1; min-width: 0; }
+.stat-label {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 2px;
+  font-weight: 500;
+}
+.stat-value {
+  font-size: 14px;
+  color: #1f2937;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.stat-progress { width: 100%; margin-top: 4px; }
+.big-num { font-size: 18px; font-weight: 600; color: #111827; }
+.small-num { color: #6b7280; font-size: 13px; }
+
+/* Stepper card + tab card */
+.stage-card { margin-bottom: 16px; border: 1px solid #e5e7eb; }
+.stage-card :deep(.el-tabs__header) { margin: 0 0 16px 0; }
+.stage-card :deep(.el-tabs__nav-wrap)::after { height: 1px; background-color: #e5e7eb; }
+
+/* Bottom spacer to clear the floating action bar */
+.bottom-spacer { height: 80px; }
+
+/* Floating status action bar (always visible at viewport bottom) */
+.status-action-floating {
+  position: fixed;
+  left: 220px;  /* clear the AppSidebar width */
+  right: 24px;
+  bottom: 16px;
+  z-index: 100;
+  pointer-events: none;
+}
+.status-action-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  pointer-events: auto;
+}
+.status-action-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+.status-action-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Transition for the floating bar */
+.slide-up-enter-active, .slide-up-leave-active {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.slide-up-enter-from, .slide-up-leave-to {
+  transform: translateY(20px);
+  opacity: 0;
+}
+
+@media (max-width: 900px) {
+  .hero-stats { grid-template-columns: repeat(2, 1fr); }
+  .status-action-floating { left: 12px; right: 12px; }
+}
 </style>
