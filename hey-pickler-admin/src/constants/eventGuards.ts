@@ -68,3 +68,39 @@ export const canLockGroups = (e: Event | null) => !!e && !e.groupingLocked
 /** 生成对阵：分组已锁定 + 当前无对阵。 */
 export const canGenerateMatches = (e: Event | null, hasMatches: boolean) =>
   !!e && !!e.groupingLocked && !hasMatches
+
+// ---------------- Team management (admin side) ----------------
+
+/** Event supports team operations: doubles/mixed + OPEN/FULL + !groupingLocked + not past deadline. */
+export const isTeamEvent = (e: Event | null) => {
+  if (!e) return false
+  if (e.format !== 'DOUBLES' && e.format !== 'MIXED') return false
+  if (e.status !== 'OPEN' && e.status !== 'FULL') return false
+  if (e.groupingLocked) return false
+  if (e.registrationDeadline && new Date(e.registrationDeadline).getTime() < Date.now()) return false
+  return true
+}
+
+/** 建队：SINGLES 不可建；且当前行所属用户还没组队；OPEN + !groupingLocked + 未过截止。 */
+export const canCreateTeam = (
+  e: Event | null,
+  existingTeam: { status: string } | null | undefined
+) => isTeamEvent(e) && !existingTeam
+
+/** 确认入队：当前行是被邀请方 (member2) + 队伍 PENDING + 事件支持组队。 */
+export const canConfirmTeam = (
+  e: Event | null,
+  team: { status: string } | null | undefined
+) => isTeamEvent(e) && !!team && team.status === 'PENDING'
+
+/** 拒绝邀请：当前行是被邀请方 + 队伍 PENDING + 事件支持组队。 */
+export const canDeclineTeam = (
+  e: Event | null,
+  team: { status: string } | null | undefined
+) => isTeamEvent(e) && !!team && team.status === 'PENDING'
+
+/** 解散队伍：当前行是任一成员 + 队伍 CONFIRMED + 事件未锁定分组。 */
+export const canDissolveTeam = (
+  e: Event | null,
+  team: { status: string } | null | undefined
+) => isTeamEvent(e) && !!team && team.status === 'CONFIRMED'

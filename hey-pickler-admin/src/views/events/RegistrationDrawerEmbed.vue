@@ -123,6 +123,65 @@
         </template>
       </el-table-column>
       <el-table-column
+        v-if="isTeamEvent(event)"
+        label="队伍"
+        width="240"
+      >
+        <template #default="{ row }">
+          <div class="team-cell">
+            <el-tag
+              v-if="teamContextByUserId[row.userId]"
+              size="small"
+              :type="teamContextByUserId[row.userId]!.status === 'CONFIRMED' ? 'success' : 'warning'"
+            >
+              {{ teamBadgeLabel(row.userId) }}
+            </el-tag>
+            <span
+              v-else
+              class="muted"
+            >未组队</span>
+            <el-button
+              v-if="canCreateTeam(event, teamContextByUserId[row.userId])"
+              link
+              type="primary"
+              size="small"
+              @click="openCreateDialog(row)"
+            >
+              建队
+            </el-button>
+            <template v-else-if="teamContextByUserId[row.userId]">
+              <el-button
+                v-if="isInvitedPartner(row.userId) && canConfirmTeam(event, teamContextByUserId[row.userId])"
+                link
+                type="success"
+                size="small"
+                @click="handleConfirmTeam(row)"
+              >
+                接受
+              </el-button>
+              <el-button
+                v-if="isInvitedPartner(row.userId) && canDeclineTeam(event, teamContextByUserId[row.userId])"
+                link
+                type="danger"
+                size="small"
+                @click="handleDeclineTeam(row)"
+              >
+                拒绝
+              </el-button>
+              <el-button
+                v-if="canDissolveTeam(event, teamContextByUserId[row.userId])"
+                link
+                type="danger"
+                size="small"
+                @click="handleDissolveTeam(row)"
+              >
+                解散
+              </el-button>
+            </template>
+          </div>
+        </template>
+      </el-table-column>
+      <el-table-column
         label="报名时间"
         width="150"
       >
@@ -202,21 +261,75 @@
       v-model:size="pagination.size"
       :total="pagination.total"
     />
+
+    <!-- 建队对话框 -->
+    <el-dialog
+      v-model="createDialogVisible"
+      title="代用户建队"
+      width="420px"
+      append-to-body
+    >
+      <el-form
+        :model="createForm"
+        label-width="100px"
+        size="small"
+      >
+        <el-form-item label="队长 (用户ID)">
+          <el-input
+            v-model.number="createForm.captainUserId"
+            disabled
+            placeholder="队长用户ID"
+          />
+        </el-form-item>
+        <el-form-item label="搭档 (用户ID)">
+          <el-input
+            v-model.number="createForm.partnerUserId"
+            placeholder="请输入搭档的用户ID"
+          />
+        </el-form-item>
+        <el-form-item label="队伍名 (可选)">
+          <el-input
+            v-model="createForm.name"
+            placeholder="可空"
+            maxlength="32"
+            show-word-limit
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="createDialogVisible = false">
+          取消
+        </el-button>
+        <el-button
+          type="primary"
+          :loading="createSubmitting"
+          @click="handleCreateTeam"
+        >
+          创建
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Pagination from '@/components/common/Pagination.vue'
 import { getEventRegistrations, updateRegistrationStatus } from '@/api/events'
+import { listEventTeams, createTeam, confirmTeam, declineTeam, dissolveTeam, type TeamVO } from '@/api/teams'
 import { formatDate } from '@/utils'
 import type { Event, Registration } from '@/types'
 import {
   canCheckIn,
   canWithdraw,
   canBulkCheckIn,
-  canBulkCheckInByEvent
+  canBulkCheckInByEvent,
+  canCreateTeam,
+  canConfirmTeam,
+  canDeclineTeam,
+  canDissolveTeam,
+  isTeamEvent
 } from '@/constants/eventGuards'
 
 const props = defineProps<{ event: Event }>()
@@ -230,6 +343,13 @@ const pagination = reactive({ page: 1, size: 10, total: 0 })
 const selected = ref<Registration[]>([])
 const bulkLoading = ref(false)
 
+// ---- teams state ----
+const teams = ref<TeamVO[]>([])
+const teamContextByUserId = ref<Record<number, TeamVO | null>>({})
+const createDialogVisible = ref(false)
+const createSubmitting = ref(false)
+const createForm = reactive({ captainUserId: 0, partnerUserId: 0, name: '' })
+
 const onSelectionChange = (rows: Registration[]) => { selected.value = rows }
 
 const bulkCheckInDisabledReason = computed(() => {
@@ -238,6 +358,33 @@ const bulkCheckInDisabledReason = computed(() => {
   if (!canBulkCheckIn(selected.value)) return '所选项中存在非「已报名」状态，无法签到'
   return ''
 })
+
+function rebuildTeamContext() {
+  const map: Record<number, TeamVO | null> = {}
+  for (const r of registrationList.value) map[r.userId] = null
+  for (const t of teams.value) {
+    if (map[t.member1UserId] !== undefined) map[t.member1UserId] = t
+    if (map[t.member2UserId] !== undefined) map[t.member2UserId] = t
+  }
+  teamContextByUserId.value = map
+}
+
+function isInvitedPartner(userId: number) {
+  const t = teamContextByUserId.value[userId]
+  return !!t && t.member2UserId === userId && t.status === 'PENDING'
+}
+
+function teamBadgeLabel(userId: number) {
+  const t = teamContextByUserId.value[userId]
+  if (!t) return ''
+  if (t.status === 'CONFIRMED') {
+    const partnerName = t.member1UserId === userId ? t.member2Name : t.member1Name
+    return `已组队 (与 ${partnerName || '队友'})`
+  }
+  // PENDING
+  if (t.member1UserId === userId) return 'PENDING'
+  return 'PENDING (你被邀请)'
+}
 
 const handleBulkCheckIn = async () => {
   if (!props.event) return
@@ -253,7 +400,7 @@ const handleBulkCheckIn = async () => {
   }
   bulkLoading.value = false
   ElMessage.success(`签到成功 ${ok} / ${targets.length}` + (failed.length ? `；失败 ${failed.length}` : ''))
-  await fetchRegistrations(); emit('changed')
+  await fetchRegistrations(); await fetchTeams(); emit('changed')
 }
 
 const handleExport = async () => {
@@ -287,11 +434,30 @@ async function fetchRegistrations() {
     if (res.code === 0) {
       registrationList.value = res.data.list
       pagination.total = res.data.total
+      rebuildTeamContext()
     }
   } catch {
 
   }
   loading.value = false
+}
+
+async function fetchTeams() {
+  if (!props.event) return
+  if (!isTeamEvent(props.event)) {
+    teams.value = []
+    rebuildTeamContext()
+    return
+  }
+  try {
+    const res = await listEventTeams(props.event.id)
+    if (res.code === 0) {
+      teams.value = res.data || []
+      rebuildTeamContext()
+    }
+  } catch {
+    // request interceptor already surfaces errors
+  }
 }
 
 function handleFilter() {
@@ -329,9 +495,107 @@ async function handleWithdraw(row: Registration) {
     if (res.code === 0) {
       ElMessage.success('已取消报名')
       await fetchRegistrations()
+      await fetchTeams()
       emit('changed')
     } else {
       ElMessage.error(res.message)
+    }
+  } catch { /* cancelled */ }
+}
+
+// ---- team actions ----
+
+function openCreateDialog(row: Registration) {
+  createForm.captainUserId = row.userId
+  createForm.partnerUserId = 0
+  createForm.name = ''
+  createDialogVisible.value = true
+}
+
+async function handleCreateTeam() {
+  if (!props.event) return
+  if (!createForm.captainUserId || !createForm.partnerUserId) {
+    ElMessage.warning('队长与搭档不能为空')
+    return
+  }
+  if (createForm.captainUserId === createForm.partnerUserId) {
+    ElMessage.warning('不能与自己组队')
+    return
+  }
+  createSubmitting.value = true
+  try {
+    const res = await createTeam(props.event.id, {
+      captainUserId: createForm.captainUserId,
+      partnerUserId: createForm.partnerUserId,
+      name: createForm.name || undefined
+    })
+    if (res.code === 0) {
+      ElMessage.success('建队成功')
+      createDialogVisible.value = false
+      await fetchTeams()
+      await fetchRegistrations()
+      emit('changed')
+    } else {
+      ElMessage.error(res.message || '建队失败')
+    }
+  } finally {
+    createSubmitting.value = false
+  }
+}
+
+async function handleConfirmTeam(row: Registration) {
+  if (!props.event) return
+  const t = teamContextByUserId.value[row.userId]
+  if (!t) return
+  try {
+    const res = await confirmTeam(t.id, { userId: row.userId })
+    if (res.code === 0) {
+      ElMessage.success('已接受邀请')
+      await fetchTeams()
+      await fetchRegistrations()
+      emit('changed')
+    } else {
+      ElMessage.error(res.message || '确认失败')
+    }
+  } catch { /* swallowed */ }
+}
+
+async function handleDeclineTeam(row: Registration) {
+  if (!props.event) return
+  const t = teamContextByUserId.value[row.userId]
+  if (!t) return
+  try {
+    await ElMessageBox.confirm(`确认拒绝该队伍的邀请？`, '拒绝邀请', { type: 'warning' })
+    const res = await declineTeam(t.id, { userId: row.userId })
+    if (res.code === 0) {
+      ElMessage.success('已拒绝邀请')
+      await fetchTeams()
+      await fetchRegistrations()
+      emit('changed')
+    } else {
+      ElMessage.error(res.message || '操作失败')
+    }
+  } catch { /* cancelled */ }
+}
+
+async function handleDissolveTeam(row: Registration) {
+  if (!props.event) return
+  const t = teamContextByUserId.value[row.userId]
+  if (!t) return
+  try {
+    await ElMessageBox.confirm(
+      `确认解散该队伍？解散后该队伍两名成员的报名都将被撤回。`,
+      '解散队伍',
+      { type: 'warning' }
+    )
+    const res = await dissolveTeam(t.id)
+    if (res.code === 0) {
+      ElMessage.success('队伍已解散')
+      await fetchTeams()
+      await fetchRegistrations()
+      emit('changed')
+    } else {
+      ElMessage.error(res.message || '解散失败')
     }
   } catch { /* cancelled */ }
 }
@@ -356,7 +620,20 @@ function formatRegStatus(status: string) {
   return map[status] || status
 }
 
-onMounted(fetchRegistrations)
+onMounted(async () => {
+  await fetchRegistrations()
+  await fetchTeams()
+})
+
+// Refetch teams when the parent swaps in a different event.
+watch(() => props.event?.id, async (id, prev) => {
+  if (id === prev) return
+  pagination.page = 1
+  teams.value = []
+  teamContextByUserId.value = {}
+  await fetchRegistrations()
+  await fetchTeams()
+})
 </script>
 
 <style scoped>
@@ -379,6 +656,13 @@ onMounted(fetchRegistrations)
 .user-name {
   font-size: 13px;
   color: #374151;
+}
+
+.team-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .bulk-bar { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
