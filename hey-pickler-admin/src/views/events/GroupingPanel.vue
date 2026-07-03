@@ -54,31 +54,51 @@
         :disabled="locked || running"
         style="width: 110px"
       />
-      <el-button
-        type="primary"
-        :loading="running"
-        :disabled="locked"
-        @click="handleGroup"
+      <el-tooltip
+        :content="canStartGrouping(props.event) ? '' : '需要赛事状态为 OPEN/FULL 且未锁定'"
+        :disabled="canStartGrouping(props.event)"
+        placement="top"
       >
-        {{ hasGroups ? '重新分组' : '开始分组' }}
-      </el-button>
-      <el-button
-        v-if="hasGroups && !locked"
-        type="danger"
-        plain
-        :loading="running"
-        @click="handleUnlock"
+        <el-button
+          type="primary"
+          :loading="running"
+          :disabled="locked || !canStartGrouping(props.event)"
+          @click="handleGroup"
+        >
+          {{ hasGroups ? '重新分组' : '开始分组' }}
+        </el-button>
+      </el-tooltip>
+      <el-tooltip
+        :content="canUnlockGroups(props.event) ? '' : '分组未锁定，无需解锁'"
+        :disabled="canUnlockGroups(props.event)"
+        placement="top"
       >
-        解锁并清空
-      </el-button>
-      <el-button
-        v-if="hasGroups && !locked"
-        type="success"
-        :loading="running"
-        @click="handleLock"
+        <el-button
+          v-if="hasGroups && !locked"
+          type="danger"
+          plain
+          :loading="running"
+          :disabled="!canUnlockGroups(props.event)"
+          @click="handleUnlock"
+        >
+          解锁并清空
+        </el-button>
+      </el-tooltip>
+      <el-tooltip
+        :content="canLockGroups(props.event) ? '' : '分组已锁定'"
+        :disabled="canLockGroups(props.event)"
+        placement="top"
       >
-        锁定
-      </el-button>
+        <el-button
+          v-if="hasGroups && !locked"
+          type="success"
+          :loading="running"
+          :disabled="!canLockGroups(props.event)"
+          @click="handleLock"
+        >
+          锁定
+        </el-button>
+      </el-tooltip>
     </div>
 
     <div
@@ -180,6 +200,11 @@ import {
   type GroupingStrategy
 } from '@/api/grouping'
 import type { Event } from '@/types'
+import {
+  canStartGrouping,
+  canUnlockGroups,
+  canLockGroups
+} from '@/constants/eventGuards'
 
 const props = defineProps<{
   event: Event

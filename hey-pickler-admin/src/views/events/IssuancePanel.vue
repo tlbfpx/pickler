@@ -82,14 +82,20 @@
       >
         积分规则
       </el-button>
-      <el-button
-        type="success"
-        :loading="completing"
-        :disabled="event.status !== 'IN_PROGRESS'"
-        @click="handleComplete"
+      <el-tooltip
+        :content="canIssuePoints(event) ? '' : '需赛事处于进行中（IN_PROGRESS）状态才能结赛'"
+        :disabled="canIssuePoints(event)"
+        placement="top"
       >
-        完成赛事并发分
-      </el-button>
+        <el-button
+          type="success"
+          :loading="completing"
+          :disabled="!canIssuePoints(event)"
+          @click="handleComplete"
+        >
+          完成赛事并发分
+        </el-button>
+      </el-tooltip>
       <div class="hint">
         完成后将按积分规则发放名次积分（source=PLACEMENT）。需所有比赛已完成，否则会提示未完成场次。
       </div>
@@ -109,6 +115,7 @@ import { completeEvent, getEventMatches } from '@/api/matches'
 import { getEventPlacements, type PlacementDetail } from '@/api/events'
 import PlacementPointsDialog from './PlacementPointsDialog.vue'
 import type { Event } from '@/types'
+import { canIssuePoints } from '@/constants/eventGuards'
 
 const props = defineProps<{ event: Event }>()
 const emit = defineEmits<{ changed: [] }>()

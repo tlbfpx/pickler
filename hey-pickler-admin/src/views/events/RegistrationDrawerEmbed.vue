@@ -136,39 +136,59 @@
         fixed="right"
       >
         <template #default="{ row }">
-          <el-button
-            v-if="row.status === 'REGISTERED'"
-            link
-            type="success"
-            size="small"
-            @click="handleCheckIn(row)"
+          <el-tooltip
+            :content="canCheckIn(row) ? '' : '该报名已签到/已退赛，无法重复签到'"
+            :disabled="canCheckIn(row)"
+            placement="top"
           >
-            签到
-          </el-button>
-          <el-button
-            v-if="row.status !== 'WITHDRAWN'"
-            link
-            type="danger"
-            size="small"
-            @click="handleWithdraw(row)"
+            <el-button
+              v-if="row.status === 'REGISTERED'"
+              link
+              type="success"
+              size="small"
+              :disabled="!canCheckIn(row) || !canBulkCheckInByEvent(event)"
+              @click="handleCheckIn(row)"
+            >
+              签到
+            </el-button>
+          </el-tooltip>
+          <el-tooltip
+            :content="canWithdraw(row) ? '' : '该报名已退赛'"
+            :disabled="canWithdraw(row)"
+            placement="top"
           >
-            取消报名
-          </el-button>
+            <el-button
+              v-if="row.status !== 'WITHDRAWN'"
+              link
+              type="danger"
+              size="small"
+              :disabled="!canWithdraw(row)"
+              @click="handleWithdraw(row)"
+            >
+              取消报名
+            </el-button>
+          </el-tooltip>
         </template>
       </el-table-column>
     </el-table>
 
     <div class="bulk-bar">
       <span class="muted">已选 {{ selected.length }} 项</span>
-      <el-button
-        type="success"
-        size="small"
-        :disabled="!selected.length"
-        :loading="bulkLoading"
-        @click="handleBulkCheckIn"
+      <el-tooltip
+        :content="bulkCheckInDisabledReason"
+        :disabled="!bulkCheckInDisabledReason"
+        placement="top"
       >
-        批量签到
-      </el-button>
+        <el-button
+          type="success"
+          size="small"
+          :disabled="!selected.length || !canBulkCheckInByEvent(event) || !canBulkCheckIn(selected)"
+          :loading="bulkLoading"
+          @click="handleBulkCheckIn"
+        >
+          批量签到
+        </el-button>
+      </el-tooltip>
       <el-button
         size="small"
         @click="handleExport"
@@ -186,12 +206,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Pagination from '@/components/common/Pagination.vue'
 import { getEventRegistrations, updateRegistrationStatus } from '@/api/events'
 import { formatDate } from '@/utils'
 import type { Event, Registration } from '@/types'
+import {
+  canCheckIn,
+  canWithdraw,
+  canBulkCheckIn,
+  canBulkCheckInByEvent
+} from '@/constants/eventGuards'
 
 const props = defineProps<{ event: Event }>()
 const emit = defineEmits<{ changed: [] }>()
@@ -205,6 +231,13 @@ const selected = ref<Registration[]>([])
 const bulkLoading = ref(false)
 
 const onSelectionChange = (rows: Registration[]) => { selected.value = rows }
+
+const bulkCheckInDisabledReason = computed(() => {
+  if (selected.value.length === 0) return '请先选择要签到的报名项'
+  if (!canBulkCheckInByEvent(props.event)) return '仅 OPEN/FULL 阶段支持签到'
+  if (!canBulkCheckIn(selected.value)) return '所选项中存在非「已报名」状态，无法签到'
+  return ''
+})
 
 const handleBulkCheckIn = async () => {
   if (!props.event) return

@@ -6,15 +6,21 @@
     <div class="panel-header">
       <h3>对阵 / 比赛</h3>
       <div>
-        <el-button
-          v-if="!hasMatches"
-          type="primary"
-          :loading="genLoading"
-          :disabled="!event.groupingLocked"
-          @click="handleGenerate"
+        <el-tooltip
+          :content="canGenerateMatches(props.event, hasMatches) ? '' : generateDisabledReason"
+          :disabled="canGenerateMatches(props.event, hasMatches)"
+          placement="top"
         >
-          生成对阵
-        </el-button>
+          <el-button
+            v-if="!hasMatches"
+            type="primary"
+            :loading="genLoading"
+            :disabled="!canGenerateMatches(props.event, hasMatches)"
+            @click="handleGenerate"
+          >
+            生成对阵
+          </el-button>
+        </el-tooltip>
         <el-button
           v-if="hasMatches"
           type="success"
@@ -91,23 +97,37 @@
           fixed="right"
         >
           <template #default="{ row }">
-            <el-button
-              link
-              type="primary"
-              size="small"
-              @click="openScore(row)"
+            <el-tooltip
+              :content="canRecordScore(row) ? '' : '该比赛已完成，不可重复录入'"
+              :disabled="canRecordScore(row)"
+              placement="top"
             >
-              代录
-            </el-button>
-            <el-button
-              v-if="row.status !== 'SCHEDULED'"
-              link
-              type="danger"
-              size="small"
-              @click="handleReset(row)"
+              <el-button
+                link
+                type="primary"
+                size="small"
+                :disabled="!canRecordScore(row)"
+                @click="openScore(row)"
+              >
+                代录
+              </el-button>
+            </el-tooltip>
+            <el-tooltip
+              :content="canResetScore(row) ? '' : '仅已完成的比赛可重置'"
+              :disabled="canResetScore(row)"
+              placement="top"
             >
-              重置
-            </el-button>
+              <el-button
+                v-if="row.status !== 'SCHEDULED'"
+                link
+                type="danger"
+                size="small"
+                :disabled="!canResetScore(row)"
+                @click="handleReset(row)"
+              >
+                重置
+              </el-button>
+            </el-tooltip>
           </template>
         </el-table-column>
       </el-table>
@@ -172,6 +192,7 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { generateMatches, getEventMatches, getEventStandings, submitMatchScore, resetMatch } from '@/api/matches'
 import type { Event, MatchItem, StandingRow, GameScore } from '@/types'
+import { canRecordScore, canResetScore, canGenerateMatches } from '@/constants/eventGuards'
 
 const props = defineProps<{ event: Event }>()
 const emit = defineEmits<{ changed: [] }>()
@@ -181,6 +202,12 @@ const matches = ref<MatchItem[][]>([])
 const standings = ref<StandingRow[][]>([])
 const standingLoading = ref(false)
 const hasMatches = computed(() => matches.value.some(g => g.length))
+
+const generateDisabledReason = computed(() => {
+  if (!props.event.groupingLocked) return '需先锁定分组后才能生成对阵'
+  if (hasMatches.value) return '对阵已生成，如需重新生成请先重置'
+  return ''
+})
 
 const fetchMatches = async () => {
   loading.value = true

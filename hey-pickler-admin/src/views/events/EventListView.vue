@@ -141,20 +141,34 @@
           fixed="right"
         >
           <template #default="{ row }">
-            <el-button
-              type="success"
-              size="small"
-              @click="handleViewRegistrations(row)"
+            <el-tooltip
+              :content="canViewRegistrations(row) ? '' : '仅 OPEN/FULL 阶段可查看报名'"
+              :disabled="canViewRegistrations(row)"
+              placement="top"
             >
-              报名
-            </el-button>
-            <el-button
-              type="info"
-              size="small"
-              @click="handleOpenPlacement(row)"
+              <el-button
+                type="success"
+                size="small"
+                :disabled="!canViewRegistrations(row)"
+                @click="handleViewRegistrations(row)"
+              >
+                报名
+              </el-button>
+            </el-tooltip>
+            <el-tooltip
+              :content="canEditPoints(row) ? '' : '已结束/已取消的赛事不可编辑积分规则'"
+              :disabled="canEditPoints(row)"
+              placement="top"
             >
-              积分规则
-            </el-button>
+              <el-button
+                type="info"
+                size="small"
+                :disabled="!canEditPoints(row)"
+                @click="handleOpenPlacement(row)"
+              >
+                积分规则
+              </el-button>
+            </el-tooltip>
             <el-button
               v-if="row.status === 'COMPLETED'"
               type="warning"
@@ -163,20 +177,34 @@
             >
               录入成绩
             </el-button>
-            <el-button
-              type="primary"
-              size="small"
-              @click="handleEdit(row)"
+            <el-tooltip
+              :content="canEditEvent(row) ? '' : '已取消的赛事不可编辑'"
+              :disabled="canEditEvent(row)"
+              placement="top"
             >
-              编辑
-            </el-button>
-            <el-button
-              type="danger"
-              size="small"
-              @click="handleDelete(row)"
+              <el-button
+                type="primary"
+                size="small"
+                :disabled="!canEditEvent(row)"
+                @click="handleEdit(row)"
+              >
+                编辑
+              </el-button>
+            </el-tooltip>
+            <el-tooltip
+              :content="canDeleteEvent(row) ? '' : '已开启/进行中/已结束/已取消的赛事不可删除'"
+              :disabled="canDeleteEvent(row)"
+              placement="top"
             >
-              删除
-            </el-button>
+              <el-button
+                type="danger"
+                size="small"
+                :disabled="!canDeleteEvent(row)"
+                @click="handleDelete(row)"
+              >
+                删除
+              </el-button>
+            </el-tooltip>
           </template>
         </el-table-column>
       </el-table>
@@ -222,6 +250,12 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { getEventList, deleteEvent, changeEventStatus } from '@/api/events'
 import { formatDate, formatEventType, formatEventFormat, getEventTypeColor, getEventFormatColor } from '@/utils'
 import { type EventStatus } from '@/constants/eventStatus'
+import {
+  canEditEvent,
+  canDeleteEvent,
+  canEditPoints,
+  canViewRegistrations
+} from '@/constants/eventGuards'
 import Pagination from '@/components/common/Pagination.vue'
 import EventStatusBadge from '@/components/common/EventStatusBadge.vue'
 import EventFilterBar from '@/components/common/EventFilterBar.vue'
