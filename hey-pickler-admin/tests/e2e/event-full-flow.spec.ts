@@ -7,7 +7,7 @@ async function step(name: string, fn: () => Promise<void>) {
   try {
     await fn()
     console.log(`[smoke] OK   ${name}`)
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.warn(`[smoke] FAIL ${name}: ${e?.message ?? e}`)
   }
 }
@@ -146,7 +146,7 @@ test('办赛指挥中心全流程冒烟（login → 新建赛事 → 详情 step
     if (await openBtn.count()) {
       try {
         await openBtn.click({ timeout: 3000 })
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.warn(`[smoke] in-page click failed: ${e?.message ?? e}`)
       }
     }
@@ -201,7 +201,7 @@ test('办赛指挥中心全流程冒烟（login → 新建赛事 → 详情 step
       try {
         await inProgressBtn.click({ timeout: 3000 })
         await page.waitForTimeout(2000)
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.warn(`[smoke] in-page click 进行中 failed: ${e?.message ?? e}`)
       }
     } else {

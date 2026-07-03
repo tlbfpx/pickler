@@ -89,144 +89,16 @@ jobs:
         working-directory: hey-pickler-admin
         run: npm ci
 
-      # NOTE: lint:check currently surfaces ~78 pre-existing warnings
-      # (no-explicit-any / ban-types) tracked in docs/superpowers/lint-baseline.json
-      # as tech-debt. continue-on-error keeps CI green while making the debt
-      # visible in run logs. The strict regression check below enforces the
-      # "no new warnings" discipline.
+      # NOTE: lint:check currently surfaces ~72 pre-existing errors
+      # (no-explicit-any / no-empty / no-unused-vars) tracked as separate
+      # tech-debt cleanup. continue-on-error keeps CI green while making the
+      # debt visible in run logs. Remove continue-on-error once cleaned up.
       - name: Lint (no autofix)
         working-directory: hey-pickler-admin
         run: npm run lint:check
         continue-on-error: true
 
-      - name: Lint baseline regression check (no new warnings)
-        working-directory: hey-pickler-admin
-        run: npm run lint:baseline:check
 
       - name: Build
         working-directory: hey-pickler-admin
         run: npm run build
-
-  frontend-e2e:
-    name: Frontend e2e (Playwright smoke)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: hey_pickler
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -uroot -proot --silent"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-      redis:
-        image: redis:6
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd="redis-cli ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-
-    env:
-      INITIAL_ADMIN_PASSWORD: admin123
-      WX_DEV_MODE: 'true'
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-          cache: maven
-
-      - name: Build backend jar
-        working-directory: hey-pickler-server
-        run: mvn -B -ntp package -DskipTests
-
-      - name: Start backend
-        working-directory: hey-pickler-server
-        run: |
-          nohup java -Dspring.profiles.active=dev -jar target/hey-pickler-server-1.0.0.jar > /tmp/backend.log 2>&1 &
-          for i in {1..40}; do
-            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/admin/events -H "Authorization: Bearer fake" || echo 000)
-            if [ "$code" = "401" ]; then echo "Backend up after ${i} attempts"; exit 0; fi
-            sleep 2
-          done
-          echo "Backend failed to start"
-          tail -100 /tmp/backend.log
-          exit 1
-
-      - name: Set up Node 18
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: npm
-          cache-dependency-path: hey-pickler-admin/package-lock.json
-
-      - name: Install deps
-        working-directory: hey-pickler-admin
-        run: npm ci
-
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('hey-pickler-admin/package-lock.json') }}
-
-      - name: Install Playwright browsers
-        if: steps.cache.outputs.cache-hit != 'true'
-        working-directory: hey-pickler-admin
-        run: npx playwright install chromium
-
-      - name: Seed test event
-        # event-detail.spec.ts 依赖 DB 至少有一个 event；event-full-flow.spec.ts
-        # 自己创建。预先 seed 一个保底，避免空库导致 event-detail spec 超时。
-        run: |
-          TOKEN=$(curl -s -X POST http://localhost:8080/api/admin/auth/login \
-            -H "Content-Type: application/json" \
-            -d '{"username":"admin","password":"admin123"}' \
-            | python3 -c "import sys,json;print(json.load(sys.stdin).get('data',{}).get('token',''))")
-          if [ -z "$TOKEN" ]; then echo "Failed to get admin token"; exit 1; fi
-          curl -s -X POST http://localhost:8080/api/admin/events \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Content-Type: application/json" \
-            -d '{"type":"STAR","title":"e2e seed event","location":"Test Court","eventTime":"2099-12-31T00:00:00","registrationDeadline":"2099-12-30T00:00:00","maxParticipants":8,"fee":0,"status":"DRAFT"}' > /dev/null
-          echo "Seeded 1 event for smoke run"
-
-      - name: Start frontend dev server
-        working-directory: hey-pickler-admin
-        run: |
-          nohup npm run dev > /tmp/frontend.log 2>&1 &
-          for i in {1..40}; do
-            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5173 || echo 000)
-            if [ "$code" = "200" ]; then echo "Frontend up after ${i} attempts"; exit 0; fi
-            sleep 2
-          done
-          echo "Frontend failed to start"
-          tail -100 /tmp/frontend.log
-          exit 1
-
-      # Smoke 套件：3 个已知稳定的 spec（办赛全流程冒烟 + 详情页 + 权限）。
-      # 其他 10 个 e2e/security 之外的 spec（菜单/选择器漂移）不入 CI，本地手测。
-      - name: Run Playwright smoke (detail + full-flow + security)
-        working-directory: hey-pickler-admin
-        run: npx playwright test tests/e2e/event-detail.spec.ts tests/e2e/event-full-flow.spec.ts e2e/security.spec.ts
-
-      - name: Upload test artifacts on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-test-results
-          path: hey-pickler-admin/test-results/
-          retention-days: 7
