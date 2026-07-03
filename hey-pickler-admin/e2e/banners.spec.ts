@@ -1,22 +1,33 @@
 import { test, expect } from './fixtures/admin.fixture'
+import type { Page } from '@playwright/test'
 
-test.describe('Banner管理', () => {
-  test('Banner列表展示', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: 'Banner管理' }).click()
-    await adminPage.waitForTimeout(2000)
+// 适配 PR #20：Banner 管理在折叠的「内容运营」子菜单下（注意路由 title 是「Banner 管理」含空格）
+async function gotoBanners(adminPage: Page) {
+  const group = adminPage.locator('.el-sub-menu__title').filter({ hasText: '内容运营' }).first()
+  if (await group.isVisible()) {
+    await group.click()
+  }
+  await adminPage.locator('.el-menu-item').filter({ hasText: 'Banner 管理' }).click()
+  await adminPage.waitForURL(/\/banners$/)
+  await expect(adminPage.locator('h1')).toContainText('Banner管理')
+}
 
-    await expect(adminPage.locator('h1')).toContainText('Banner管理')
+test.describe('Banner 管理', () => {
+  test('Banner 列表展示', async ({ adminPage }) => {
+    await gotoBanners(adminPage)
     await expect(adminPage.locator('.el-table')).toBeVisible()
   })
 
   test('新建Banner', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: 'Banner管理' }).click()
-    await adminPage.waitForTimeout(2000)
+    await gotoBanners(adminPage)
 
     await adminPage.getByRole('button', { name: '新建Banner' }).click()
     await expect(adminPage.locator('.el-dialog__title')).toContainText('新建Banner')
 
-    const imageUrl = `https://example.com/e2e-banner-${Date.now()}.jpg`
+    // 后端 HeadBasedImageUrlValidator 要求：HEAD 返回 2xx + image/* content-type
+    // 前端正则：/^https:\/\/[^/]+\/.*\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i
+    // 用 placehold.co 静态图（URL 不能带额外 query，否则上游返回 403/404）
+    const imageUrl = `https://placehold.co/${Date.now() % 900 + 100}x300.jpg`
     await adminPage
       .locator('.el-dialog .el-form-item')
       .filter({ hasText: '图片地址' })
@@ -31,12 +42,15 @@ test.describe('Banner管理', () => {
 
     // Button is "新建" not "提交"
     await adminPage.locator('.el-dialog__footer').getByRole('button', { name: '新建' }).click()
-    await expect(adminPage.getByText('Banner创建成功')).toBeVisible({ timeout: 10000 })
+
+    // 成功信号：dialog 关闭（ElMessage.success 闪退太快，改用 dialog 状态）
+    await expect(adminPage.locator('.el-dialog')).not.toBeVisible({ timeout: 10000 })
+    // 表格不展示图片 URL 文本，仅做行级断言 — 行数 ≥ 1 且 linkUrl 匹配
+    await expect(adminPage.locator('.el-table__body-wrapper')).toContainText('https://example.com/link')
   })
 
   test('编辑Banner', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: 'Banner管理' }).click()
-    await adminPage.waitForTimeout(2000)
+    await gotoBanners(adminPage)
 
     const editBtn = adminPage
       .locator('.el-table__body-wrapper .el-table__row')
@@ -52,7 +66,7 @@ test.describe('Banner管理', () => {
       .filter({ hasText: '图片地址' })
       .getByRole('textbox')
     await imageUrlInput.clear()
-    await imageUrlInput.fill(`https://example.com/edited-banner-${Date.now()}.jpg`)
+    await imageUrlInput.fill(`https://placehold.co/${Date.now() % 900 + 100}x300-edit.jpg`)
 
     // Button is "更新" not "提交"
     await adminPage.locator('.el-dialog__footer').getByRole('button', { name: '更新' }).click()
@@ -60,8 +74,7 @@ test.describe('Banner管理', () => {
   })
 
   test('删除Banner', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: 'Banner管理' }).click()
-    await adminPage.waitForTimeout(2000)
+    await gotoBanners(adminPage)
 
     const rows = adminPage.locator('.el-table__body-wrapper .el-table__row')
     const rowCount = await rows.count()
@@ -77,8 +90,7 @@ test.describe('Banner管理', () => {
   })
 
   test('必填字段验证', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: 'Banner管理' }).click()
-    await adminPage.waitForTimeout(2000)
+    await gotoBanners(adminPage)
 
     await adminPage.getByRole('button', { name: '新建Banner' }).click()
     await expect(adminPage.locator('.el-dialog')).toBeVisible()
@@ -90,8 +102,7 @@ test.describe('Banner管理', () => {
   })
 
   test('排序字段', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: 'Banner管理' }).click()
-    await adminPage.waitForTimeout(2000)
+    await gotoBanners(adminPage)
 
     await adminPage.getByRole('button', { name: '新建Banner' }).click()
     await expect(adminPage.locator('.el-dialog')).toBeVisible()
@@ -114,8 +125,7 @@ test.describe('Banner管理', () => {
   })
 
   test('状态选择', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: 'Banner管理' }).click()
-    await adminPage.waitForTimeout(2000)
+    await gotoBanners(adminPage)
 
     await adminPage.getByRole('button', { name: '新建Banner' }).click()
     await expect(adminPage.locator('.el-dialog')).toBeVisible()
@@ -138,8 +148,7 @@ test.describe('Banner管理', () => {
   })
 
   test('关闭对话框', async ({ adminPage }) => {
-    await adminPage.locator('.el-menu-item').filter({ hasText: 'Banner管理' }).click()
-    await adminPage.waitForTimeout(2000)
+    await gotoBanners(adminPage)
 
     await adminPage.getByRole('button', { name: '新建Banner' }).click()
     await expect(adminPage.locator('.el-dialog')).toBeVisible()
