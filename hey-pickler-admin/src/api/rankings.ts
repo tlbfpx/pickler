@@ -10,15 +10,15 @@ export interface RankingQuery {
 }
 
 export const getRankings = (q: RankingQuery) => {
-  return request.get<any, ApiResponse<PageResult<RankingEntry>>>(`/rankings/${q.type}`, {
+  return request.get<unknown, ApiResponse<PageResult<RankingEntry>>>(`/rankings/${q.type}`, {
     params: { page: q.page, size: q.size, keyword: q.keyword, tier: q.tier }
   })
 }
 
 export const enterPoints = (data: EnterPointsRequest) => {
-  return request.post<any, ApiResponse<void>>('/rankings/points', data)
+  return request.post<unknown, ApiResponse<void>>('/rankings/points', data)
 }
 
 export const refreshRankings = (type: 'STAR' | 'PARTY') => {
-  return request.post<any, ApiResponse<void>>('/rankings/refresh', { type })
+  return request.post<unknown, ApiResponse<void>>('/rankings/refresh', { type })
 }
