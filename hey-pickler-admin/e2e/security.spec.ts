@@ -18,12 +18,12 @@ test.describe('安全与权限', () => {
 
   test('登录后侧边栏菜单可见', async ({ adminPage }) => {
     const menuItems = [
-      '控制台',
+      '工作台',
       '用户管理',
-      '赛事管理',
-      '活动管理',
+      '竞技赛事',
+      '社交活动',
       '排名管理',
-      'Banner管理',
+      'Banner 管理',
       '管理员管理',
       '操作日志',
     ]
@@ -46,17 +46,17 @@ test.describe('安全与权限', () => {
 
   test('退出后token清除', async ({ page }) => {
     await page.goto('/login')
-    await page.getByPlaceholder('请输入用户名').fill(E2E_ADMIN_USERNAME)
-    await page.getByPlaceholder('请输入密码').fill(E2E_ADMIN_PASSWORD)
-    await page.getByRole('button', { name: '登录' }).click()
-    await expect(page).toHaveURL('/', { timeout: 10000 })
+    await page.locator('.login-container form input').first().fill(E2E_ADMIN_USERNAME)
+    await page.locator('.login-container form input[type="password"]').fill(E2E_ADMIN_PASSWORD)
+    await page.locator('.login-container form button.el-button--primary').click()
+    await page.waitForURL((url) => !url.pathname.startsWith('/login'))
 
     const tokenBefore = await page.evaluate(() => localStorage.getItem('admin_token'))
     expect(tokenBefore).not.toBeNull()
 
-    // Logout — menu text is "Logout" in English
+    // Logout — menu text is "退出登录" in Chinese
     await page.locator('.user-info').click()
-    await page.locator('.el-dropdown-menu__item').filter({ hasText: 'Logout' }).click()
+    await page.locator('.el-dropdown-menu__item').filter({ hasText: '退出登录' }).click()
     const confirmBtn = page.locator('.el-message-box__btns').getByRole('button', { name: '确定' })
     if (await confirmBtn.isVisible()) {
       await confirmBtn.click()
