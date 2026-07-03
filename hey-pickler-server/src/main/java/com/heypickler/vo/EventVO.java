@@ -19,4 +19,6 @@ public class EventVO {
     private BigDecimal fee;
     private LocalDateTime registrationDeadline;
     private Integer minPoints;
+    private String format;
+    private Boolean groupingLocked;
 }
