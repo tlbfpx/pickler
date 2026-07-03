@@ -224,7 +224,10 @@ const handleReset = async (m: MatchItem) => {
 }
 
 const scoreText = (m: MatchItem) => m.games?.length ? m.games.map(g => `${g.a}:${g.b}`).join(' ') : (m.gamesWonA != null ? `${m.gamesWonA}:${m.gamesWonB}` : '-')
-const statusLabel = (s: string) => ({ SCHEDULED: '待打', IN_PROGRESS: '进行中', COMPLETED: '已完成' } as any)[s] || s
+const statusLabel = (s: string) => {
+  const map: Record<string, string> = { SCHEDULED: '待打', IN_PROGRESS: '进行中', COMPLETED: '已完成' }
+  return map[s] || s
+}
 
 onMounted(fetchMatches)
 </script>

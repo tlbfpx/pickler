@@ -293,7 +293,7 @@ const handleExport = async () => {
   // 拉全量
   const all: Registration[] = []; let page = 1; let total = Infinity
   while (all.length < total) {
-    const res = await getEventRegistrations(props.event.id, { page, size: 100 } as any)
+    const res = await getEventRegistrations(props.event.id, { page, size: 100 })
     if (res.code !== 0) break
     all.push(...(res.data.list || [])); total = res.data.total || 0; page++
   }
@@ -326,7 +326,7 @@ async function fetchRegistrations() {
       size: pagination.size,
       status: filterStatus.value || undefined,
       matchType: filterMatchType.value || undefined,
-    } as any)
+    })
     if (res.code === 0) {
       registrationList.value = res.data.list
       pagination.total = res.data.total

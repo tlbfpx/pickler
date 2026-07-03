@@ -1,7 +1,8 @@
 import { test, expect } from './fixtures/admin.fixture'
+import type { Page } from '@playwright/test'
 
 // 进入竞技赛事菜单：菜单改名为「竞技赛事」；页面 h1/dialog 仍是「赛事管理」（PR #20 没改视图文案）
-async function gotoEvents(adminPage: any) {
+async function gotoEvents(adminPage: Page) {
   await adminPage.locator('.el-menu-item').filter({ hasText: '竞技赛事' }).click()
   await adminPage.waitForURL(/\/events$/)
   await expect(adminPage.locator('h1')).toContainText('赛事管理')

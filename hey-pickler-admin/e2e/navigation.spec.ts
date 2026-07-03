@@ -1,9 +1,10 @@
 import { test, expect } from './fixtures/admin.fixture'
+import type { Page } from '@playwright/test'
 
 // 适配 PR #20：侧边栏改用 4 个折叠的 el-sub-menu
 // 运营管理 / 积分与赛季 / 内容运营 / 系统
 // 进入子菜单前必须先点击 .el-sub-menu__title 展开
-async function expandGroup(page: any, groupName: string) {
+async function expandGroup(page: Page, groupName: string) {
   const title = page.locator('.el-sub-menu__title').filter({ hasText: groupName }).first()
   if (await title.isVisible()) {
     await title.click()

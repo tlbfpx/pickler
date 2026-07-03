@@ -364,6 +364,8 @@ const fetchBy = (status: string) =>
     .then(r => (r.code === 0 ? (r.data?.list || []) : []))
     .catch(() => [])
 
+type TodoEvent = { id: number; title: string; eventTime: string | null }
+
 const buildTodos = async () => {
   const [draft, open, prog, done] = await Promise.all([
     fetchBy('DRAFT'),
@@ -373,13 +375,13 @@ const buildTodos = async () => {
   ])
   const now = Date.now()
   const list: { id: number; title: string; eventTime: string | null; label: string; action: string; tagType: string }[] = []
-  draft.forEach((e: any) => list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '待发布', action: '去发布', tagType: 'info' }))
-  open.forEach((e: any) => {
+  draft.forEach((e: TodoEvent) => list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '待发布', action: '去发布', tagType: 'info' }))
+  open.forEach((e: TodoEvent) => {
     const t = e.eventTime ? new Date(e.eventTime).getTime() - now : Infinity
     if (t < 3 * 86400000) list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '即将开赛', action: '去管理', tagType: 'warning' })
   })
-  prog.forEach((e: any) => list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '进行中', action: '去完成', tagType: 'danger' }))
-  done.slice(0, 5).forEach((e: any) => list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '已结束', action: '查看发分', tagType: 'success' }))
+  prog.forEach((e: TodoEvent) => list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '进行中', action: '去完成', tagType: 'danger' }))
+  done.slice(0, 5).forEach((e: TodoEvent) => list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '已结束', action: '查看发分', tagType: 'success' }))
   todos.value = list
     .sort((a, b) => new Date(a.eventTime || 0).getTime() - new Date(b.eventTime || 0).getTime())
     .slice(0, 12)

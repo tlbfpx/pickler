@@ -1,7 +1,8 @@
 import { test, expect } from './fixtures/admin.fixture'
+import type { Page } from '@playwright/test'
 
 // 菜单改名为「社交活动」；页面 h1/dialog 仍是「活动管理」（PR #20 没改视图文案）
-async function gotoActivities(adminPage: any) {
+async function gotoActivities(adminPage: Page) {
   await adminPage.locator('.el-menu-item').filter({ hasText: '社交活动' }).click()
   await adminPage.waitForURL(/\/activities$/)
   await expect(adminPage.locator('h1')).toContainText('活动管理')

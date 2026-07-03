@@ -1,7 +1,8 @@
 import { test, expect } from './fixtures/admin.fixture'
+import type { Page } from '@playwright/test'
 
 // 适配 PR #20：管理员管理在折叠的「系统」子菜单下，需先点开
-async function gotoAdmins(adminPage: any) {
+async function gotoAdmins(adminPage: Page) {
   const group = adminPage.locator('.el-sub-menu__title').filter({ hasText: '系统' }).first()
   if (await group.isVisible()) {
     await group.click()

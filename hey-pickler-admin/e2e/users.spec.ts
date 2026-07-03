@@ -1,7 +1,8 @@
 import { test, expect } from './fixtures/admin.fixture'
+import type { Page } from '@playwright/test'
 
 // 用户管理菜单名未变；积分体系改名为 战力/活力
-async function gotoUsers(adminPage: any) {
+async function gotoUsers(adminPage: Page) {
   await adminPage.locator('.el-menu-item').filter({ hasText: '用户管理' }).click()
   await adminPage.waitForURL(/\/users$/)
   await expect(adminPage.locator('h1')).toContainText('用户管理')

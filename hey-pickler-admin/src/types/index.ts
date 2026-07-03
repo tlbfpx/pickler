@@ -263,6 +263,7 @@ export interface PageParams {
   location?: string
   startTime?: string
   endTime?: string
+  matchType?: string
 }
 
 // ==================== File Upload ====================
