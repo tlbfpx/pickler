@@ -22,7 +22,7 @@ public class CorsConfig {
     public CorsFilter corsFilter() {
         CorsConfiguration adminConfig = new CorsConfiguration();
         adminConfig.setAllowedOrigins(List.of(adminOrigins.split(",")));
-        adminConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        adminConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         adminConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         adminConfig.setAllowCredentials(true);
         adminConfig.setMaxAge(3600L);
@@ -38,7 +38,7 @@ public class CorsConfig {
             appConfig.setAllowedOrigins(appOriginList);
             appConfig.setAllowCredentials(true);
         }
-        appConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        appConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         appConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         appConfig.setMaxAge(3600L);
 
