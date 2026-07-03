@@ -412,6 +412,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getDashboardStats } from '@/api/dashboard'
 import { getEventList } from '@/api/events'
+import { useAuthStore } from '@/stores/auth'
 import Pagination from '@/components/common/Pagination.vue'
 import * as echarts from 'echarts'
 import { TERMS, TIER_NAME, TIER_COLOR } from '@/constants/terms'
@@ -436,6 +437,7 @@ const stats = reactive<DashboardStats>({
 })
 
 const router = useRouter()
+const authStore = useAuthStore()
 const todos = ref<Array<{ id: number; title: string; eventTime: string | null; label: string; action: string; tagType: string; organizer: string | null }>>([])
 const currentPage = ref(1)
 const pageSize = ref(10)
@@ -453,12 +455,24 @@ const fetchBy = (status: string) =>
 type TodoEvent = { id: number; title: string; eventTime: string | null; createdByUsername?: string | null }
 
 const buildTodos = async () => {
-  const [draft, open, prog, done] = await Promise.all([
+  const [draftAll, openAll, progAll, doneAll] = await Promise.all([
     fetchBy('DRAFT'),
     fetchBy('OPEN'),
     fetchBy('IN_PROGRESS'),
     fetchBy('COMPLETED')
   ])
+  // 待办只展示当前管理员负责的赛事；
+  // 超级管理员看全部（与 dashboard 其它统计口径一致）。
+  const isSuperAdmin = authStore.admin?.role === 'SUPER_ADMIN'
+  const currentUsername = authStore.admin?.username ?? null
+  const filterMine = <T extends TodoEvent>(list: T[]): T[] => {
+    if (isSuperAdmin || !currentUsername) return list
+    return list.filter(e => e.createdByUsername === currentUsername)
+  }
+  const draft = filterMine(draftAll)
+  const open = filterMine(openAll)
+  const prog = filterMine(progAll)
+  const done = filterMine(doneAll)
   const now = Date.now()
   const list: { id: number; title: string; eventTime: string | null; label: string; action: string; tagType: string; organizer: string | null }[] = []
   draft.forEach((e: TodoEvent) => list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '待发布', action: '去发布', tagType: 'info', organizer: e.createdByUsername ?? null }))
