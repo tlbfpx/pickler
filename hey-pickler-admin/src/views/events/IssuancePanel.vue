@@ -80,7 +80,7 @@
         type="primary"
         @click="openPlacement"
       >
-        配置加分表
+        自动积分配置
       </el-button>
       <el-button
         type="success"
@@ -91,7 +91,7 @@
         完成赛事并发分
       </el-button>
       <div class="hint">
-        完成后将按加分表自动发放名次积分（source=PLACEMENT）。需所有比赛已完成，否则会提示未完成场次。
+        完成后将按自动积分配置发放名次积分（source=PLACEMENT）。需所有比赛已完成，否则会提示未完成场次。
       </div>
     </template>
     <PlacementPointsDialog
