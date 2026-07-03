@@ -9,6 +9,72 @@
       :closable="false"
       title="赛事已结束，名次积分已发放"
     />
+    <template v-if="event.status === 'COMPLETED'">
+      <div
+        v-loading="placementsLoading"
+        class="placement-detail"
+      >
+        <el-table
+          v-if="placements.length > 0"
+          :data="placements"
+          stripe
+          size="small"
+          class="placement-table"
+        >
+          <el-table-column
+            label="#"
+            prop="rank"
+            width="64"
+            align="center"
+          />
+          <el-table-column
+            label="选手"
+            min-width="160"
+          >
+            <template #default="{ row }">
+              {{ row.nickname || `用户 ${row.userId}` }}
+            </template>
+          </el-table-column>
+          <el-table-column
+            label="积分"
+            width="120"
+            align="right"
+          >
+            <template #default="{ row }">
+              <span class="points-bold">+{{ row.points }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column
+            label="原因"
+            min-width="240"
+          >
+            <template #default="{ row }">
+              <el-tooltip
+                :content="row.reason"
+                placement="top"
+                :show-after="200"
+              >
+                <span class="reason-text">{{ row.reason }}</span>
+              </el-tooltip>
+            </template>
+          </el-table-column>
+          <el-table-column
+            label="时间"
+            width="180"
+          >
+            <template #default="{ row }">
+              {{ formatDate(row.createdAt) }}
+            </template>
+          </el-table-column>
+        </el-table>
+        <div
+          v-else-if="!placementsLoading"
+          class="empty-state"
+        >
+          暂无发分记录
+        </div>
+      </div>
+    </template>
     <template v-else>
       <el-button
         type="primary"
@@ -37,9 +103,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { completeEvent, getEventMatches } from '@/api/matches'
+import { getEventPlacements, type PlacementDetail } from '@/api/events'
 import PlacementPointsDialog from './PlacementPointsDialog.vue'
 import type { Event } from '@/types'
 
@@ -48,7 +115,38 @@ const emit = defineEmits<{ changed: [] }>()
 
 const placementOpen = ref(false)
 const completing = ref(false)
+const placementsLoading = ref(false)
+const placements = ref<PlacementDetail[]>([])
+
 const openPlacement = () => { placementOpen.value = true }
+
+const formatDate = (iso: string) => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return iso
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+const loadPlacements = async () => {
+  if (props.event.status !== 'COMPLETED') return
+  placementsLoading.value = true
+  try {
+    const r = await getEventPlacements(props.event.id)
+    if (r.code === 0) {
+      placements.value = r.data || []
+    } else {
+      placements.value = []
+      ElMessage.error(r.message || '加载发分记录失败')
+    }
+  } finally {
+    placementsLoading.value = false
+  }
+}
+
+onMounted(loadPlacements)
+watch(() => props.event.id, loadPlacements)
+watch(() => props.event.status, loadPlacements)
 
 const handleComplete = async () => {
   try {
@@ -76,4 +174,24 @@ const handleComplete = async () => {
 <style scoped>
 .panel-header { margin-bottom: 12px; }
 .hint { color: #9ca3af; font-size: 12px; margin-top: 12px; }
+.placement-detail { margin-top: 12px; }
+.placement-table { margin-top: 4px; }
+.points-bold { font-weight: 600; color: #16a34a; }
+.reason-text {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+.empty-state {
+  margin-top: 8px;
+  padding: 16px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 13px;
+  background: #f9fafb;
+  border-radius: 4px;
+}
 </style>

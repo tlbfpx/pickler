@@ -1,7 +1,10 @@
 package com.heypickler.service;
 
 import com.heypickler.entity.EventPlacementPoints;
+import com.heypickler.vo.PlacementDetailVO;
 import com.heypickler.vo.PlacementPointsVO;
+
+import java.util.List;
 
 public interface PlacementService {
 
@@ -27,4 +30,12 @@ public interface PlacementService {
     /** Removes the per-event override so future GETs return the default table.
      *  Rejects if event is COMPLETED. No-op if no override exists. */
     void clearPoints(Long eventId);
+
+    /**
+     * Lists the PLACEMENT point_record rows for an event, ordered by points DESC,
+     * id ASC. rank is the row index + 1. Nickname is loaded via a single
+     * selectBatchIds. Throws NOT_FOUND if event is missing; returns an empty
+     * list if no placements have been issued yet.
+     */
+    List<PlacementDetailVO> listByEventId(Long eventId);
 }

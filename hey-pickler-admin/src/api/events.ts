@@ -10,6 +10,15 @@ export interface EventParticipant {
   registrationStatus: string
 }
 
+export interface PlacementDetail {
+  rank: number
+  userId: number
+  nickname: string | null
+  points: number
+  reason: string
+  createdAt: string
+}
+
 export const getEventList = (params: PageParams) => {
   return request.get<unknown, ApiResponse<PageResult<Event>>>('/events', { params })
 }
@@ -48,3 +57,6 @@ export const updateRegistrationStatus = (eventId: number, registrationId: number
     `/events/${eventId}/registrations/${registrationId}/status`, { status }
   )
 }
+
+export const getEventPlacements = (id: number) =>
+  request.get<unknown, ApiResponse<PlacementDetail[]>>(`/events/${id}/placements`)

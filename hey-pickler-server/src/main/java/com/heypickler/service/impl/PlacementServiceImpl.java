@@ -11,6 +11,7 @@ import com.heypickler.entity.Match;
 import com.heypickler.entity.MatchGroup;
 import com.heypickler.entity.PointRecord;
 import com.heypickler.entity.Team;
+import com.heypickler.entity.User;
 import com.heypickler.mapper.EventMapper;
 import com.heypickler.mapper.EventPlacementPointsMapper;
 import com.heypickler.mapper.GroupAssignmentMapper;
@@ -18,8 +19,10 @@ import com.heypickler.mapper.MatchGroupMapper;
 import com.heypickler.mapper.MatchMapper;
 import com.heypickler.mapper.PointRecordMapper;
 import com.heypickler.mapper.TeamMapper;
+import com.heypickler.mapper.UserMapper;
 import com.heypickler.service.PlacementService;
 import com.heypickler.service.PointService;
+import com.heypickler.vo.PlacementDetailVO;
 import com.heypickler.vo.PlacementPointsVO;
 import com.heypickler.vo.StandingVO;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +37,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Placement issuance (Spec 3). On event COMPLETED, read final standings + the
@@ -54,6 +58,7 @@ public class PlacementServiceImpl implements PlacementService {
     private final GroupAssignmentMapper groupAssignmentMapper;
     private final MatchMapper matchMapper;
     private final TeamMapper teamMapper;
+    private final UserMapper userMapper;
     private final PointService pointService;
     private final PlacementProperties defaultProps;
 
@@ -165,6 +170,40 @@ public class PlacementServiceImpl implements PlacementService {
         pointsMapper.delete(
                 new LambdaQueryWrapper<EventPlacementPoints>()
                         .eq(EventPlacementPoints::getEventId, eventId));
+    }
+
+    @Override
+    public List<PlacementDetailVO> listByEventId(Long eventId) {
+        requireEvent(eventId);
+        List<PointRecord> records = pointRecordMapper.selectList(
+                new LambdaQueryWrapper<PointRecord>()
+                        .eq(PointRecord::getEventId, eventId)
+                        .eq(PointRecord::getSource, "PLACEMENT")
+                        .orderByDesc(PointRecord::getPoints)
+                        .orderByAsc(PointRecord::getId));
+        if (records.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Set<Long> userIds = new HashSet<>();
+        for (PointRecord r : records) {
+            if (r.getUserId() != null) userIds.add(r.getUserId());
+        }
+        Map<Long, User> users = userMapper.selectBatchIds(userIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+        List<PlacementDetailVO> out = new ArrayList<>(records.size());
+        int rank = 1;
+        for (PointRecord r : records) {
+            PlacementDetailVO vo = new PlacementDetailVO();
+            vo.setRank(rank++);
+            vo.setUserId(r.getUserId());
+            User u = r.getUserId() == null ? null : users.get(r.getUserId());
+            vo.setNickname(u == null ? null : u.getNickname());
+            vo.setPoints(r.getPoints());
+            vo.setReason(r.getReason());
+            vo.setCreatedAt(r.getCreatedAt());
+            out.add(vo);
+        }
+        return out;
     }
 
     private Map<Integer, Integer> resolveTable(Long eventId) {

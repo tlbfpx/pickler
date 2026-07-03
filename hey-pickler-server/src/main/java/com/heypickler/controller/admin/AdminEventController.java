@@ -16,6 +16,7 @@ import com.heypickler.service.PointService;
 import com.heypickler.service.dto.PointEntry;
 import com.heypickler.vo.EventParticipantVO;
 import com.heypickler.vo.EventVO;
+import com.heypickler.vo.PlacementDetailVO;
 import com.heypickler.vo.PlacementPointsVO;
 import com.heypickler.vo.RegistrationVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -175,5 +176,12 @@ public class AdminEventController {
     public Result<Void> clearPlacementPoints(@PathVariable Long id) {
         placementService.clearPoints(id);
         return Result.ok();
+    }
+
+    @GetMapping("/{id}/placements")
+    @Operation(summary = "查询赛事 PLACEMENT 发分明细（按积分降序）")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
+    public Result<List<PlacementDetailVO>> getPlacements(@PathVariable Long id) {
+        return Result.ok(placementService.listByEventId(id));
     }
 }
