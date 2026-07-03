@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     :model-value="modelValue"
-    :title="`自动积分配置 — ${event?.title ?? ''}`"
+    :title="`积分规则 — ${event?.title ?? ''}`"
     width="600px"
     :close-on-click-modal="false"
     @update:model-value="$emit('update:modelValue', $event)"
@@ -11,7 +11,7 @@
       v-if="readonly"
       class="readonly-banner"
     >
-      赛事已结束，自动积分配置不可再修改。
+      赛事已结束，积分规则不可再修改。
     </div>
 
     <div

@@ -153,7 +153,7 @@
               size="small"
               @click="handleOpenPlacement(row)"
             >
-              自动积分配置
+              积分规则
             </el-button>
             <el-button
               v-if="row.status === 'COMPLETED'"
