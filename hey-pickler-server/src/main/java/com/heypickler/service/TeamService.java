@@ -3,6 +3,8 @@ package com.heypickler.service;
 import com.heypickler.entity.Team;
 import com.heypickler.vo.TeamVO;
 
+import java.util.List;
+
 /**
  * Team state machine for doubles/mixed events.
  *
@@ -56,6 +58,13 @@ public interface TeamService {
      * @return the team, or null if the user has no team in this event
      */
     Team getMyTeam(Long eventId, Long userId);
+
+    /**
+     * List all teams in an event (PENDING + CONFIRMED) as VOs with member
+     * nicknames populated. Used by the admin panel to show the team context
+     * alongside the registration list.
+     */
+    List<TeamVO> listByEventId(Long eventId);
 
     /**
      * Convert a team entity to a VO with member names populated.

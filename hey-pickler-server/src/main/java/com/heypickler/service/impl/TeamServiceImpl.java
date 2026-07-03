@@ -181,6 +181,22 @@ public class TeamServiceImpl implements TeamService {
     }
 
     @Override
+    public List<TeamVO> listByEventId(Long eventId) {
+        List<Team> teams = teamMapper.selectList(
+                new LambdaQueryWrapper<Team>()
+                        .eq(Team::getEventId, eventId)
+                        .orderByAsc(Team::getId));
+        if (teams.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<TeamVO> out = new java.util.ArrayList<>(teams.size());
+        for (Team t : teams) {
+            out.add(toVO(t));
+        }
+        return out;
+    }
+
+    @Override
     public TeamVO toVO(Team team) {
         if (team == null) return null;
         TeamVO vo = new TeamVO();
