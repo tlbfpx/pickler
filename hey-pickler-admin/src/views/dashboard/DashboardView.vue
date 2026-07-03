@@ -23,7 +23,7 @@
         stripe
         class="todo-table"
         row-class-name="todo-row-clickable"
-        @row-click="(row: any) => goDetail(row.id)"
+        @row-click="(row: any) => goAction(row)"
       >
         <el-table-column
           label="标签"
@@ -75,7 +75,7 @@
               link
               type="primary"
               size="small"
-              @click.stop="goDetail(row.id)"
+              @click.stop="goAction(row)"
             >
               {{ row.action }}
             </el-button>
@@ -488,7 +488,11 @@ const buildTodos = async () => {
   currentPage.value = 1
 }
 
-const goDetail = (id: number) => router.push(`/events/${id}`)
+const goAction = (row: { id: number; label: string }) => {
+  // 不同标签跳转不同 Tab：进行中/已结束跳到发分 Tab，其余跳详情（默认 info）。
+  const tab = (row.label === '进行中' || row.label === '已结束') ? 'issue' : undefined
+  router.push({ path: `/events/${row.id}`, query: tab ? { tab } : undefined })
+}
 
 const fmtDate = (d: string | null) => {
   if (!d) return '-'

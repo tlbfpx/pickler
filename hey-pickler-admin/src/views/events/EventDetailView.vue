@@ -245,8 +245,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   ArrowLeft, Edit, Location, Clock, Calendar, User, Promotion, Right, CircleClose
@@ -262,6 +262,7 @@ import RegistrationDrawerEmbed from './RegistrationDrawerEmbed.vue'
 import type { Event } from '@/types'
 
 const route = useRoute()
+const router = useRouter()
 const raw = route.params.id
 const id = Number(Array.isArray(raw) ? raw[0] : raw)
 if (!Number.isFinite(id)) {
@@ -272,6 +273,19 @@ const loading = ref(false)
 const event = ref<Event | null>(null)
 const editOpen = ref(false)
 const activeTab = ref('info')
+
+// 允许的 Tab 名称（防止外部 query 传入非法值）
+const VALID_TABS = new Set(['info', 'reg', 'group', 'match', 'issue'])
+const initialTab = typeof route.query.tab === 'string' && VALID_TABS.has(route.query.tab)
+  ? route.query.tab
+  : 'info'
+activeTab.value = initialTab
+
+// 手动切换 Tab 时回写 URL（replace，不污染历史栈）
+watch(activeTab, (tab) => {
+  if (tab === route.query.tab) return
+  router.replace({ query: { ...route.query, tab } })
+})
 
 const reload = async () => {
   if (!validId) return
