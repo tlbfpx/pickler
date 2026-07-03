@@ -270,7 +270,10 @@ class MatchServiceImplTest {
     }
 
     @Test
-    void submitScore_eventCompleted_throwsInvalidStatusTransition() {
+    void submitScore_eventCompleted_matchScheduled_allowsReRecord() {
+        // Fix-data path: operator who reset a match on a COMPLETED event
+        // must be able to re-record. submitScore ALLOWS this; only the match's
+        // own COMPLETED status still blocks re-recording (see test below).
         Event event = event(1L, "SINGLES", true, "COMPLETED");
         when(eventMapper.selectById(1L)).thenReturn(event);
         Match m = new Match();
@@ -281,9 +284,8 @@ class MatchServiceImplTest {
         m.setStatus(MatchStatus.SCHEDULED);
         when(matchMapper.selectById(50L)).thenReturn(m);
 
-        BizException ex = assertThrows(BizException.class,
-                () -> matchService.submitScore(50L, 1L, List.of(game(1, 21, 15), game(2, 21, 18)), false));
-        assertEquals(1006, ex.getCode());
+        matchService.submitScore(50L, 1L, List.of(game(1, 21, 15), game(2, 21, 18)), true);
+        verify(matchMapper).updateById(any(Match.class));
     }
 
     @Test
