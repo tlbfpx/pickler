@@ -35,6 +35,7 @@ export interface Event {
   minPoints?: number
   format?: 'SINGLES' | 'DOUBLES' | 'MIXED' | null
   groupingLocked?: boolean
+  createdByUsername?: string | null
 }
 
 export interface CreateEventRequest {

@@ -16,34 +16,84 @@
       <div class="panel-head">
         <span>待办</span>
       </div>
+      <el-table
+        v-if="todos.length"
+        :data="pagedTodos"
+        size="small"
+        stripe
+        class="todo-table"
+        row-class-name="todo-row-clickable"
+        @row-click="(row: any) => goDetail(row.id)"
+      >
+        <el-table-column
+          label="标签"
+          width="96"
+          align="center"
+        >
+          <template #default="{ row }">
+            <el-tag
+              size="small"
+              :type="row.tagType"
+            >
+              {{ row.label }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="标题"
+          min-width="180"
+          show-overflow-tooltip
+          prop="title"
+        />
+        <el-table-column
+          label="比赛时间"
+          width="120"
+          align="center"
+        >
+          <template #default="{ row }">
+            {{ formatDate(row.eventTime) }}
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="活动负责人"
+          width="120"
+          align="center"
+          prop="organizer"
+          show-overflow-tooltip
+        >
+          <template #default="{ row }">
+            {{ row.organizer || '—' }}
+          </template>
+        </el-table-column>
+        <el-table-column
+          label="操作"
+          width="100"
+          align="center"
+        >
+          <template #default="{ row }">
+            <el-button
+              link
+              type="primary"
+              size="small"
+              @click.stop="goDetail(row.id)"
+            >
+              {{ row.action }}
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
       <div
-        v-if="!todos.length"
-        class="muted"
+        v-else
+        class="muted todo-empty"
       >
         暂无待办
       </div>
-      <div
-        v-for="t in todos"
-        :key="t.id"
-        class="todo-row"
-        @click="goDetail(t.id)"
-      >
-        <el-tag
-          size="small"
-          :type="t.tagType"
-        >
-          {{ t.label }}
-        </el-tag>
-        <span class="todo-title">{{ t.title }}</span>
-        <span class="muted">{{ formatDate(t.eventTime) }}</span>
-        <el-button
-          link
-          type="primary"
-          size="small"
-        >
-          {{ t.action }}
-        </el-button>
-      </div>
+      <Pagination
+        v-if="todos.length > pageSize"
+        v-model:page="currentPage"
+        v-model:size="pageSize"
+        :total="todos.length"
+      />
     </el-card>
 
     <!-- KPI -->
@@ -357,11 +407,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, nextTick, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getDashboardStats } from '@/api/dashboard'
 import { getEventList } from '@/api/events'
+import Pagination from '@/components/common/Pagination.vue'
 import * as echarts from 'echarts'
 import { TERMS, TIER_NAME, TIER_COLOR } from '@/constants/terms'
 import type { DashboardStats } from '@/types'
@@ -385,14 +436,21 @@ const stats = reactive<DashboardStats>({
 })
 
 const router = useRouter()
-const todos = ref<Array<{ id: number; title: string; eventTime: string | null; label: string; action: string; tagType: string }>>([])
+const todos = ref<Array<{ id: number; title: string; eventTime: string | null; label: string; action: string; tagType: string; organizer: string | null }>>([])
+const currentPage = ref(1)
+const pageSize = ref(10)
+
+const pagedTodos = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return todos.value.slice(start, start + pageSize.value)
+})
 
 const fetchBy = (status: string) =>
   getEventList({ page: 1, size: 50, status })
     .then(r => (r.code === 0 ? (r.data?.list || []) : []))
     .catch(() => [])
 
-type TodoEvent = { id: number; title: string; eventTime: string | null }
+type TodoEvent = { id: number; title: string; eventTime: string | null; createdByUsername?: string | null }
 
 const buildTodos = async () => {
   const [draft, open, prog, done] = await Promise.all([
@@ -402,17 +460,18 @@ const buildTodos = async () => {
     fetchBy('COMPLETED')
   ])
   const now = Date.now()
-  const list: { id: number; title: string; eventTime: string | null; label: string; action: string; tagType: string }[] = []
-  draft.forEach((e: TodoEvent) => list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '待发布', action: '去发布', tagType: 'info' }))
+  const list: { id: number; title: string; eventTime: string | null; label: string; action: string; tagType: string; organizer: string | null }[] = []
+  draft.forEach((e: TodoEvent) => list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '待发布', action: '去发布', tagType: 'info', organizer: e.createdByUsername ?? null }))
   open.forEach((e: TodoEvent) => {
     const t = e.eventTime ? new Date(e.eventTime).getTime() - now : Infinity
-    if (t < 3 * 86400000) list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '即将开赛', action: '去管理', tagType: 'warning' })
+    if (t < 3 * 86400000) list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '即将开赛', action: '去管理', tagType: 'warning', organizer: e.createdByUsername ?? null })
   })
-  prog.forEach((e: TodoEvent) => list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '进行中', action: '去完成', tagType: 'danger' }))
-  done.slice(0, 5).forEach((e: TodoEvent) => list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '已结束', action: '查看发分', tagType: 'success' }))
+  prog.forEach((e: TodoEvent) => list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '进行中', action: '去完成', tagType: 'danger', organizer: e.createdByUsername ?? null }))
+  done.slice(0, 5).forEach((e: TodoEvent) => list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '已结束', action: '查看发分', tagType: 'success', organizer: e.createdByUsername ?? null }))
   todos.value = list
     .sort((a, b) => new Date(a.eventTime || 0).getTime() - new Date(b.eventTime || 0).getTime())
     .slice(0, 12)
+  currentPage.value = 1
 }
 
 const goDetail = (id: number) => router.push(`/events/${id}`)
@@ -572,27 +631,17 @@ onBeforeUnmount(() => { window.removeEventListener('resize', onResize); charts.f
 }
 
 /* Todo panel */
-.todo-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px solid #f3f4f6;
+.todo-table {
+  margin-top: 4px;
+}
+
+.todo-empty {
+  padding: 24px 0;
+  text-align: center;
+}
+
+:deep(.todo-row-clickable) {
   cursor: pointer;
-}
-
-.todo-row:last-child {
-  border-bottom: none;
-}
-
-.todo-row:hover {
-  background: #f9fafb;
-}
-
-.todo-title {
-  flex: 1;
-  font-size: 13px;
-  color: #1f2937;
 }
 
 .muted {
