@@ -60,7 +60,7 @@ public class MatchServiceImpl implements MatchService {
     public List<Match> generate(Long eventId) {
         Event event = requireEvent(eventId);
         if (!Boolean.TRUE.equals(event.getGroupingLocked())) {
-            throw new BizException(ErrorCode.INVALID_STATUS_TRANSITION, "赛事尚未分组锁定");
+            throw new BizException(ErrorCode.INVALID_STATUS_TRANSITION, "赛事尚未分组锁定，无法生成对阵；请先在「分组」Tab 完成分组并点「锁定分组」");
         }
 
         // Clear any prior matches (idempotent re-generation).
@@ -104,7 +104,7 @@ public class MatchServiceImpl implements MatchService {
         // re-issued on a re-record — the operator accepts that the leaderboard will
         // lag until the next event if they re-record post-completion.
         if (match.getStatus() == MatchStatus.COMPLETED) {
-            throw new BizException(ErrorCode.INVALID_STATUS_TRANSITION, "比赛已结束");
+            throw new BizException(ErrorCode.INVALID_STATUS_TRANSITION, "该比赛已记录比分，不能重复录入；如需重新录入请先在「对阵/比赛」Tab 点「重置」");
         }
         if (!isAdmin && !isParticipant(match, userId)) {
             throw new BizException(ErrorCode.FORBIDDEN, "仅参赛双方可提交比分");
@@ -248,7 +248,7 @@ public class MatchServiceImpl implements MatchService {
         long unfinished = all.stream()
                 .filter(m -> m.getStatus() != MatchStatus.COMPLETED).count();
         if (unfinished > 0) {
-            throw new BizException(ErrorCode.PARAM_ERROR, "还有 " + unfinished + " 场比赛未完成");
+            throw new BizException(ErrorCode.PARAM_ERROR, "还有 " + unfinished + " 场比赛未完成；请先在「对阵/比赛」Tab 录入所有比分后再结束赛事");
         }
         // Spec 3: issue placement points atomically. If this throws (e.g., duplicate),
         // the COMPLETED status update rolls back.

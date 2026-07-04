@@ -94,7 +94,7 @@ public class PointServiceImpl implements PointService, PointWallet {
             title = event.getTitle();
         }
         if (resolvedType == null) {
-            throw new BizException(ErrorCode.PARAM_ERROR, "积分类型不能为空");
+            throw new BizException(ErrorCode.PARAM_ERROR, "积分类型不能为空；请指定 STAR(战力) 或 PARTY(活力)");
         }
         return new ResolvedTarget(resolvedType, title);
     }

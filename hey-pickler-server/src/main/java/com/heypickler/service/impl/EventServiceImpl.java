@@ -104,10 +104,10 @@ public class EventServiceImpl implements EventService {
         Event event = requireEvent(eventId);
 
         if (Boolean.TRUE.equals(event.getGroupingLocked())) {
-            throw new BizException(ErrorCode.REGISTRATION_CLOSED, "赛事已分组锁定，如需调整请先解锁");
+            throw new BizException(ErrorCode.REGISTRATION_CLOSED, "赛事已分组锁定。如需调整请在「对阵/比赛」Tab 点「解锁并清空」");
         }
         if ("IN_PROGRESS".equals(event.getStatus()) || "COMPLETED".equals(event.getStatus())) {
-            throw new BizException(ErrorCode.INVALID_STATUS_TRANSITION, "赛事已开始比赛，无法报名");
+            throw new BizException(ErrorCode.INVALID_STATUS_TRANSITION, "赛事已开始比赛，无法报名；如需代签到请使用「报名」Tab 的签到按钮");
         }
         if (!"OPEN".equals(event.getStatus())) {
             throw new BizException(ErrorCode.REGISTRATION_CLOSED);
@@ -130,7 +130,7 @@ public class EventServiceImpl implements EventService {
      */
     private void registerSingles(Long userId, Long eventId, Event event, RegisterRequest request) {
         if (request.getPartnerId() != null || request.getPartnerUserId() != null || request.getTeamId() != null) {
-            throw new BizException(ErrorCode.PARAM_ERROR, "单打赛事不能携带搭档或队伍");
+            throw new BizException(ErrorCode.PARAM_ERROR, "单打赛事不能携带搭档或队伍；如需双打请选择「DOUBLES」或「MIXED」比赛形式");
         }
         checkPointsEligibility(userId, event);
         guardDuplicate(userId, eventId);
@@ -165,7 +165,7 @@ public class EventServiceImpl implements EventService {
             reserveSlot(eventId, event);
             teamService.createTeam(eventId, userId, request.getPartnerUserId());
         } else {
-            throw new BizException(ErrorCode.PARAM_ERROR, "双打/混打需指定搭档(partnerUserId)或确认队伍(teamId)");
+            throw new BizException(ErrorCode.PARAM_ERROR, "双打/混打需指定搭档(partnerUserId)或确认队伍(teamId)；请先在「报名」Tab 完成建队再报名");
         }
         maybeTransitionFull(eventId, event);
     }
@@ -176,10 +176,10 @@ public class EventServiceImpl implements EventService {
         Event event = requireEvent(eventId);
 
         if (Boolean.TRUE.equals(event.getGroupingLocked())) {
-            throw new BizException(ErrorCode.REGISTRATION_CLOSED, "赛事已分组锁定，如需调整请先解锁");
+            throw new BizException(ErrorCode.REGISTRATION_CLOSED, "赛事已分组锁定。如需调整请在「对阵/比赛」Tab 点「解锁并清空」");
         }
         if ("IN_PROGRESS".equals(event.getStatus()) || "COMPLETED".equals(event.getStatus())) {
-            throw new BizException(ErrorCode.INVALID_STATUS_TRANSITION, "赛事已开始比赛，无法取消报名");
+            throw new BizException(ErrorCode.INVALID_STATUS_TRANSITION, "赛事已开始比赛，无法取消报名；如需代签到或代录入请使用「报名」/「对阵/比赛」Tab");
         }
         if (LocalDateTime.now().isAfter(event.getRegistrationDeadline())) {
             throw new BizException(ErrorCode.REGISTRATION_CLOSED);
@@ -528,8 +528,10 @@ public class EventServiceImpl implements EventService {
             if (user != null) {
                 int userPoints = "STAR".equals(event.getType()) ? user.getStarPoints() : user.getPartyPoints();
                 if (userPoints < event.getMinPoints()) {
+                    String track = "STAR".equals(event.getType()) ? "战力" : "活力";
                     throw new BizException(ErrorCode.INSUFFICIENT_POINTS,
-                            String.format("积分不足，需 %d 分，当前 %d 分", event.getMinPoints(), userPoints));
+                            String.format("%s积分不足，无法报名该赛事（需 %d %s，当前 %d 分）；请先参加其他 %s 赛事积累积分",
+                                    track, event.getMinPoints(), track, userPoints, track));
                 }
             }
         }

@@ -69,7 +69,7 @@ public class TeamServiceImpl implements TeamService {
                                 .or().eq(Team::getMember1UserId, partnerUserId)
                                 .or().eq(Team::getMember2UserId, partnerUserId)));
         if (!existing.isEmpty()) {
-            throw new BizException(ErrorCode.DUPLICATE_REGISTRATION, "该用户已在本赛事组队");
+            throw new BizException(ErrorCode.DUPLICATE_REGISTRATION, "队长或搭档已在该赛事组队；如需更换队友请先在「报名」Tab 解散原队伍后再建队");
         }
 
         Team team = new Team();
@@ -98,11 +98,11 @@ public class TeamServiceImpl implements TeamService {
 
         // Only the invited partner may confirm.
         if (!userId.equals(team.getMember2UserId())) {
-            throw new BizException(ErrorCode.FORBIDDEN, "仅受邀队友可确认组队");
+            throw new BizException(ErrorCode.FORBIDDEN, "仅受邀队友可确认组队；请让收到邀请的搭档在「报名」Tab 点「接受」");
         }
         if (!TeamStatus.PENDING.name().equals(team.getStatus())) {
             throw new BizException(ErrorCode.INVALID_STATUS_TRANSITION,
-                    "当前队伍状态无法确认: " + team.getStatus());
+                    "当前队伍状态(" + team.getStatus() + ")无法确认；PENDING 状态才可接受邀请");
         }
 
         // The partner must not have joined another team in the meantime.
@@ -113,7 +113,7 @@ public class TeamServiceImpl implements TeamService {
                         .and(w -> w.eq(Team::getMember1UserId, userId)
                                 .or().eq(Team::getMember2UserId, userId)));
         if (!conflicts.isEmpty()) {
-            throw new BizException(ErrorCode.DUPLICATE_REGISTRATION, "该用户已在本赛事组队");
+            throw new BizException(ErrorCode.DUPLICATE_REGISTRATION, "该用户已在该赛事另一支队伍中；如需加入本队伍请先在「报名」Tab 解散原队伍");
         }
 
         team.setStatus(TeamStatus.CONFIRMED.name());
@@ -155,7 +155,7 @@ public class TeamServiceImpl implements TeamService {
         Team team = requireTeam(teamId);
 
         if (!userId.equals(team.getMember2UserId())) {
-            throw new BizException(ErrorCode.FORBIDDEN, "仅受邀队友可拒绝邀请");
+            throw new BizException(ErrorCode.FORBIDDEN, "仅受邀队友可拒绝邀请；请让收到邀请的搭档在「报名」Tab 点「拒绝」");
         }
 
         // Withdraw the captain's registration (only they have one so far).
