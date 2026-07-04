@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     :model-value="modelValue"
-    :title="event ? '编辑赛事' : '新建赛事'"
+    :title="dialogTitle"
     width="600px"
     @update:model-value="$emit('update:modelValue', $event)"
   >
@@ -187,14 +187,35 @@ import { formatEventStatus } from '@/utils'
 import { TERMS } from '@/constants/terms'
 import type { Event, CreateEventRequest } from '@/types'
 
+/**
+ * 复制场景下的初始表单数据（来自已有赛事）。
+ * 包含 description / rules / prizes / bannerUrl 等 EventVO 没有但后端 create 接受的字段。
+ */
+export interface EventDuplicatePrefill {
+  type: 'STAR' | 'PARTY'
+  format?: 'SINGLES' | 'DOUBLES' | 'MIXED' | null
+  title: string
+  description?: string
+  bannerUrl?: string | null
+  rules?: string
+  location: string
+  eventTime: string
+  registrationDeadline: string
+  maxParticipants: number
+  fee: number
+  prizes?: string
+  minPoints?: number
+}
+
 const props = defineProps<{
   modelValue: boolean
   event: Event | null
+  prefill?: EventDuplicatePrefill | null
 }>()
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  success: []
+  success: [eventId?: number]
 }>()
 
 const formRef = ref<FormInstance>()
@@ -241,6 +262,12 @@ const editStatusOptions = computed(() => {
   return allowed.map(s => ({ value: s, label: formatEventStatus(s) }))
 })
 
+const dialogTitle = computed(() => {
+  if (props.event) return '编辑赛事'
+  if (props.prefill) return '新建赛事（来自复制）'
+  return '新建赛事'
+})
+
 watch(() => props.event, (val) => {
   if (val) {
     formData.type = val.type
@@ -259,6 +286,21 @@ watch(() => props.event, (val) => {
     formRef.value?.resetFields()
   }
 })
+
+watch(() => props.prefill, (val) => {
+  if (!val) return
+  formData.type = val.type
+  formData.format = (val.format ?? 'SINGLES') as CreateEventRequest['format']
+  formData.title = val.title
+  formData.description = val.description ?? ''
+  formData.location = val.location
+  formData.eventTime = val.eventTime
+  formData.registrationDeadline = val.registrationDeadline
+  formData.maxParticipants = val.maxParticipants
+  formData.fee = val.fee
+  formData.minPoints = val.minPoints ?? 0
+  formData.status = undefined
+}, { immediate: true })
 
 watch(() => props.modelValue, (val) => {
   if (!val && !props.event) {
@@ -286,13 +328,14 @@ const handleConfirm = async () => {
 
     if (res.code === 0) {
       ElMessage.success(props.event ? '赛事更新成功' : '赛事创建成功')
-      emit('success')
+      const newId = props.event ? undefined : res.data?.id
+      emit('success', newId)
       emit('update:modelValue', false)
     } else {
       ElMessage.error(res.message || '操作失败')
     }
   } catch {
-    
+
   } finally {
     loading.value = false
   }

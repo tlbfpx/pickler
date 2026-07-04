@@ -44,6 +44,9 @@
         <el-button type="primary" :icon="Edit" plain @click="editOpen = true">
           编辑信息
         </el-button>
+        <el-button type="success" :icon="CopyDocument" plain :loading="duplicateLoading" @click="handleDuplicate">
+          复制并新建
+        </el-button>
       </div>
       <el-divider class="hero-divider" />
       <div class="hero-stats">
@@ -249,7 +252,8 @@
     <EventFormDialog
       v-model="editOpen"
       :event="event"
-      @success="reload"
+      :prefill="duplicatePrefill"
+      @success="onFormSuccess"
     />
   </div>
 </template>
@@ -259,12 +263,12 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
-  ArrowLeft, Edit, Location, Clock, Calendar, User, Promotion, Right, CircleClose
+  ArrowLeft, Edit, Location, Clock, Calendar, User, Promotion, Right, CircleClose, CopyDocument
 } from '@element-plus/icons-vue'
 import { getEventDetail, changeEventStatus } from '@/api/events'
 import { formatStatus, statusColor, statusTooltip, getAllowedTargets, type EventStatus } from '@/constants/eventStatus'
 import { formatDate, formatEventType, formatEventFormat, getEventTypeColor } from '@/utils'
-import EventFormDialog from './EventFormDialog.vue'
+import EventFormDialog, { type EventDuplicatePrefill } from './EventFormDialog.vue'
 import GroupingPanel from './GroupingPanel.vue'
 import MatchesPanel from './MatchesPanel.vue'
 import IssuancePanel from './IssuancePanel.vue'
@@ -283,6 +287,8 @@ const loading = ref(false)
 const event = ref<Event | null>(null)
 const editOpen = ref(false)
 const activeTab = ref('info')
+const duplicateLoading = ref(false)
+const duplicatePrefill = ref<EventDuplicatePrefill | null>(null)
 
 // 允许的 Tab 名称（防止外部 query 传入非法值）
 const VALID_TABS = new Set(['info', 'reg', 'group', 'match', 'issue'])
@@ -346,6 +352,85 @@ const changeStatus = async (t: EventStatus) => {
   const r = await changeEventStatus(event.value.id, t)
   if (r.code === 0) { ElMessage.success('状态已更新'); reload() }
   else ElMessage.error(r.message || '更新失败')
+}
+
+/**
+ * 把 LocalDateTime / ISO 字符串裁成 dialog 接受的 'YYYY-MM-DDTHH:mm:ss'。
+ * 后端 LocalDateTime Jackson 默认序列化形如 2026-07-01T18:00:00，缺少秒也兼容。
+ */
+function toDialogDateTime(value: string | null | undefined): string {
+  if (!value) return ''
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
+
+function shiftDateTime(value: string, days: number): string {
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return value
+  d.setDate(d.getDate() + days)
+  return toDialogDateTime(d.toISOString())
+}
+
+function todayYmd(): string {
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+const handleDuplicate = async () => {
+  if (!event.value || duplicateLoading.value) return
+  duplicateLoading.value = true
+  try {
+    // 重新拉取详情以拿到 description / rules / prizes / bannerUrl 等字段
+    const r = await getEventDetail(event.value.id)
+    if (r.code !== 0) {
+      ElMessage.error(r.message || '加载赛事详情失败')
+      return
+    }
+    const src = r.data as Event & {
+      description?: string
+      rules?: string
+      prizes?: string
+      bannerUrl?: string | null
+    }
+    const shiftedEventTime = src.eventTime ? shiftDateTime(src.eventTime, 7) : ''
+    const shiftedDeadline = src.registrationDeadline ? shiftDateTime(src.registrationDeadline, 7) : ''
+    duplicatePrefill.value = {
+      type: src.type,
+      format: src.format ?? 'SINGLES',
+      title: `${src.title} (副本 ${todayYmd()})`,
+      description: src.description,
+      bannerUrl: src.bannerUrl,
+      rules: src.rules,
+      location: src.location,
+      eventTime: shiftedEventTime,
+      registrationDeadline: shiftedDeadline,
+      maxParticipants: src.maxParticipants ?? 50,
+      fee: src.fee ?? 0,
+      prizes: src.prizes,
+      minPoints: src.minPoints ?? 0
+    }
+    editOpen.value = true
+  } finally {
+    duplicateLoading.value = false
+  }
+}
+
+// 关闭 dialog 时清理 prefill，避免下次按"编辑信息"时残留复制数据
+watch(editOpen, (val) => {
+  if (!val) duplicatePrefill.value = null
+})
+
+const onFormSuccess = (newEventId?: number) => {
+  // 复制新建：跳到新赛事详情页
+  if (newEventId && duplicatePrefill.value) {
+    duplicatePrefill.value = null
+    router.replace(`/events/${newEventId}`)
+    return
+  }
+  reload()
 }
 </script>
 

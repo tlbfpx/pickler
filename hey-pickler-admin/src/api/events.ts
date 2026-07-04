@@ -31,7 +31,7 @@ export const getEventParticipants = (eventId: number) => {
 }
 
 export const createEvent = (data: CreateEventRequest) => {
-  return request.post<unknown, ApiResponse<void>>('/events', data)
+  return request.post<unknown, ApiResponse<{ id: number }>>('/events', data)
 }
 
 export const updateEvent = (id: number, data: UpdateEventRequest) => {
