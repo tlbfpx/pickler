@@ -81,9 +81,11 @@ test.describe('赛事管理', () => {
     if (await deleteBtn.isVisible()) {
       await deleteBtn.click()
 
-      // Confirm in ElMessageBox
-      await adminPage.locator('.el-message-box__btns').getByRole('button', { name: '确定' }).click()
-      await expect(adminPage.getByText('赛事删除成功')).toBeVisible({ timeout: 10000 })
+      // 乐观删除 + 5s 撤销窗口：底部出现撤销条，倒计时到 0 后才真正调后端
+      const undoBar = adminPage.locator('.undo-bar')
+      await expect(undoBar).toBeVisible({ timeout: 5000 })
+      // 等 5s 倒计时结束，后端 DELETE 完成，成功消息浮现（toast 内文本形如 "X" 已删除）
+      await expect(adminPage.locator('.el-message').filter({ hasText: '已删除' })).toBeVisible({ timeout: 10000 })
     }
   })
 

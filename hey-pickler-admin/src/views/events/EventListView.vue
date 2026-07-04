@@ -246,12 +246,20 @@
       :event="selectedEventForPlacement"
       @saved="fetchEvents"
     />
+
+    <UndoBar
+      :visible="undoState.visible"
+      :message="undoState.message"
+      :seconds-left="undoState.secondsLeft"
+      @undo="handleUndo"
+      @dismiss="handleUndoDismiss"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
+import { ElMessage } from 'element-plus'
 import { getEventList, deleteEvent, changeEventStatus } from '@/api/events'
 import { formatDate, formatEventType, formatEventFormat, getEventTypeColor, getEventFormatColor } from '@/utils'
 import { type EventStatus, statusTooltip } from '@/constants/eventStatus'
@@ -264,6 +272,7 @@ import {
 import Pagination from '@/components/common/Pagination.vue'
 import EventStatusBadge from '@/components/common/EventStatusBadge.vue'
 import EventFilterBar from '@/components/common/EventFilterBar.vue'
+import UndoBar from '@/components/common/UndoBar.vue'
 import EventFormDialog from './EventFormDialog.vue'
 import RegistrationDrawer from './RegistrationDrawer.vue'
 import PointEntryDialog from '@/views/rankings/PointEntryDialog.vue'
@@ -362,25 +371,121 @@ const handleOpenPlacement = (event: Event) => {
 }
 
 const handleDelete = async (event: Event) => {
-  try {
-    await ElMessageBox.confirm(
-      `确定要删除赛事 "${event.title}" 吗？`,
-      '确认删除',
-      { type: 'warning' }
-    )
-    const res = await deleteEvent(event.id)
-    if (res.code === 0) {
-      ElMessage.success('赛事删除成功')
-      fetchEvents()
-    } else {
-      ElMessage.error(res.message || '删除赛事失败')
+  // 乐观删除：立刻从列表移除 + 弹出 5s 撤销条；倒计时结束后才真正调用后端 DELETE。
+  startOptimisticDelete(event)
+}
+
+// ---- 乐观删除 + 撤销窗口 ----
+const UNDO_DURATION_MS = 5000
+const undoState = reactive({
+  visible: false,
+  message: '',
+  secondsLeft: 0
+})
+// 待提交的删除队列：每项 = 赛事快照 + 真正调用 DELETE 的回调
+const pendingDeletes = ref<Array<{ snapshot: Event; commit: () => Promise<void> }>>([])
+let commitTimer: number | null = null
+let countdownTimer: number | null = null
+let startedAt = 0
+
+function clearTimers() {
+  if (commitTimer !== null) { window.clearTimeout(commitTimer); commitTimer = null }
+  if (countdownTimer !== null) { window.clearInterval(countdownTimer); countdownTimer = null }
+}
+
+function insertEventBack(snapshot: Event) {
+  if (eventList.value.some(e => e.id === snapshot.id)) return
+  eventList.value.unshift(snapshot)
+}
+
+function refreshUndoBar() {
+  if (pendingDeletes.value.length === 0) {
+    undoState.visible = false
+    undoState.message = ''
+    undoState.secondsLeft = 0
+    return
+  }
+  const n = pendingDeletes.value.length
+  const first = pendingDeletes.value[0].snapshot
+  undoState.message = n === 1
+    ? `已删除 "${first.title}"`
+    : `已删除 ${n} 项赛事（含 "${first.title}" 等）`
+  const elapsed = Date.now() - startedAt
+  undoState.secondsLeft = Math.max(0, Math.ceil((UNDO_DURATION_MS - elapsed) / 1000))
+  undoState.visible = true
+}
+
+function scheduleCommit() {
+  clearTimers()
+  startedAt = Date.now()
+  commitTimer = window.setTimeout(() => {
+    const queue = pendingDeletes.value.slice()
+    pendingDeletes.value = []
+    refreshUndoBar()
+    void (async () => {
+      for (const item of queue) {
+        await item.commit()
+      }
+    })()
+  }, UNDO_DURATION_MS)
+  countdownTimer = window.setInterval(() => {
+    if (pendingDeletes.value.length === 0) {
+      if (countdownTimer !== null) {
+        window.clearInterval(countdownTimer)
+        countdownTimer = null
+      }
+      return
     }
-  } catch (error: unknown) {
-    if (error !== 'cancel') {
-      // ignore
+    const elapsed = Date.now() - startedAt
+    undoState.secondsLeft = Math.max(0, Math.ceil((UNDO_DURATION_MS - elapsed) / 1000))
+  }, 250)
+}
+
+function startOptimisticDelete(event: Event) {
+  const idx = eventList.value.findIndex(e => e.id === event.id)
+  if (idx === -1) return
+  const snapshot = eventList.value[idx]
+  eventList.value.splice(idx, 1)
+
+  const commit = async () => {
+    try {
+      const res = await deleteEvent(snapshot.id)
+      if (res.code === 0) {
+        ElMessage.success(`"${snapshot.title}" 已删除`)
+      } else {
+        insertEventBack(snapshot)
+        ElMessage.error(res.message || '删除失败')
+      }
+    } catch {
+      insertEventBack(snapshot)
+      ElMessage.error('删除失败')
     }
   }
+
+  pendingDeletes.value.push({ snapshot, commit })
+  refreshUndoBar()
+  scheduleCommit()
 }
+
+function handleUndo() {
+  if (pendingDeletes.value.length === 0) return
+  for (const item of pendingDeletes.value) {
+    insertEventBack(item.snapshot)
+  }
+  pendingDeletes.value = []
+  clearTimers()
+  refreshUndoBar()
+  ElMessage.info('已撤销删除')
+}
+
+function handleUndoDismiss() {
+  // 用户主动关闭撤销条：等同撤销（不立刻提交，让用户重做决定）
+  handleUndo()
+}
+
+onBeforeUnmount(() => {
+  clearTimers()
+})
 
 const handleChangeStatus = async (event: Event, targetStatus: EventStatus) => {
   try {
