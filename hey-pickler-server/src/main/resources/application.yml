@@ -6,6 +6,13 @@ spring:
     time-zone: Asia/Shanghai
     default-property-inclusion: non_null
 
+mybatis-plus:
+  global-config:
+    db-config:
+      logic-delete-field: deletedAt
+      logic-delete-value: NOW()
+      logic-not-delete-value: "NULL"
+
 hey-pickler:
   tier:
     keys: [BRONZE, SILVER, GOLD, PLATINUM, DIAMOND, MASTER]

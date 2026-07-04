@@ -29,6 +29,7 @@ public class Event {
     private LocalDateTime createdAt;
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt;
+    @TableLogic
     private LocalDateTime deletedAt;
     private String format;
     private Boolean groupingLocked;

@@ -23,9 +23,6 @@ mybatis-plus:
   global-config:
     db-config:
       id-type: auto
-      logic-delete-field: deletedAt
-      logic-delete-value: NOW()
-      logic-not-delete-value: "NULL"
 
 hey-pickler:
   rate-limit:
