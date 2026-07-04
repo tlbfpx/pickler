@@ -24,3 +24,14 @@ export const getAllowedTargets = (s: EventStatus): EventStatus[] => ALLOWED_TRAN
 
 export const formatStatus = (s: string): string => STATUS_LABEL[s as EventStatus] || s
 export const statusColor = (s: string): string => STATUS_COLOR[s as EventStatus] || '#6B7280'
+
+// 状态色含义：鼠标 hover 状态 tag 时展示，给用户解释色块语义
+export const STATUS_TOOLTIP: Record<EventStatus, string> = {
+  DRAFT: '草稿：赛事已创建但未发布，选手暂不可报名',
+  OPEN: '报名中：正在接受选手报名',
+  FULL: '名额已满：已达人数上限，不再接受新报名',
+  IN_PROGRESS: '进行中：比赛已开始，正在录入比分',
+  COMPLETED: '已结束：比赛已完结，可配置积分表',
+  CANCELLED: '已取消：该赛事已被取消，不再生效'
+}
+export const statusTooltip = (s: string): string => STATUS_TOOLTIP[s as EventStatus] || ''

@@ -14,7 +14,8 @@
       :body-style="{ padding: '20px 24px' }"
     >
       <div class="panel-head">
-        <span>待办</span>
+        <span>异常事件</span>
+        <span class="panel-tag">需要处理</span>
       </div>
       <el-table
         v-if="todos.length"
@@ -41,13 +42,22 @@
         </el-table-column>
         <el-table-column
           label="标题"
-          min-width="180"
+          min-width="160"
           show-overflow-tooltip
           prop="title"
         />
         <el-table-column
+          label="异常详情"
+          min-width="220"
+          show-overflow-tooltip
+        >
+          <template #default="{ row }">
+            {{ row.detail }}
+          </template>
+        </el-table-column>
+        <el-table-column
           label="比赛时间"
-          width="120"
+          width="110"
           align="center"
         >
           <template #default="{ row }">
@@ -86,7 +96,7 @@
         v-else
         class="muted todo-empty"
       >
-        暂无待办
+        暂无异常事件
       </div>
       <Pagination
         v-if="todos.length > pageSize"
@@ -320,13 +330,18 @@
               align="center"
             >
               <template #default="{ row }">
-                <el-tag
-                  :type="sType(row.status)"
-                  size="small"
-                  round
+                <el-tooltip
+                  :content="statusTooltip(row.status)"
+                  placement="top"
                 >
-                  {{ sLabel(row.status) }}
-                </el-tag>
+                  <el-tag
+                    :type="sType(row.status)"
+                    size="small"
+                    round
+                  >
+                    {{ sLabel(row.status) }}
+                  </el-tag>
+                </el-tooltip>
               </template>
             </el-table-column>
           </el-table>
@@ -416,6 +431,7 @@ import { useAuthStore } from '@/stores/auth'
 import Pagination from '@/components/common/Pagination.vue'
 import * as echarts from 'echarts'
 import { TERMS, TIER_NAME, TIER_COLOR } from '@/constants/terms'
+import { statusTooltip } from '@/constants/eventStatus'
 import type { DashboardStats } from '@/types'
 
 const loading = ref(true)
@@ -438,7 +454,7 @@ const stats = reactive<DashboardStats>({
 
 const router = useRouter()
 const authStore = useAuthStore()
-const todos = ref<Array<{ id: number; title: string; eventTime: string | null; label: string; action: string; tagType: string; organizer: string | null }>>([])
+const todos = ref<Array<{ id: number; title: string; eventTime: string | null; label: string; detail: string; action: string; tagType: string; organizer: string | null; tab?: string }>>([])
 const currentPage = ref(1)
 const pageSize = ref(10)
 
@@ -452,17 +468,38 @@ const fetchBy = (status: string) =>
     .then(r => (r.code === 0 ? (r.data?.list || []) : []))
     .catch(() => [])
 
-type TodoEvent = { id: number; title: string; eventTime: string | null; createdByUsername?: string | null }
+type TodoEvent = {
+  id: number
+  title: string
+  eventTime: string | null
+  registrationDeadline: string | null
+  status: string
+  currentParticipants: number
+  maxParticipants: number | null
+  createdByUsername?: string | null
+}
+
+const DAY_MS = 86400000
+const ACTION_TAB: Record<string, string | undefined> = {
+  draftStale: undefined,         // 草稿编辑
+  openUnderfilled: 'reg',        // 报名 Tab（关注流量）
+  inProgressStale: 'match',      // 对阵/比赛 Tab
+  deadlineMissed: 'reg'          // 报名 Tab
+}
 
 const buildTodos = async () => {
-  const [draftAll, openAll, progAll, doneAll] = await Promise.all([
+  // 拉所有相关状态的赛事；后端对 status 字段做了精确过滤。
+  // FULL 状态对应 OPEN 已满员，OPEN 列表里 currentParticipants 可能已等于 max。
+  const [draftAll, openFullAll, progAll] = await Promise.all([
     fetchBy('DRAFT'),
-    fetchBy('OPEN'),
-    fetchBy('IN_PROGRESS'),
-    fetchBy('COMPLETED')
+    fetchBy('OPEN').then(async list => {
+      // 合并 FULL 状态一起判断「报名过少」
+      const full = await fetchBy('FULL')
+      return [...list, ...full]
+    }),
+    fetchBy('IN_PROGRESS')
   ])
-  // 待办只展示当前管理员负责的赛事；
-  // 超级管理员看全部（与 dashboard 其它统计口径一致）。
+  // 待办只展示当前管理员负责的赛事；超级管理员看全部。
   const isSuperAdmin = authStore.admin?.role === 'SUPER_ADMIN'
   const currentUsername = authStore.admin?.username ?? null
   const filterMine = <T extends TodoEvent>(list: T[]): T[] => {
@@ -470,28 +507,105 @@ const buildTodos = async () => {
     return list.filter(e => e.createdByUsername === currentUsername)
   }
   const draft = filterMine(draftAll)
-  const open = filterMine(openAll)
+  const open = filterMine(openFullAll)
   const prog = filterMine(progAll)
-  const done = filterMine(doneAll)
   const now = Date.now()
-  const list: { id: number; title: string; eventTime: string | null; label: string; action: string; tagType: string; organizer: string | null }[] = []
-  draft.forEach((e: TodoEvent) => list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '待发布', action: '去发布', tagType: 'info', organizer: e.createdByUsername ?? null }))
-  open.forEach((e: TodoEvent) => {
-    const t = e.eventTime ? new Date(e.eventTime).getTime() - now : Infinity
-    if (t < 3 * 86400000) list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '即将开赛', action: '去管理', tagType: 'warning', organizer: e.createdByUsername ?? null })
+  const list: { id: number; title: string; eventTime: string | null; label: string; detail: string; action: string; tagType: string; organizer: string | null; tab: string | undefined }[] = []
+
+  // 异常 1：草稿超过 3 天未发布
+  draft.forEach((e: TodoEvent) => {
+    // 后端 EventVO 不暴露 createdAt；以「比赛时间 > 3 天后」作为草稿长期未发布的保守近似，
+    // 更准确的 createdAt 需要后端扩展；这里若 eventTime 缺失，仍提示去发布。
+    const eventMs = e.eventTime ? new Date(e.eventTime).getTime() : Infinity
+    if (eventMs - now > 3 * DAY_MS || !e.eventTime) {
+      list.push({
+        id: e.id, title: e.title, eventTime: e.eventTime,
+        label: '草稿长期未发布',
+        detail: '比赛时间 > 3 天但仍为草稿，请尽快发布',
+        action: '去发布',
+        tagType: 'info',
+        organizer: e.createdByUsername ?? null,
+        tab: ACTION_TAB.draftStale
+      })
+    }
   })
-  prog.forEach((e: TodoEvent) => list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '进行中', action: '去完成', tagType: 'danger', organizer: e.createdByUsername ?? null }))
-  done.slice(0, 5).forEach((e: TodoEvent) => list.push({ id: e.id, title: e.title, eventTime: e.eventTime, label: '已结束', action: '查看发分', tagType: 'success', organizer: e.createdByUsername ?? null }))
+
+  // 异常 2：OPEN/FULL 即将开赛（7 天内）但报名未满 30%
+  open.forEach((e: TodoEvent) => {
+    const eventMs = e.eventTime ? new Date(e.eventTime).getTime() : Infinity
+    const within7d = eventMs - now > 0 && eventMs - now <= 7 * DAY_MS
+    if (!within7d) return
+    const max = e.maxParticipants ?? 0
+    if (max <= 0) return
+    const fillRatio = e.currentParticipants / max
+    if (fillRatio < 0.3) {
+      list.push({
+        id: e.id, title: e.title, eventTime: e.eventTime,
+        label: '即将开赛 报名过少',
+        detail: `${e.currentParticipants}/${max} 人（${Math.round(fillRatio * 100)}%），<30%`,
+        action: '查看报名',
+        tagType: 'warning',
+        organizer: e.createdByUsername ?? null,
+        tab: ACTION_TAB.openUnderfilled
+      })
+    }
+  })
+
+  // 异常 3：IN_PROGRESS 已开赛超过 14 天无进展
+  prog.forEach((e: TodoEvent) => {
+    const eventMs = e.eventTime ? new Date(e.eventTime).getTime() : 0
+    if (!eventMs) return
+    const daysInProgress = (now - eventMs) / DAY_MS
+    if (daysInProgress > 14) {
+      list.push({
+        id: e.id, title: e.title, eventTime: e.eventTime,
+        label: '进行中超 14 天',
+        detail: `已开赛 ${Math.floor(daysInProgress)} 天，请检查对阵/比分是否停滞`,
+        action: '去看对阵',
+        tagType: 'danger',
+        organizer: e.createdByUsername ?? null,
+        tab: ACTION_TAB.inProgressStale
+      })
+    }
+  })
+
+  // 异常 4：报名截止已过但未满员（任意状态）
+  const deadlineMissedCandidates = [...draft, ...open, ...prog]
+  deadlineMissedCandidates.forEach((e: TodoEvent) => {
+    const deadlineMs = e.registrationDeadline ? new Date(e.registrationDeadline).getTime() : null
+    if (deadlineMs == null || deadlineMs > now) return
+    const max = e.maxParticipants ?? 0
+    if (max > 0 && e.currentParticipants < max) {
+      // 避免与上方已加的「即将开赛 报名过少」重复
+      const alreadyAdded = list.some(t => t.id === e.id && t.label === '即将开赛 报名过少')
+      if (alreadyAdded) return
+      list.push({
+        id: e.id, title: e.title, eventTime: e.eventTime,
+        label: '报名期已过未满员',
+        detail: `截止已过 ${Math.floor((now - deadlineMs) / DAY_MS)} 天，${e.currentParticipants}/${max} 人`,
+        action: '查看报名',
+        tagType: 'info',
+        organizer: e.createdByUsername ?? null,
+        tab: ACTION_TAB.deadlineMissed
+      })
+    }
+  })
+
   todos.value = list
-    .sort((a, b) => new Date(a.eventTime || 0).getTime() - new Date(b.eventTime || 0).getTime())
-    .slice(0, 12)
+    .sort((a, b) => {
+      // 危险的（danger）优先；其次按比赛时间升序
+      if (a.tagType !== b.tagType) {
+        const order: Record<string, number> = { danger: 0, warning: 1, info: 2, success: 3 }
+        return (order[a.tagType] ?? 9) - (order[b.tagType] ?? 9)
+      }
+      return new Date(a.eventTime || 0).getTime() - new Date(b.eventTime || 0).getTime()
+    })
+    .slice(0, 20)
   currentPage.value = 1
 }
 
-const goAction = (row: { id: number; label: string }) => {
-  // 不同标签跳转不同 Tab：进行中/已结束跳到发分 Tab，其余跳详情（默认 info）。
-  const tab = (row.label === '进行中' || row.label === '已结束') ? 'issue' : undefined
-  router.push({ path: `/events/${row.id}`, query: tab ? { tab } : undefined })
+const goAction = (row: { id: number; tab?: string }) => {
+  router.push({ path: `/events/${row.id}`, query: row.tab ? { tab: row.tab } : undefined })
 }
 
 const fmtDate = (d: string | null) => {

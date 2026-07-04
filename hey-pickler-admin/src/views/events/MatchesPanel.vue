@@ -149,24 +149,38 @@
     <el-dialog
       v-model="scoreOpen"
       title="代录比分（三局两胜）"
-      width="520px"
+      width="560px"
     >
       <div
         v-for="(g, idx) in scoreForm"
         :key="idx"
         class="score-row"
       >
-        <span>第{{ idx + 1 }}局</span>
+        <span class="game-label">第{{ idx + 1 }}局</span>
         <el-input-number
           v-model="g.a"
           :min="0"
           :max="30"
         />
+        <span class="dash">:</span>
         <el-input-number
           v-model="g.b"
           :min="0"
           :max="30"
         />
+        <el-tooltip
+          :content="copyPrevDisabled(idx) ? '没有已录入的上一局' : '复制第 ' + idx + ' 局比分到第 ' + (idx + 1) + ' 局'"
+          :disabled="!copyPrevDisabled(idx)"
+          placement="top"
+        >
+          <el-button
+            size="small"
+            :disabled="copyPrevDisabled(idx)"
+            @click="copyFromPrev(idx)"
+          >
+            复制上局
+          </el-button>
+        </el-tooltip>
       </div>
       <div class="hint">
         规则：21 分起，净胜 2 分，单局 ≤30
@@ -256,6 +270,20 @@ const statusLabel = (s: string) => {
   return map[s] || s
 }
 
+// 「复制上局」按钮：把上一局已填的 A/B 复制到当前空行。
+// 「已填」= 两值都 > 0；只有上一局已填时才允许复制。
+const copyPrevDisabled = (idx: number) => {
+  if (idx === 0) return true
+  const prev = scoreForm.value[idx - 1]
+  return !(prev && prev.a > 0 && prev.b > 0)
+}
+const copyFromPrev = (idx: number) => {
+  if (idx === 0) return
+  const prev = scoreForm.value[idx - 1]
+  if (!prev) return
+  scoreForm.value[idx] = { ...scoreForm.value[idx], a: prev.a, b: prev.b }
+}
+
 onMounted(fetchMatches)
 </script>
 
@@ -267,5 +295,7 @@ onMounted(fetchMatches)
 .standings-title { font-weight: 600; color: #374151; }
 .standing-item { margin-right: 12px; }
 .score-row { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+.game-label { width: 56px; color: #374151; font-size: 13px; }
+.dash { color: #6b7280; font-weight: 600; }
 .hint { color: #9ca3af; font-size: 12px; }
 </style>

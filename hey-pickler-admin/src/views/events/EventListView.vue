@@ -120,10 +120,15 @@
           width="150"
         >
           <template #default="{ row }">
-            <EventStatusBadge
-              :status="row.status"
-              @change="(t) => handleChangeStatus(row, t)"
-            />
+            <el-tooltip
+              :content="statusTooltip(row.status)"
+              placement="top"
+            >
+              <EventStatusBadge
+                :status="row.status"
+                @change="(t) => handleChangeStatus(row, t)"
+              />
+            </el-tooltip>
           </template>
         </el-table-column>
         <el-table-column
@@ -249,7 +254,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getEventList, deleteEvent, changeEventStatus } from '@/api/events'
 import { formatDate, formatEventType, formatEventFormat, getEventTypeColor, getEventFormatColor } from '@/utils'
-import { type EventStatus } from '@/constants/eventStatus'
+import { type EventStatus, statusTooltip } from '@/constants/eventStatus'
 import {
   canEditEvent,
   canDeleteEvent,

@@ -266,25 +266,104 @@
     <el-dialog
       v-model="createDialogVisible"
       title="代用户建队"
-      width="420px"
+      width="520px"
       append-to-body
+      @open="loadPartnerCandidates"
     >
       <el-form
         :model="createForm"
         label-width="100px"
         size="small"
       >
-        <el-form-item label="队长 (用户ID)">
-          <el-input
-            v-model.number="createForm.captainUserId"
-            disabled
-            placeholder="队长用户ID"
-          />
+        <el-form-item label="队长">
+          <div class="captain-row">
+            <el-avatar
+              v-if="createFormCaptain"
+              :src="createFormCaptain.avatarUrl || undefined"
+              :size="24"
+            />
+            <span v-if="createFormCaptain">
+              {{ createFormCaptain.nickname || '用户' }}
+              <span class="muted-inline">(ID: {{ createForm.captainUserId }})</span>
+            </span>
+            <span
+              v-else
+              class="muted"
+            >-</span>
+          </div>
         </el-form-item>
-        <el-form-item label="搭档 (用户ID)">
+        <el-form-item label="搭档">
+          <div class="partner-picker">
+            <el-input
+              v-model="partnerSearch"
+              placeholder="搜索昵称筛选下方候选"
+              clearable
+              size="small"
+              class="partner-search"
+            />
+            <el-table
+              v-loading="partnerLoading"
+              :data="filteredPartnerCandidates"
+              size="small"
+              height="220"
+              highlight-current-row
+              :row-class-name="(args: { row: PartnerCandidate }) => isSelectedPartner(args.row) ? 'partner-row-selected' : ''"
+              @row-click="(row: PartnerCandidate) => selectPartnerCandidate(row)"
+            >
+              <el-table-column
+                width="56"
+                align="center"
+              >
+                <template #default="{ row }">
+                  <el-avatar
+                    :src="row.avatarUrl || undefined"
+                    :size="24"
+                  />
+                </template>
+              </el-table-column>
+              <el-table-column
+                label="昵称"
+                min-width="120"
+                show-overflow-tooltip
+              >
+                <template #default="{ row }">
+                  {{ row.nickname || '-' }}
+                </template>
+              </el-table-column>
+              <el-table-column
+                label="用户ID"
+                width="90"
+                align="center"
+                prop="userId"
+              />
+              <el-table-column
+                label="报名状态"
+                width="90"
+                align="center"
+              >
+                <template #default="{ row }">
+                  <el-tag
+                    size="small"
+                    :type="row.status === 'REGISTERED' ? 'primary' : row.status === 'CHECKED_IN' ? 'success' : 'info'"
+                  >
+                    {{ formatRegStatus(row.status) }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+            </el-table>
+            <div
+              v-if="!partnerLoading && !filteredPartnerCandidates.length"
+              class="partner-empty muted"
+            >
+              该赛事暂无其他报名用户
+            </div>
+          </div>
+        </el-form-item>
+        <el-form-item label="或手动输入">
           <el-input
             v-model.number="createForm.partnerUserId"
-            placeholder="请输入搭档的用户ID"
+            placeholder="候选名单外的用户可手动输入 ID"
+            clearable
           />
         </el-form-item>
         <el-form-item label="队伍名 (可选)">
@@ -349,6 +428,56 @@ const teamContextByUserId = ref<Record<number, TeamVO | null>>({})
 const createDialogVisible = ref(false)
 const createSubmitting = ref(false)
 const createForm = reactive({ captainUserId: 0, partnerUserId: 0, name: '' })
+
+// Partner candidate picker state
+type PartnerCandidate = Pick<Registration, 'userId' | 'nickname' | 'avatarUrl' | 'status'>
+const partnerCandidates = ref<PartnerCandidate[]>([])
+const partnerLoading = ref(false)
+const partnerSearch = ref('')
+
+const createFormCaptain = computed<Registration | undefined>(() =>
+  registrationList.value.find(r => r.userId === createForm.captainUserId)
+)
+
+const filteredPartnerCandidates = computed<PartnerCandidate[]>(() => {
+  const q = partnerSearch.value.trim().toLowerCase()
+  return partnerCandidates.value
+    .filter(c => c.userId !== createForm.captainUserId)
+    .filter(c => {
+      if (!q) return true
+      const nick = (c.nickname || '').toLowerCase()
+      return nick.includes(q) || String(c.userId).includes(q)
+    })
+})
+
+const isSelectedPartner = (row: PartnerCandidate) =>
+  createForm.partnerUserId === row.userId
+
+const selectPartnerCandidate = (row: PartnerCandidate) => {
+  createForm.partnerUserId = row.userId
+}
+
+async function loadPartnerCandidates() {
+  if (!props.event) return
+  partnerLoading.value = true
+  try {
+    const res = await getEventRegistrations(props.event.id, { page: 1, size: 100 })
+    if (res.code === 0) {
+      partnerCandidates.value = (res.data.list || []).map(r => ({
+        userId: r.userId,
+        nickname: r.nickname,
+        avatarUrl: r.avatarUrl,
+        status: r.status
+      }))
+    } else {
+      partnerCandidates.value = []
+    }
+  } catch {
+    partnerCandidates.value = []
+  } finally {
+    partnerLoading.value = false
+  }
+}
 
 const onSelectionChange = (rows: Registration[]) => { selected.value = rows }
 
@@ -509,6 +638,7 @@ function openCreateDialog(row: Registration) {
   createForm.captainUserId = row.userId
   createForm.partnerUserId = 0
   createForm.name = ''
+  partnerSearch.value = ''
   createDialogVisible.value = true
 }
 
@@ -666,4 +796,28 @@ watch(() => props.event?.id, async (id, prev) => {
 }
 
 .bulk-bar { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+
+/* Partner picker */
+.captain-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #374151;
+}
+.muted-inline { color: #9ca3af; font-size: 12px; margin-left: 4px; }
+.partner-picker {
+  width: 100%;
+}
+.partner-search { margin-bottom: 8px; }
+.partner-empty {
+  padding: 12px;
+  text-align: center;
+  font-size: 12px;
+  border: 1px dashed #e5e7eb;
+  border-radius: 4px;
+}
+:deep(.partner-row-selected) {
+  background-color: #ecf5ff !important;
+}
 </style>

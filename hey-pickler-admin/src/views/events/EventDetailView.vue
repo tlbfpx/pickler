@@ -19,9 +19,14 @@
           </div>
           <h1 class="hero-title">{{ event.title }}</h1>
           <div class="hero-tags">
-            <el-tag :color="statusColor(event.status)" effect="dark" size="large" round>
-              {{ formatStatus(event.status) }}
-            </el-tag>
+            <el-tooltip
+              :content="statusTooltip(event.status)"
+              placement="top"
+            >
+              <el-tag :color="statusColor(event.status)" effect="dark" size="large" round>
+                {{ formatStatus(event.status) }}
+              </el-tag>
+            </el-tooltip>
             <el-tag :color="getEventTypeColor(event.type)" effect="dark" size="default" round>
               {{ formatEventType(event.type) }}
             </el-tag>
@@ -161,9 +166,14 @@
               <el-tag size="small" effect="plain">{{ formatEventFormat(event.format) }}</el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="状态">
-              <el-tag :color="statusColor(event.status)" effect="dark" size="small">
-                {{ formatStatus(event.status) }}
-              </el-tag>
+              <el-tooltip
+                :content="statusTooltip(event.status)"
+                placement="top"
+              >
+                <el-tag :color="statusColor(event.status)" effect="dark" size="small">
+                  {{ formatStatus(event.status) }}
+                </el-tag>
+              </el-tooltip>
             </el-descriptions-item>
             <el-descriptions-item label="比赛时间">
               {{ event.eventTime ? formatDate(event.eventTime) : '-' }}
@@ -252,7 +262,7 @@ import {
   ArrowLeft, Edit, Location, Clock, Calendar, User, Promotion, Right, CircleClose
 } from '@element-plus/icons-vue'
 import { getEventDetail, changeEventStatus } from '@/api/events'
-import { formatStatus, statusColor, getAllowedTargets, type EventStatus } from '@/constants/eventStatus'
+import { formatStatus, statusColor, statusTooltip, getAllowedTargets, type EventStatus } from '@/constants/eventStatus'
 import { formatDate, formatEventType, formatEventFormat, getEventTypeColor } from '@/utils'
 import EventFormDialog from './EventFormDialog.vue'
 import GroupingPanel from './GroupingPanel.vue'
