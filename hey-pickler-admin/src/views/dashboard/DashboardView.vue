@@ -266,6 +266,48 @@
       </div>
     </el-card>
 
+    <!-- 30 天 KPI 趋势图 -->
+    <el-card
+      shadow="never"
+      class="page-card"
+      :body-style="{ padding: '20px 24px' }"
+    >
+      <div class="panel-head">
+        <span>30 天趋势</span>
+        <span class="panel-tag">每日新增 + 完赛率滚动</span>
+      </div>
+      <div class="trend-grid">
+        <div class="trend-cell">
+          <div class="trend-label">新增用户</div>
+          <div
+            ref="trendUsersRef"
+            class="chart-xs"
+          />
+        </div>
+        <div class="trend-cell">
+          <div class="trend-label">新增报名</div>
+          <div
+            ref="trendRegsRef"
+            class="chart-xs"
+          />
+        </div>
+        <div class="trend-cell">
+          <div class="trend-label">新增赛事</div>
+          <div
+            ref="trendEventsRef"
+            class="chart-xs"
+          />
+        </div>
+        <div class="trend-cell">
+          <div class="trend-label">完赛率</div>
+          <div
+            ref="trendRateRef"
+            class="chart-xs"
+          />
+        </div>
+      </div>
+    </el-card>
+
     <!-- Tables -->
     <el-card
       shadow="never"
@@ -426,6 +468,7 @@ import { ref, reactive, computed, onMounted, nextTick, onBeforeUnmount } from 'v
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getDashboardStats } from '@/api/dashboard'
+import { getAnalyticsOverview } from '@/api/analytics'
 import { getEventList } from '@/api/events'
 import { useAuthStore } from '@/stores/auth'
 import Pagination from '@/components/common/Pagination.vue'
@@ -440,6 +483,10 @@ const regChartRef = ref<HTMLElement>()
 const eventTypeRef = ref<HTMLElement>()
 const starTierRef = ref<HTMLElement>()
 const partyTierRef = ref<HTMLElement>()
+const trendUsersRef = ref<HTMLElement>()
+const trendRegsRef = ref<HTMLElement>()
+const trendEventsRef = ref<HTMLElement>()
+const trendRateRef = ref<HTMLElement>()
 const charts: echarts.ECharts[] = []
 
 const stats = reactive<DashboardStats>({
@@ -451,6 +498,14 @@ const stats = reactive<DashboardStats>({
   dailyNewUsers: [], dailyRegistrations: [],
   recentRegistrations: [], upcomingEvents: []
 })
+
+// 30 天 KPI 趋势图数据
+const trendData = reactive<{
+  newUsers: Array<{ date: string; count: number }>
+  newRegistrations: Array<{ date: string; count: number }>
+  newEvents: Array<{ date: string; count: number }>
+  completionRate: Array<{ date: string; rate: number }>
+}>({ newUsers: [], newRegistrations: [], newEvents: [], completionRate: [] })
 
 const router = useRouter()
 const authStore = useAuthStore()
