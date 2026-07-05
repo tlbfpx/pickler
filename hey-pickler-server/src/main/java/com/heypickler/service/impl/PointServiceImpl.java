@@ -130,7 +130,23 @@ public class PointServiceImpl implements PointService, PointWallet {
         record.setSource(sourceName);
         record.setSeasonCode(seasonCode);
         record.setOperatorId(operatorId);
-        pointRecordMapper.insert(record);
+
+        // V17 幂等兜底：MySQL functional unique index
+        //   uk_event_user_when_placement (
+        //     (CASE WHEN source='PLACEMENT' THEN CONCAT(event_id,'-',user_id) ELSE NULL END)
+        //   )
+        // 命中时该 INSERT 被拒，捕获并跳过即可。MySQL InnoDB 中 UNIQUE 违反
+        // 仅回滚本语句、事务可继续；此处不重抛是为了防止 Spring 将外层事务
+        // 标记为 rollback-only。
+        // 在 InnoDB 中，UNIQUE 违反只回滚该语句，整个事务可继续；捕获并跳过即可。
+        // 此处不重抛是为了避免 Spring 把外层事务标记为 rollback-only。
+        try {
+            pointRecordMapper.insert(record);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            log.warn("point_record duplicate ignored (idempotent): event={}, user={}, source={}, season={}",
+                    eventId, user.getId(), sourceName, seasonCode);
+            return; // 跳出，跳过 userPoints 累加避免双重加和
+        }
 
         if ("STAR".equals(target.type())) {
             int current = user.getStarPoints() != null ? user.getStarPoints() : 0;

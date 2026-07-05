@@ -101,6 +101,7 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void register(Long userId, Long eventId, RegisterRequest request) {
+        // 1) read-only guards — pre-flight checks before opening a write transaction.
         Event event = requireEvent(eventId);
 
         if (Boolean.TRUE.equals(event.getGroupingLocked())) {
@@ -547,14 +548,34 @@ public class EventServiceImpl implements EventService {
         }
     }
 
-    /** Atomic capacity-guarded slot reservation. */
+    /**
+     * Atomic capacity + grouping-lock guarded slot reservation (D4 fix).
+     *
+     * <p>Why the WHERE includes {@code grouping_locked = false}:
+     * the lock flag is independently flipped by {@code GroupingService.lock}
+     * (Spec 1). Without including it in the slot UPDATE, there is a TOCTOU
+     * window between {@code register()} checking the flag in memory and
+     * flipping the slot counter. Folding the lock check into the same UPDATE
+     * makes "locked OR full → reject" atomic at the storage layer.
+     *
+     * <p>On 0 rows updated, we distinguish "full" vs "locked" with one extra
+     * SELECT — strictly cheaper than the previous report's two-step read.
+     */
     private void reserveSlot(Long eventId, Event event) {
         int rows = eventMapper.update(null,
                 new LambdaUpdateWrapper<Event>()
                         .eq(Event::getId, eventId)
+                        // No-lock guard — must be evaluated inside the slot UPDATE.
+                        .and(w -> w.isNull(Event::getGroupingLocked)
+                                .or().eq(Event::getGroupingLocked, false))
                         .lt(Event::getCurrentParticipants, event.getMaxParticipants())
                         .setSql("current_participants = current_participants + 1"));
         if (rows == 0) {
+            Event fresh = eventMapper.selectById(eventId);
+            if (fresh != null && Boolean.TRUE.equals(fresh.getGroupingLocked())) {
+                throw new BizException(ErrorCode.REGISTRATION_CLOSED,
+                        "赛事已分组锁定。如需调整请在「对阵/比赛」Tab 点「解锁并清空」");
+            }
             throw new BizException(ErrorCode.REGISTRATION_FULL);
         }
     }
