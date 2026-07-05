@@ -468,7 +468,6 @@ import { ref, reactive, computed, onMounted, nextTick, onBeforeUnmount } from 'v
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getDashboardStats } from '@/api/dashboard'
-import { getAnalyticsOverview } from '@/api/analytics'
 import { getEventList } from '@/api/events'
 import { useAuthStore } from '@/stores/auth'
 import Pagination from '@/components/common/Pagination.vue'
@@ -498,14 +497,6 @@ const stats = reactive<DashboardStats>({
   dailyNewUsers: [], dailyRegistrations: [],
   recentRegistrations: [], upcomingEvents: []
 })
-
-// 30 天 KPI 趋势图数据
-const trendData = reactive<{
-  newUsers: Array<{ date: string; count: number }>
-  newRegistrations: Array<{ date: string; count: number }>
-  newEvents: Array<{ date: string; count: number }>
-  completionRate: Array<{ date: string; rate: number }>
-}>({ newUsers: [], newRegistrations: [], newEvents: [], completionRate: [] })
 
 const router = useRouter()
 const authStore = useAuthStore()

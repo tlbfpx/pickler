@@ -98,6 +98,12 @@ const router = createRouter({
           name: 'Notifications',
           component: () => import('@/views/notifications/NotificationsView.vue'),
           meta: { title: '通知中心', icon: 'Bell', group: '系统' }
+        },
+        {
+          path: 'analytics',
+          name: 'Analytics',
+          component: () => import('@/views/admin/AdminAnalyticsView.vue'),
+          meta: { title: '数据分析', icon: 'DataAnalysis', group: '数据' }
         }
       ]
     }

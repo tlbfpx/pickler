@@ -158,9 +158,20 @@ class AdminAnalyticsControllerTest {
         String lastMonth = (String) byMonth.get(11).get("month");
         assertTrue(firstMonth.compareTo(lastMonth) < 0, "months should be ascending");
 
-        Map<String, Object> eventTypes = (Map<String, Object>) data.get("eventTypes");
-        assertEquals(0L, eventTypes.get("STAR"));
-        assertEquals(0L, eventTypes.get("PARTY"));
+        Map<String, Object> byType = (Map<String, Object>) data.get("byType");
+        assertEquals(0L, byType.get("STAR"));
+        assertEquals(0L, byType.get("PARTY"));
+
+        Map<String, Object> byStatus = (Map<String, Object>) data.get("byStatus");
+        assertNotNull(byStatus, "byStatus should be present");
+        // 6 个枚举值都在，未出现的补 0
+        assertEquals(6, byStatus.size());
+        assertEquals(0L, byStatus.get("DRAFT"));
+        assertEquals(0L, byStatus.get("OPEN"));
+        assertEquals(0L, byStatus.get("FULL"));
+        assertEquals(0L, byStatus.get("IN_PROGRESS"));
+        assertEquals(0L, byStatus.get("COMPLETED"));
+        assertEquals(0L, byStatus.get("CANCELLED"));
     }
 
     @Test

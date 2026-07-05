@@ -50,7 +50,7 @@ const menuRoutes = (router.options.routes.find((r: RouteRecordRaw) => r.path ===
   )
   .map(r => ({ path: '/' + r.path, title: r.meta.title, icon: r.meta.icon, group: r.meta.group }))
 
-const GROUP_ORDER = ['运营管理', '积分与赛季', '内容运营', '系统']
+const GROUP_ORDER = ['运营管理', '积分与赛季', '内容运营', '数据', '系统']
 const groups = computed(() => GROUP_ORDER
   .map(name => ({ name, items: menuRoutes.filter(r => r.group === name) }))
   .filter(g => g.items.length))

@@ -2,6 +2,7 @@ package com.heypickler.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.heypickler.common.annotation.RequireRole;
+import com.heypickler.common.enums.EventStatus;
 import com.heypickler.common.enums.UserRole;
 import com.heypickler.common.result.Result;
 import com.heypickler.entity.Event;
@@ -246,10 +247,19 @@ public class AdminAnalyticsController {
                 new LambdaQueryWrapper<Event>().isNull(Event::getDeletedAt).eq(Event::getType, "STAR"));
         long partyEvents = eventMapper.selectCount(
                 new LambdaQueryWrapper<Event>().isNull(Event::getDeletedAt).eq(Event::getType, "PARTY"));
-        Map<String, Long> eventTypes = new LinkedHashMap<>();
-        eventTypes.put("STAR", starEvents);
-        eventTypes.put("PARTY", partyEvents);
-        data.put("eventTypes", eventTypes);
+        Map<String, Long> byType = new LinkedHashMap<>();
+        byType.put("STAR", starEvents);
+        byType.put("PARTY", partyEvents);
+        data.put("byType", byType);
+
+        // ---- 赛事状态分布：枚举全部 6 个状态，未出现的补 0 ----
+        Map<String, Long> byStatus = new LinkedHashMap<>();
+        for (EventStatus s : EventStatus.values()) {
+            long count = eventMapper.selectCount(
+                    new LambdaQueryWrapper<Event>().isNull(Event::getDeletedAt).eq(Event::getStatus, s.name()));
+            byStatus.put(s.name(), count);
+        }
+        data.put("byStatus", byStatus);
 
         return Result.ok(data);
     }

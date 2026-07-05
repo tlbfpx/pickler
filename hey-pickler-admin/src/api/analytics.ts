@@ -47,15 +47,18 @@ export interface MonthlyTrend {
 
 export interface AnalyticsDashboard {
   totals: AnalyticsTotals
-  /** COMPLETED / (非 CANCELLED) × 100 */
+  /** 完赛率：COMPLETED / (非 CANCELLED) × 100 */
   completionRate: number
-  /** 总报名 / 总赛事 */
+  /** 报名转化：总报名 / 总赛事 */
   registrationPerEvent: number
   /** 30 天内有效报名 + 创建赛事的去重用户数 */
   activeUsersLast30d: number
+  /** 最近 12 个月趋势 */
   byMonth: MonthlyTrend[]
   /** 赛事类型分布（STAR / PARTY） */
-  eventTypes: Record<string, number>
+  byType: Record<string, number>
+  /** 赛事状态分布（DRAFT/OPEN/FULL/IN_PROGRESS/COMPLETED/CANCELLED） */
+  byStatus: Record<string, number>
 }
 
 export const getAnalyticsDashboard = () =>
