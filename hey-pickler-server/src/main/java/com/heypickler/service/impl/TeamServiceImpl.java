@@ -19,6 +19,7 @@ import com.heypickler.service.TeamService;
 import com.heypickler.vo.TeamVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -79,7 +80,17 @@ public class TeamServiceImpl implements TeamService {
         team.setMember1UserId(captainId);
         team.setMember2UserId(partnerUserId);
         team.setStatus(TeamStatus.PENDING.name());
-        teamMapper.insert(team);
+        try {
+            teamMapper.insert(team);
+        } catch (DataIntegrityViolationException e) {
+            // V12 UNIQUE KEY (uk_event_member1 / uk_event_member2) tripped — a
+            // simultaneous invite raced with us and one of the two users is
+            // already on another team. Surface as a business error, not 500.
+            log.info("createTeam race lost for captain={}, partner={}, event={}",
+                    captainId, partnerUserId, eventId);
+            throw new BizException(ErrorCode.DUPLICATE_REGISTRATION,
+                    "组队冲突：该搭档刚刚被其他队伍邀请，请刷新页面后重试");
+        }
 
         // Captain self-registers immediately; partner's registration appears on confirm.
         Registration captainReg = new Registration();

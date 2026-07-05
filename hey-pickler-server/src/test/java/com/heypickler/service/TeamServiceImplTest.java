@@ -19,6 +19,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import static org.mockito.Mockito.doThrow;
 
 import java.util.List;
 
@@ -121,6 +122,21 @@ class TeamServiceImplTest {
                 () -> teamService.createTeam(10L, 1L, 1L));
         assertEquals(ErrorCode.PARAM_ERROR.getCode(), ex.getCode());
         verify(teamMapper, never()).insert(any());
+    }
+
+    /**
+     * Loop engineering D5 兜底：双向邀请 race 触发 V12 UNIQUE KEY。
+     * 应用层 check 通过了，但 DB UNIQUE 命中 → 必须翻译为业务异常。
+     */
+    @Test
+    void createTeam_dbUniqueViolation_throwsDuplicate() {
+        when(teamMapper.selectList(any())).thenReturn(List.of());  // app-level OK
+        doThrow(new org.springframework.dao.DataIntegrityViolationException(
+                "uk_event_member2")).when(teamMapper).insert(any(Team.class));
+
+        BizException ex = assertThrows(BizException.class,
+                () -> teamService.createTeam(10L, 1L, 2L));
+        assertEquals(ErrorCode.DUPLICATE_REGISTRATION.getCode(), ex.getCode());
     }
 
     // ---------- confirmTeam ----------
