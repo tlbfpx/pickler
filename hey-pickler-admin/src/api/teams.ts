@@ -49,3 +49,16 @@ export const declineTeam = (teamId: number, data: UserScopedTeamRequest) => {
 export const dissolveTeam = (teamId: number) => {
   return request.delete<unknown, ApiResponse<void>>(`/teams/${teamId}`)
 }
+
+export interface TeamInviteVO {
+  teamId: number
+  eventId: number
+  eventTitle: string
+  captainName: string
+  expiresAt: string
+}
+
+/** GET /teams/{teamId}/invite */
+export const getTeamInvite = (teamId: number) => {
+  return request.get<unknown, ApiResponse<TeamInviteVO>>(`/teams/${teamId}/invite`)
+}

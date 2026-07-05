@@ -34,6 +34,7 @@ class TeamServiceImplTest {
     @Mock RegistrationMapper registrationMapper;
     @Mock UserMapper userMapper;
     @Mock EventMapper eventMapper;
+    @Mock NotificationService notificationService;
 
     // ---------- createTeam ----------
 
@@ -41,7 +42,12 @@ class TeamServiceImplTest {
     void createTeam_captainInvites_createsPendingTeamAndCaptainReg() {
         // Neither captain (1) nor partner (2) is in any team of event 10.
         when(teamMapper.selectList(any())).thenReturn(java.util.Collections.emptyList());
-        when(eventMapper.selectById(10L)).thenReturn(eventWithFormat("DOUBLES"));
+        Event ev = eventWithFormat("DOUBLES");
+        ev.setTitle("Open Doubles");
+        when(eventMapper.selectById(10L)).thenReturn(ev);
+        // Notification trigger looks up the captain for the invite message.
+        User captain = new User(); captain.setId(1L); captain.setNickname("Alice");
+        when(userMapper.selectById(1L)).thenReturn(captain);
         when(teamMapper.insert(any(Team.class))).thenAnswer(inv -> {
             Team t = inv.getArgument(0);
             t.setId(99L);
@@ -53,6 +59,10 @@ class TeamServiceImplTest {
         });
 
         Team result = teamService.createTeam(10L, 1L, 2L);
+
+        // Verify the partner-received invite was pushed (smoke-check, not detailed).
+        verify(notificationService).push(eq(2L), eq("TEAM_INVITED"), anyString(),
+                anyString(), anyString());
 
         ArgumentCaptor<Team> teamCap = ArgumentCaptor.forClass(Team.class);
         verify(teamMapper).insert(teamCap.capture());

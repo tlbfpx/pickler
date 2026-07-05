@@ -7,6 +7,7 @@ import com.heypickler.common.exception.ErrorCode;
 import com.heypickler.common.result.Result;
 import com.heypickler.entity.Team;
 import com.heypickler.service.TeamService;
+import com.heypickler.vo.TeamInviteVO;
 import com.heypickler.vo.TeamVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -91,6 +92,17 @@ public class AdminTeamController {
     public Result<Void> dissolve(@PathVariable Long teamId) {
         teamService.dissolve(teamId);
         return Result.ok();
+    }
+
+    @GetMapping("/teams/{teamId}/invite")
+    @Operation(summary = "获取队伍邀请信息（用于生成分享链接/邀请码；teamId 即邀请码）")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
+    public Result<TeamInviteVO> invite(@PathVariable Long teamId) {
+        TeamInviteVO vo = teamService.buildInvite(teamId);
+        if (vo == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "队伍或赛事不存在");
+        }
+        return Result.ok(vo);
     }
 
     // ---------- request bodies ----------

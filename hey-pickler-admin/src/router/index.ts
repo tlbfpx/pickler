@@ -92,6 +92,12 @@ const router = createRouter({
           name: 'AdminLogs',
           component: () => import('@/views/admin-logs/AdminLogListView.vue'),
           meta: { title: '操作日志', icon: 'List', group: '系统' }
+        },
+        {
+          path: 'notifications',
+          name: 'Notifications',
+          component: () => import('@/views/notifications/NotificationsView.vue'),
+          meta: { title: '通知中心', icon: 'Bell', group: '系统' }
         }
       ]
     }

@@ -125,7 +125,7 @@
       <el-table-column
         v-if="isTeamEvent(event)"
         label="队伍"
-        width="240"
+        width="280"
       >
         <template #default="{ row }">
           <div class="team-cell">
@@ -150,6 +150,24 @@
               建队
             </el-button>
             <template v-else-if="teamContextByUserId[row.userId]">
+              <el-button
+                v-if="isPendingCaptain(row.userId)"
+                link
+                type="primary"
+                size="small"
+                @click="handleCopyInviteCode(teamContextByUserId[row.userId]!.id, 'code')"
+              >
+                复制邀请码
+              </el-button>
+              <el-button
+                v-if="isPendingCaptain(row.userId)"
+                link
+                type="primary"
+                size="small"
+                @click="handleCopyInviteCode(teamContextByUserId[row.userId]!.id, 'link')"
+              >
+                复制邀请链接
+              </el-button>
               <el-button
                 v-if="isInvitedPartner(row.userId) && canConfirmTeam(event, teamContextByUserId[row.userId])"
                 link
@@ -396,7 +414,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Pagination from '@/components/common/Pagination.vue'
 import { getEventRegistrations, updateRegistrationStatus } from '@/api/events'
-import { listEventTeams, createTeam, confirmTeam, declineTeam, dissolveTeam, type TeamVO } from '@/api/teams'
+import { listEventTeams, createTeam, confirmTeam, declineTeam, dissolveTeam, getTeamInvite, type TeamVO } from '@/api/teams'
 import { formatDate } from '@/utils'
 import type { Event, Registration } from '@/types'
 import {
@@ -501,6 +519,55 @@ function rebuildTeamContext() {
 function isInvitedPartner(userId: number) {
   const t = teamContextByUserId.value[userId]
   return !!t && t.member2UserId === userId && t.status === 'PENDING'
+}
+
+function isPendingCaptain(userId: number) {
+  const t = teamContextByUserId.value[userId]
+  return !!t && t.member1UserId === userId && t.status === 'PENDING'
+}
+
+/**
+ * Copy a team invite identifier to the clipboard.
+ *
+ * mode='code' → copy the raw teamId (the numeric "invite code").
+ * mode='link' → copy a full https://<host>/app/join-team/<teamId> URL.
+ *
+ * The link is best-effort: we fall back to the relative path if window.location
+ * can't be resolved (e.g. SSR). Toast on success/fail.
+ */
+async function handleCopyInviteCode(teamId: number, mode: 'code' | 'link') {
+  try {
+    const res = await getTeamInvite(teamId)
+    if (res.code !== 0 || !res.data) {
+      ElMessage.warning(res.message || '未找到该队伍的邀请信息')
+      return
+    }
+    let text: string
+    if (mode === 'code') {
+      text = String(res.data.teamId)
+    } else {
+      const origin = (typeof window !== 'undefined' && window.location && window.location.origin)
+        ? window.location.origin
+        : ''
+      text = `${origin}/app/join-team/${res.data.teamId}`
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      // Fallback for browsers without clipboard API: textarea+execCommand
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.left = '-9999px'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    }
+    ElMessage.success(mode === 'code' ? '已复制邀请码' : '已复制邀请链接')
+  } catch (e) {
+    ElMessage.error('复制失败，请稍后重试')
+  }
 }
 
 function teamBadgeLabel(userId: number) {

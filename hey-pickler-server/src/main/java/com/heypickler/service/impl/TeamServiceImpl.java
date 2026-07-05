@@ -14,6 +14,7 @@ import com.heypickler.mapper.EventMapper;
 import com.heypickler.mapper.RegistrationMapper;
 import com.heypickler.mapper.TeamMapper;
 import com.heypickler.mapper.UserMapper;
+import com.heypickler.service.NotificationService;
 import com.heypickler.service.TeamService;
 import com.heypickler.vo.TeamVO;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +50,7 @@ public class TeamServiceImpl implements TeamService {
     private final RegistrationMapper registrationMapper;
     private final UserMapper userMapper;
     private final EventMapper eventMapper;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -87,6 +89,18 @@ public class TeamServiceImpl implements TeamService {
         captainReg.setMatchType(resolveMatchType(eventId));
         captainReg.setStatus(REG_REGISTERED);
         registrationMapper.insert(captainReg);
+
+        // Notify the invited partner; event title carries the message context.
+        Event eventForNotify = eventMapper.selectById(eventId);
+        User captainForNotify = userMapper.selectById(captainId);
+        String eventTitle = eventForNotify != null ? eventForNotify.getTitle() : "赛事";
+        String captainName = captainForNotify != null ? captainForNotify.getNickname() : "队长";
+        notificationService.push(
+                partnerUserId,
+                "TEAM_INVITED",
+                "组队邀请",
+                captainName + " 邀请你组队参加《" + eventTitle + "》",
+                "/events/" + eventId + "?tab=reg");
 
         return team;
     }
@@ -237,6 +251,35 @@ public class TeamServiceImpl implements TeamService {
             throw new BizException(ErrorCode.NOT_FOUND, "队伍不存在");
         }
         return team;
+    }
+
+    @Override
+    public com.heypickler.vo.TeamInviteVO buildInvite(Long teamId) {
+        Team team = teamMapper.selectById(teamId);
+        if (team == null) return null;
+        Event event = eventMapper.selectById(team.getEventId());
+        if (event == null) return null;
+
+        com.heypickler.vo.TeamInviteVO vo = new com.heypickler.vo.TeamInviteVO();
+        vo.setTeamId(team.getId());
+        vo.setEventId(event.getId());
+        vo.setEventTitle(event.getTitle());
+
+        // Captain (member1) display name.
+        User captain = userMapper.selectById(team.getMember1UserId());
+        if (captain != null && captain.getNickname() != null) {
+            vo.setCaptainName(captain.getNickname());
+        } else {
+            vo.setCaptainName("队长");
+        }
+
+        // Prefer the event's registration deadline; fall back to a 30-day soft window.
+        if (event.getRegistrationDeadline() != null) {
+            vo.setExpiresAt(event.getRegistrationDeadline());
+        } else {
+            vo.setExpiresAt(java.time.LocalDateTime.now().plusDays(30));
+        }
+        return vo;
     }
 
     private List<Long> idsOf(Long... ids) {

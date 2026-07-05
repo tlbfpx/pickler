@@ -70,4 +70,12 @@ public interface TeamService {
      * Convert a team entity to a VO with member names populated.
      */
     TeamVO toVO(Team team);
+
+    /**
+     * Build a public-ish invite view for the given team. The teamId itself
+     * acts as the invite code; expiresAt is set to the event's registration
+     * deadline if present, otherwise to a soft 30-day window. Returns null if
+     * the team (or its event) no longer exists.
+     */
+    com.heypickler.vo.TeamInviteVO buildInvite(Long teamId);
 }

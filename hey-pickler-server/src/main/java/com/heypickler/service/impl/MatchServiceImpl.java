@@ -20,6 +20,7 @@ import com.heypickler.mapper.TeamMapper;
 import com.heypickler.mapper.UserMapper;
 import com.heypickler.service.GameValidator;
 import com.heypickler.service.MatchService;
+import com.heypickler.service.NotificationService;
 import com.heypickler.service.PlacementService;
 import com.heypickler.service.RoundRobinGenerator;
 import com.heypickler.vo.MatchVO;
@@ -51,6 +52,7 @@ public class MatchServiceImpl implements MatchService {
     private final TeamMapper teamMapper;
     private final UserMapper userMapper;
     private final PlacementService placementService;
+    private final NotificationService notificationService;
 
     private final RoundRobinGenerator roundRobin = new RoundRobinGenerator();
     private final GameValidator gameValidator = new GameValidator();
@@ -90,6 +92,15 @@ public class MatchServiceImpl implements MatchService {
             eventMapper.update(null, new LambdaUpdateWrapper<Event>()
                     .eq(Event::getId, eventId)
                     .set(Event::getStatus, "IN_PROGRESS"));
+            // Notify event creator that match play has begun.
+            if (event.getCreatedBy() != null) {
+                notificationService.push(
+                        event.getCreatedBy(),
+                        "EVENT_IN_PROGRESS",
+                        "赛事已开赛",
+                        "《" + event.getTitle() + "》已生成全部对阵，比赛进行中",
+                        "/events/" + event.getId() + "?tab=match");
+            }
         }
         return all;
     }
@@ -256,6 +267,15 @@ public class MatchServiceImpl implements MatchService {
         eventMapper.update(null, new LambdaUpdateWrapper<Event>()
                 .eq(Event::getId, eventId)
                 .set(Event::getStatus, "COMPLETED"));
+        // Notify event creator that the event is wrapped up.
+        if (event.getCreatedBy() != null) {
+            notificationService.push(
+                    event.getCreatedBy(),
+                    "EVENT_COMPLETED",
+                    "赛事已结束",
+                    "《" + event.getTitle() + "》已结束，名次积分已发放",
+                    "/events/" + event.getId() + "?tab=result");
+        }
     }
 
     @Override
