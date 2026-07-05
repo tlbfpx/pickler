@@ -56,12 +56,18 @@ public final class SensitiveDataUtil {
     private static boolean isSensitive(String fieldName) {
         if (fieldName == null) return false;
         String lower = fieldName.toLowerCase();
+        // 长名优先匹配（password → token → … → card_no）。
+        // 规则尽量用"contains"匹配同一含义的不同命名变体。
         return lower.contains("password") || lower.contains("passwd")
                 || lower.contains("token") || lower.contains("secret")
                 || lower.contains("apikey") || lower.contains("accesstoken")
                 || lower.contains("refreshtoken")
                 || lower.contains("phone") || lower.contains("mobile")
-                || lower.contains("idcard") || lower.contains("bankcard");
+                || lower.contains("idcard") || lower.contains("bankcard")
+                || lower.contains("card_no") || lower.contains("cardno")
+                || lower.contains("email")
+                || lower.contains("address") || lower.contains("addr")
+                || lower.contains("tel");
     }
 
     private static String maskValue(String fieldName, String value) {
@@ -78,10 +84,34 @@ public final class SensitiveDataUtil {
         if (lower.contains("idcard")) {
             return maskIdCard(value);
         }
-        if (lower.contains("bankcard")) {
+        if (lower.contains("bankcard") || lower.contains("card_no") || lower.contains("cardno")) {
             return maskBankCard(value);
         }
+        if (lower.contains("email")) {
+            return maskEmail(value);
+        }
+        if (lower.contains("address") || lower.contains("addr")) {
+            return maskAddress(value);
+        }
+        if (lower.contains("tel")) {
+            return maskPhone(value); // tel shares phone mask format
+        }
         return "***";
+    }
+
+    private static String maskEmail(String email) {
+        if (email == null || !email.contains("@")) return "***";
+        int at = email.indexOf('@');
+        String local = email.substring(0, at);
+        String domain = email.substring(at);
+        if (local.length() <= 2) return "**" + domain;
+        return local.substring(0, 2) + "***" + domain;
+    }
+
+    private static String maskAddress(String address) {
+        if (address == null || address.length() <= 4) return "***";
+        // 保留首字 + 末字
+        return address.substring(0, 2) + "***" + address.substring(address.length() - 2);
     }
 
     private static String maskPhone(String phone) {

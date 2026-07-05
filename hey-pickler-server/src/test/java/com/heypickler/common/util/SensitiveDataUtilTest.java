@@ -69,6 +69,40 @@ class SensitiveDataUtilTest {
     }
 
     @Test
+    void maskEmail_keepsDomainAndFirstTwoLocal() {
+        String out = SensitiveDataUtil.maskJson("{\"email\":\"alice@example.com\"}");
+        assertEquals("{\"email\":\"al***@example.com\"}", out);
+    }
+
+    @Test
+    void maskEmail_shortLocal_returnsMasked() {
+        String out = SensitiveDataUtil.maskJson("{\"email\":\"a@example.com\"}");
+        assertEquals("{\"email\":\"**@example.com\"}", out);
+    }
+
+    @Test
+    void maskCardNo_variants() {
+        // bankCard 字段名 → maskBankCard；card_no 走相同分支
+        assertEquals("{\"bankCard\":\"****1234\"}", SensitiveDataUtil.maskJson("{\"bankCard\":\"6222600012341234\"}"));
+        assertEquals("{\"card_no\":\"****5678\"}", SensitiveDataUtil.maskJson("{\"card_no\":\"6222600012345678\"}"));
+        assertEquals("{\"cardNo\":\"****9012\"}", SensitiveDataUtil.maskJson("{\"cardNo\":\"6222600012349012\"}"));
+    }
+
+    @Test
+    void maskAddress_keepsFirst2Last2() {
+        // "北京市朝阳区建国路88号" (length=12) → first 2 "北京" + *** + last 2 "8号"
+        String out = SensitiveDataUtil.maskJson("{\"address\":\"北京市朝阳区建国路88号\"}");
+        assertEquals("{\"address\":\"北京***8号\"}", out);
+    }
+
+    @Test
+    void maskTel_usesPhoneLikeFormat() {
+        String out = SensitiveDataUtil.maskJson("{\"tel\":\"010-12345678\"}");
+        // tel 不强制 11 位，按 phone 规则（>7 chars 保留前后）
+        assertTrue(out.contains("\"tel\":\"010****5678\""), "actual=" + out);
+    }
+
+    @Test
     void largePayload_truncatedInAspectNotUtil() {
         // util 不截断，截断是 aspect 的职责；这里只验证 util 能处理大输入
         StringBuilder sb = new StringBuilder("{\"data\":\"");
