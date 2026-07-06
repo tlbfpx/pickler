@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.heypickler.common.enums.MatchStatus;
+import com.heypickler.vo.MatchVO;
 import com.heypickler.common.exception.BizException;
 import com.heypickler.entity.Event;
 import com.heypickler.entity.GroupAssignment;
@@ -453,5 +454,102 @@ class MatchServiceImplTest {
 
         BizException ex = assertThrows(BizException.class, () -> matchService.complete(1L));
         assertEquals(1001, ex.getCode());
+    }
+
+    // ──────────────── Loop-v9 — MatchServiceImpl coverage sprint ────────────────
+
+    @Test
+    void listMyMatches_singlesPath_returnsVO() {
+        when(eventMapper.selectById(1L)).thenReturn(event(1L, "SINGLES", true, "OPEN"));
+        Match m = new Match();
+        m.setId(11L);
+        m.setEventId(1L);
+        m.setSlotAUserId(7L);
+        m.setStatus(MatchStatus.SCHEDULED);
+        when(matchMapper.selectList(any())).thenReturn(List.of(m));
+        when(teamMapper.selectList(any())).thenReturn(List.of());
+
+        List<MatchVO> result = matchService.listMyMatches(1L, 7L);
+        assertEquals(1, result.size());
+        assertEquals(11L, result.get(0).getId());
+    }
+
+    @Test
+    void listMyMatches_doublesPath_mergesUserAndTeamMatches() {
+        when(eventMapper.selectById(1L)).thenReturn(event(1L, "DOUBLES", true, "OPEN"));
+        Match userM = new Match();
+        userM.setId(11L);
+        userM.setSlotAUserId(7L);
+        userM.setStatus(MatchStatus.SCHEDULED);
+        when(matchMapper.selectList(any()))
+                .thenReturn(List.of(userM))
+                .thenReturn(List.of(userM));
+        Team team = new Team();
+        team.setId(99L);
+        team.setMember1UserId(7L);
+        when(teamMapper.selectList(any())).thenReturn(List.of(team));
+
+        assertEquals(1, matchService.listMyMatches(1L, 7L).size());
+    }
+
+    @Test
+    void listMyMatches_noUserOrTeamMatches_returnsEmpty() {
+        when(eventMapper.selectById(1L)).thenReturn(event(1L, "SINGLES", true, "OPEN"));
+        when(matchMapper.selectList(any())).thenReturn(List.of());
+        when(teamMapper.selectList(any())).thenReturn(List.of());
+        assertTrue(matchService.listMyMatches(1L, 7L).isEmpty());
+    }
+
+    @Test
+    void listEventMatches_groupsMatchesByMatchGroup() {
+        when(eventMapper.selectById(1L)).thenReturn(event(1L, "SINGLES", true, "OPEN"));
+        com.heypickler.entity.MatchGroup group = new com.heypickler.entity.MatchGroup();
+        group.setId(1L);
+        when(matchGroupMapper.selectList(any())).thenReturn(List.of(group));
+        Match m1 = new Match();
+        m1.setId(11L);
+        m1.setGroupId(1L);
+        m1.setSlotAUserId(7L);
+        m1.setStatus(MatchStatus.SCHEDULED);
+        Match m2 = new Match();
+        m2.setId(12L);
+        m2.setGroupId(1L);
+        m2.setSlotAUserId(8L);
+        m2.setStatus(MatchStatus.SCHEDULED);
+        when(matchMapper.selectList(any())).thenReturn(List.of(m1, m2));
+
+        List<List<MatchVO>> result = matchService.listEventMatches(1L);
+        assertEquals(1, result.size());
+        assertEquals(2, result.get(0).size());
+    }
+
+    @Test
+    void toVO_setsAllFields() {
+        Match m = new Match();
+        m.setId(11L);
+        m.setEventId(1L);
+        m.setGroupId(2L);
+        m.setSlotAUserId(7L);
+        m.setSlotBUserId(8L);
+        m.setStatus(MatchStatus.SCHEDULED);
+        m.setGamesWonA(0);
+        m.setGamesWonB(0);
+        MatchVO vo = matchService.toVO(m);
+        assertEquals(11L, vo.getId());
+        assertEquals(1L, vo.getEventId());
+        assertEquals(2L, vo.getGroupId());
+        assertEquals(7L, vo.getSlotAUserId());
+        assertEquals(8L, vo.getSlotBUserId());
+    }
+
+    @Test
+    void toVO_withGames_returnsEmptyListForEmptyString() {
+        Match m = new Match();
+        m.setId(11L);
+        m.setStatus(MatchStatus.SCHEDULED);
+        m.setGames("");
+        MatchVO vo = matchService.toVO(m);
+        assertNotNull(vo.getGames());
+        assertTrue(vo.getGames().isEmpty());
     }
 }
