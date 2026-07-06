@@ -4,10 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.heypickler.common.aspect.NotificationPushMonitor;
 import com.heypickler.entity.Notification;
 import com.heypickler.mapper.NotificationMapper;
 import com.heypickler.service.NotificationService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -15,21 +15,31 @@ import org.springframework.stereotype.Service;
  * Notification persistence. The {@link #push} method is intentionally
  * exception-swallowing: call sites are transactional (event/team state changes)
  * and a notification failure must not roll back a domain transition.
+ *
+ * <p>Loop-v3 D15 — push failures were previously only logged. Added a
+ * {@link NotificationPushMonitor} so operators can grep for a counter or
+ * attach a Grafana alert when failures rise above baseline.
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
 
     private static final int CONTENT_MAX = 1000;
 
     private final NotificationMapper notificationMapper;
+    private final NotificationPushMonitor monitor;
+
+    public NotificationServiceImpl(NotificationMapper notificationMapper,
+                                   NotificationPushMonitor monitor) {
+        this.notificationMapper = notificationMapper;
+        this.monitor = monitor;
+    }
 
     @Override
     public void push(Long userId, String type, String title, String content, String linkUrl) {
         if (userId == null || type == null || title == null) {
-            // Caller mis-wired; log and bail rather than throw.
-            log.warn("NotificationService.push skipped: userId/type/title required (userId={}, type={}, title={})", userId, type, title);
+            log.warn("NotificationService.push skipped: userId/type/title required (userId={}, type={}, title={})",
+                    userId, type, title);
             return;
         }
         try {
@@ -48,7 +58,11 @@ public class NotificationServiceImpl implements NotificationService {
             n.setReadFlag(0);
             notificationMapper.insert(n);
         } catch (Exception e) {
-            log.error("Failed to push notification (userId={}, type={}): {}", userId, type, e.getMessage(), e);
+            // Loop-v3 D15 — increment the monitor counter before logging so
+            // operators can alert on count, not on log-pattern matches.
+            monitor.recordFailure(userId, type, e);
+            log.error("Failed to push notification (userId={}, type={}): {}",
+                    userId, type, e.getMessage(), e);
         }
     }
 
