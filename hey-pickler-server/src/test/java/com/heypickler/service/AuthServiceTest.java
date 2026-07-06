@@ -52,7 +52,10 @@ class AuthServiceTest {
     void refreshToken_shouldReturnNewToken() {
         User user = new User();
         user.setId(1L);
+        user.setOpenid("openid-1");
         when(userMapper.selectById(1L)).thenReturn(user);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get(anyString())).thenReturn("live-session-key");
         when(jwtUtil.generateAppToken(1L)).thenReturn("new-token");
 
         String token = authService.refreshToken(1L);
@@ -63,6 +66,45 @@ class AuthServiceTest {
     void refreshToken_userNotFound_shouldThrow() {
         when(userMapper.selectById(999L)).thenReturn(null);
         assertThrows(BizException.class, () -> authService.refreshToken(999L));
+    }
+
+    /**
+     * Loop-v6 D26 — banned users must NOT be allowed to refresh tokens.
+     * Pre-fix: token could be re-minted indefinitely, defeating the ban.
+     */
+    @Test
+    void refreshToken_bannedUser_throwsUserBanned() {
+        User banned = new User();
+        banned.setId(7L);
+        banned.setOpenid("openid-banned");
+        banned.setStatus("BANNED");
+        when(userMapper.selectById(7L)).thenReturn(banned);
+
+        BizException ex = assertThrows(BizException.class,
+                () -> authService.refreshToken(7L));
+        assertEquals(ErrorCode.USER_BANNED.getCode(), ex.getCode());
+        verify(jwtUtil, never()).generateAppToken(anyLong());
+    }
+
+    /**
+     * Loop-v6 D27 — refreshToken must require a live WeChat session.
+     * Bypass attack: an attacker who holds an old JWT can keep
+     * refreshing forever without re-proving device-bound session.
+     */
+    @Test
+    void refreshToken_wxSessionExpired_throwsUnauthorized() {
+        User user = new User();
+        user.setId(8L);
+        user.setOpenid("openid-8");
+        // no BANNED set → status defaults
+        when(userMapper.selectById(8L)).thenReturn(user);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get(anyString())).thenReturn(null);  // expired session
+
+        BizException ex = assertThrows(BizException.class,
+                () -> authService.refreshToken(8L));
+        assertEquals(ErrorCode.UNAUTHORIZED.getCode(), ex.getCode());
+        verify(jwtUtil, never()).generateAppToken(anyLong());
     }
 
     @Test
