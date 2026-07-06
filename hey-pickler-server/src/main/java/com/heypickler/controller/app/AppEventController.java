@@ -1,5 +1,7 @@
 package com.heypickler.controller.app;
 
+import com.heypickler.common.annotation.PublicAnonymousAccess;
+import com.heypickler.common.annotation.RequireAppUser;
 import com.heypickler.common.result.PageResult;
 import com.heypickler.common.result.Result;
 import com.heypickler.dto.app.RegisterRequest;
@@ -28,6 +30,7 @@ public class AppEventController {
     private final TeamService teamService;
 
     @GetMapping
+    @PublicAnonymousAccess
     @Operation(summary = "赛事列表")
     public Result<PageResult<EventVO>> listEvents(
             @RequestParam(required = false) String type,
@@ -38,6 +41,7 @@ public class AppEventController {
     }
 
     @GetMapping("/{id}")
+    @PublicAnonymousAccess
     @Operation(summary = "赛事详情")
     public Result<EventDetailVO> getEventDetail(
             @PathVariable Long id,
@@ -47,6 +51,7 @@ public class AppEventController {
     }
 
     @PostMapping("/{id}/register")
+    @RequireAppUser
     @Operation(summary = "报名赛事")
     public Result<Void> register(
             @PathVariable Long id,
@@ -58,6 +63,7 @@ public class AppEventController {
     }
 
     @PostMapping("/{id}/cancel")
+    @RequireAppUser
     @Operation(summary = "取消报名")
     public Result<Void> cancelRegistration(
             @PathVariable Long id,
@@ -68,6 +74,7 @@ public class AppEventController {
     }
 
     @GetMapping("/{id}/my-team")
+    @RequireAppUser
     @Operation(summary = "查询当前用户在该赛事的队伍状态")
     public Result<TeamVO> getMyTeam(
             @PathVariable Long id,
@@ -77,6 +84,7 @@ public class AppEventController {
     }
 
     @GetMapping("/{id}/results")
+    @PublicAnonymousAccess
     @Operation(summary = "赛事成绩榜")
     public Result<List<EventResultVO>> getResults(@PathVariable Long id) {
         return Result.ok(eventService.getEventResults(id));
