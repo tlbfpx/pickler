@@ -155,6 +155,20 @@ public class AuthServiceImpl implements AuthService {
         if (user == null) {
             throw new BizException(ErrorCode.UNAUTHORIZED);
         }
+        // Loop-v6 D26 — refreshToken must enforce the same status gate as
+        // appLogin. Without this, a banned user holds their pre-ban JWT
+        // and can mint a new one indefinitely, defeating the ban.
+        if ("BANNED".equals(user.getStatus())) {
+            throw new BizException(ErrorCode.USER_BANNED);
+        }
+        // Loop-v6 D27 — also require the WeChat session to still be live.
+        // Bypass attack: even non-banned users could keep refreshing forever
+        // without re-proving they hold the device-bound wx_session; admin
+        // app policy tightens that to "must have logged in within 30 min".
+        String sessionKey = (String) redisTemplate.opsForValue().get(RedisKey.wxSession(user.getOpenid()));
+        if (sessionKey == null) {
+            throw new BizException(ErrorCode.UNAUTHORIZED, "微信会话已过期，请重新登录");
+        }
         return jwtUtil.generateAppToken(userId);
     }
 
