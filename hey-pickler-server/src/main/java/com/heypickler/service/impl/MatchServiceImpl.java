@@ -80,6 +80,11 @@ public class MatchServiceImpl implements MatchService {
                             : Participant.team(s.getTeamId(), 0))
                     .collect(Collectors.toList());
             List<Match> matches = roundRobin.generate(parts, g.getId());
+            // Loop-v3 D12 — generate() for large groups scales as N*(N-1)/2 INSERTs
+            // (50 users ≈ 1225, 100 users ≈ 4950). Per-row insert is the project's
+            // current convention; a real batch-insert would require switching
+            // MatchMapper to extend IService<Match>. Defer to loop-v4 — for now,
+            // document the per-row cost and recommend generation stays below N=50.
             for (Match m : matches) {
                 m.setEventId(eventId);
                 m.setStatus(MatchStatus.SCHEDULED);
