@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.heypickler.common.annotation.RequireRole;
 import com.heypickler.common.enums.UserRole;
+import com.heypickler.common.exception.BizException;
+import com.heypickler.common.exception.ErrorCode;
 import com.heypickler.common.result.Result;
 import com.heypickler.entity.Notification;
 import com.heypickler.mapper.NotificationMapper;
@@ -81,32 +83,26 @@ public class AdminNotificationController {
             @PathVariable Long id,
             @RequestParam(required = false) Long userId) {
         if (userId == null) {
-            // MVP: admin global view; mark by id only (lookup to get owner if needed).
-            // For now, take the id directly; this is admin-level, no cross-user concern.
-            int updated = notificationMapper.update(null,
-                    new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Notification>()
-                            .eq(Notification::getId, id)
-                            .eq(Notification::getReadFlag, 0)
-                            .set(Notification::getReadFlag, 1));
-            return Result.ok(Map.of("updated", updated > 0));
+            // Loop-v7 D30 — cross-user mark-read was silently allowed for any
+            // SUPER_ADMIN/ADMIN. Tighten: drop the unscoped branch entirely;
+            // admins query with explicit userId (e.g. themselves) or scroll
+            // through their own feed via /api/app/notifications instead.
+            throw new BizException(ErrorCode.PARAM_ERROR, "userId 不能为空，请指定目标用户");
         }
         boolean ok = notificationService.markRead(id, userId);
         return Result.ok(Map.of("updated", ok));
     }
 
     @PostMapping("/read-all")
-    @Operation(summary = "全部标记已读（可选 userId 限定）")
+    @Operation(summary = "全部标记已读（需要 userId 限定；不允许 unscoped 跨用户）")
     @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
     public Result<Map<String, Object>> markAllRead(@RequestParam(required = false) Long userId) {
-        int n;
-        if (userId != null) {
-            n = notificationService.markAllRead(userId);
-        } else {
-            n = notificationMapper.update(null,
-                    new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Notification>()
-                            .eq(Notification::getReadFlag, 0)
-                            .set(Notification::getReadFlag, 1));
+        if (userId == null) {
+            // Loop-v7 D30 — D31 sibling — same tightening: no unscoped global
+            // mark-all. Forces admin to scope to an explicit recipient.
+            throw new BizException(ErrorCode.PARAM_ERROR, "userId 不能为空，请指定目标用户");
         }
+        int n = notificationService.markAllRead(userId);
         return Result.ok(Map.of("updated", n));
     }
 }

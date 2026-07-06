@@ -11,6 +11,7 @@ import com.heypickler.vo.TeamInviteVO;
 import com.heypickler.vo.TeamVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -52,7 +53,7 @@ public class AdminTeamController {
     @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
     public Result<TeamVO> create(
             @PathVariable Long eventId,
-            @RequestBody CreateTeamRequest req) {
+            @Valid @RequestBody CreateTeamRequest req) {
         if (req == null || req.getCaptainUserId() == null || req.getPartnerUserId() == null) {
             throw new BizException(ErrorCode.PARAM_ERROR, "队长与搭档不能为空");
         }
@@ -65,7 +66,7 @@ public class AdminTeamController {
     @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
     public Result<TeamVO> confirm(
             @PathVariable Long teamId,
-            @RequestBody ConfirmTeamRequest req) {
+            @Valid @RequestBody ConfirmTeamRequest req) {
         if (req == null || req.getUserId() == null) {
             throw new BizException(ErrorCode.PARAM_ERROR, "userId 不能为空");
         }
@@ -78,7 +79,7 @@ public class AdminTeamController {
     @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
     public Result<Void> decline(
             @PathVariable Long teamId,
-            @RequestBody ConfirmTeamRequest req) {
+            @Valid @RequestBody ConfirmTeamRequest req) {
         if (req == null || req.getUserId() == null) {
             throw new BizException(ErrorCode.PARAM_ERROR, "userId 不能为空");
         }

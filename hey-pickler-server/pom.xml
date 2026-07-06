@@ -251,15 +251,22 @@
                                 <rule>
                                     <element>BUNDLE</element>
                                     <limits>
+                                        <!-- Loop-v7 D34 — coverage ceiling goes from
+                                             75/50 (v6 baseline) to 78.7/55 (v7
+                                             target). The 1.3pp jump came from the
+                                             EventServiceImpl test sprint (24 → 34
+                                             tests). 80/60 is the v8 target — admin
+                                             controllers still have ~10pp slack that
+                                             needs @WebMvcTest investment. -->
                                         <limit>
                                             <counter>INSTRUCTION</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.75</minimum>
+                                            <minimum>0.787</minimum>
                                         </limit>
                                         <limit>
                                             <counter>BRANCH</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.50</minimum>
+                                            <minimum>0.55</minimum>
                                         </limit>
                                     </limits>
                                 </rule>
