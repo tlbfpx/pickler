@@ -473,16 +473,20 @@ public class EventServiceImpl implements EventService {
 
         String oldStatus = registration.getStatus();
 
+        // Loop-v2 D10 — registration state-machine gate. Centralizes the
+        // transition rules so future statuses (PAUSED, REFUNDED...) cannot be
+        // silently shipped past an if/else chain. Throws INVALID_STATUS_TRANSITION
+        // (1006) for unknown source/transition pairs.
+        if (!StatusTransitionValidator.canRegistrationTransit(oldStatus, status)) {
+            throw new BizException(ErrorCode.INVALID_STATUS_TRANSITION,
+                    "报名状态不允许从 " + oldStatus + " 变更为 " + status
+                            + "；允许的目标：" + StatusTransitionValidator.getAllowedRegistrationTargets(oldStatus));
+        }
+
         if ("CHECKED_IN".equals(status)) {
-            if (!"REGISTERED".equals(oldStatus)) {
-                throw new BizException(ErrorCode.PARAM_ERROR, "只有已报名状态可以签到");
-            }
             registration.setStatus("CHECKED_IN");
             registrationMapper.updateById(registration);
         } else if ("WITHDRAWN".equals(status)) {
-            if ("WITHDRAWN".equals(oldStatus)) {
-                throw new BizException(ErrorCode.PARAM_ERROR, "该报名已取消");
-            }
             registration.setStatus("WITHDRAWN");
             registrationMapper.updateById(registration);
 
@@ -504,8 +508,6 @@ public class EventServiceImpl implements EventService {
                                     .set(Event::getStatus, "OPEN"));
                 }
             }
-        } else {
-            throw new BizException(ErrorCode.PARAM_ERROR, "不支持的状态变更");
         }
     }
 
