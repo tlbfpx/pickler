@@ -61,3 +61,9 @@ hey-pickler:
     appid: ${WX_APPID}
     secret: ${WX_SECRET}
     dev-mode: ${WX_DEV_MODE:false}
+  scheduler:
+    # Loop-v3 D14 — EventStatusScheduler is on by default. Set to 'false' to
+    # disable the 60s cron that auto-transitions OPEN/FULL events to
+    # IN_PROGRESS. Operators may want to disable during a controlled freeze
+    # window or while running read-only DBs.
+    status-transition-enabled: ${HEY_PICKLER_STATUS_SCHEDULER_ENABLED:true}
