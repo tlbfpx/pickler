@@ -204,11 +204,25 @@
                 <configuration>
                     <!-- @{argLine} placeholder preserves jacoco's -javaagent injected by prepare-agent. -->
                     <argLine>@{argLine} -Dnet.bytebuddy.experimental=true</argLine>
+                    <!-- Loop-v6 D28 — exclude *IntegrationTest from surefire (unit-test) phase; failsafe picks them up in integration-test phase. -->
+                    <excludes>
+                        <exclude>**/*IntegrationTest.java</exclude>
+                    </excludes>
                 </configuration>
             </plugin>
 
             <!-- Loop-v4 D21 — jacoco coverage. Bound to `verify` phase;
-                 run `mvn verify` to produce target/site/jacoco/jacoco.xml -->
+                 run `mvn verify` to produce target/site/jacoco/jacoco.xml.
+                 Loop-v6 D28 — second prepare-agent-it execution attaches the
+                 jacoco runtime to the failsafe fork so *IntegrationTest
+                 contributed code coverage merges into the same jacoco.exec
+                 file. Without it, controllers show 0% in jacoco even though
+                 integration tests exercise them.
+                 Loop-v6 D29 — coverage gate (jacoco:check). Fails build when
+                 instruction coverage < 75% or branch < 50% — soft threshold
+                 for v6, raise in subsequent loops as coverage climbs. The
+                 check + report executions live in this single plugin block
+                 (Maven rejects duplicate plugin declarations). -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
@@ -219,9 +233,65 @@
                         <goals><goal>prepare-agent</goal></goals>
                     </execution>
                     <execution>
+                        <id>prepare-agent-it</id>
+                        <goals><goal>prepare-agent</goal></goals>
+                        <phase>pre-integration-test</phase>
+                    </execution>
+                    <execution>
                         <id>report</id>
                         <phase>verify</phase>
                         <goals><goal>report</goal></goals>
+                    </execution>
+                    <execution>
+                        <id>check</id>
+                        <phase>verify</phase>
+                        <goals><goal>check</goal></goals>
+                        <configuration>
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>INSTRUCTION</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.75</minimum>
+                                        </limit>
+                                        <limit>
+                                            <counter>BRANCH</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.50</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Loop-v6 D28 — failsafe runs *IntegrationTest. Without this,
+                 jacoco only sees surefire (unit) test data and admin
+                 controllers look 0% covered even though integration tests
+                 hit them. The <includes> overrides failsafe's defaults
+                 (*IT*.java, *IT.java, *ITCase.java) which would otherwise
+                 miss our *IntegrationTest.java naming convention. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>3.1.2</version>
+                <configuration>
+                    <!-- argLine placeholder preserves jacoco-injected -javaagent. -->
+                    <argLine>@{argLine} -Dnet.bytebuddy.experimental=true</argLine>
+                    <includes>
+                        <include>**/*IntegrationTest.java</include>
+                    </includes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>
