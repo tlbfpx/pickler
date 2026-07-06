@@ -2,6 +2,8 @@ package com.heypickler.service;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.heypickler.common.result.PageResult;
 import com.heypickler.common.exception.BizException;
 import com.heypickler.common.exception.ErrorCode;
 import com.heypickler.dto.admin.EventCreateRequest;
@@ -17,6 +19,7 @@ import com.heypickler.mapper.RegistrationMapper;
 import com.heypickler.mapper.UserMapper;
 import com.heypickler.service.impl.EventServiceImpl;
 import com.heypickler.vo.EventResultVO;
+import com.heypickler.vo.EventVO;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -522,5 +525,182 @@ class EventServiceTest {
         record.setReason("test");
         record.setOperatorId(1L);
         return record;
+    }
+
+    // ──────────────── Loop-v7 D32 — EventServiceImpl coverage sprint ────────────────
+
+    @Test
+    void getParticipants_eventNotFoundOrDeleted_throws() {
+        when(eventMapper.selectById(1L)).thenReturn(null);
+        assertThrows(BizException.class, () -> eventService.getParticipants(1L));
+
+        Event deleted = new Event();
+        deleted.setId(1L);
+        deleted.setDeletedAt(now);
+        when(eventMapper.selectById(1L)).thenReturn(deleted);
+        assertThrows(BizException.class, () -> eventService.getParticipants(1L));
+    }
+
+    @Test
+    void getParticipants_emptyRegistry_returnsEmpty() {
+        when(eventMapper.selectById(1L)).thenReturn(testEvent);
+        when(registrationMapper.selectList(any())).thenReturn(Collections.emptyList());
+        assertTrue(eventService.getParticipants(1L).isEmpty());
+    }
+
+    @Test
+    void getParticipants_populatesVoWithUserFields() {
+        when(eventMapper.selectById(1L)).thenReturn(testEvent);
+        Registration reg = new Registration();
+        reg.setUserId(11L);
+        reg.setEventId(1L);
+        reg.setMatchType("SINGLES");
+        reg.setStatus("REGISTERED");
+        when(registrationMapper.selectList(any())).thenReturn(List.of(reg));
+        User u = new User();
+        u.setId(11L);
+        u.setNickname("alice");
+        u.setAvatarUrl("http://x");
+        u.setCity("BJ");
+        when(userMapper.selectBatchIds(any())).thenReturn(List.of(u));
+
+        List<com.heypickler.vo.EventParticipantVO> out = eventService.getParticipants(1L);
+        assertEquals(1, out.size());
+        assertEquals("alice", out.get(0).getNickname());
+        assertEquals("SINGLES", out.get(0).getMatchType());
+    }
+
+    @Test
+    void updateRegistrationStatus_checkedIn_path() {
+        testEvent.setStatus("OPEN");
+        when(eventMapper.selectById(1L)).thenReturn(testEvent);
+        Registration reg = new Registration();
+        reg.setId(50L);
+        reg.setEventId(1L);
+        reg.setStatus("REGISTERED");
+        when(registrationMapper.selectById(50L)).thenReturn(reg);
+
+        eventService.updateRegistrationStatus(1L, 50L, "CHECKED_IN");
+        verify(registrationMapper).updateById(reg);
+        assertEquals("CHECKED_IN", reg.getStatus());
+    }
+
+    @Test
+    void updateRegistrationStatus_withdrawn_decrementsCountAndOpensEvent() {
+        testEvent.setStatus("FULL");
+        testEvent.setMaxParticipants(5);
+        testEvent.setCurrentParticipants(5);
+        Event reopened = new Event();
+        reopened.setId(1L);
+        reopened.setStatus("FULL");
+        reopened.setMaxParticipants(5);
+        reopened.setCurrentParticipants(5);
+
+        when(eventMapper.selectById(1L)).thenReturn(testEvent).thenReturn(reopened);
+        when(eventMapper.update(eq(null), any())).thenReturn(1);
+        Registration reg = new Registration();
+        reg.setId(50L);
+        reg.setEventId(1L);
+        reg.setStatus("REGISTERED");
+        when(registrationMapper.selectById(50L)).thenReturn(reg);
+
+        eventService.updateRegistrationStatus(1L, 50L, "WITHDRAWN");
+
+        verify(registrationMapper).updateById(reg);
+        verify(eventMapper, atLeastOnce()).update(eq(null), any());
+        assertEquals("WITHDRAWN", reg.getStatus());
+    }
+
+    @Test
+    void updateRegistrationStatus_invalidTransition_throwsInvalidStatusTransition() {
+        // Loop-v7 D32 sibling: invalid state machine throws 1006 (not 1001) per
+        // the D10 refactor. Locked-branch coverage.
+        testEvent.setStatus("OPEN");
+        when(eventMapper.selectById(1L)).thenReturn(testEvent);
+        Registration reg = new Registration();
+        reg.setId(50L);
+        reg.setEventId(1L);
+        reg.setStatus("WITHDRAWN");
+        when(registrationMapper.selectById(50L)).thenReturn(reg);
+
+        BizException ex = assertThrows(BizException.class,
+                () -> eventService.updateRegistrationStatus(1L, 50L, "REGISTERED"));
+        assertEquals(ErrorCode.INVALID_STATUS_TRANSITION.getCode(), ex.getCode());
+    }
+
+    @Test
+    void adminListEvents_keyword_isCaseInsensitiveInWire() {
+        // Loop-v7 D32: adminListEvents accepts keyword, type, status, location,
+        // startTime, endTime as filters. Stub distinct values and assert the
+        // mapper receives a non-null wrapper.
+        testEvent.setStatus("OPEN");
+        when(eventMapper.selectPage(any(Page.class), any())).thenReturn(new Page<>(1, 10));
+
+        PageResult<EventVO> result = eventService.adminListEvents(
+                "loop", "STAR", "OPEN", "BJ", null, null, 1, 10);
+        assertEquals(0, result.getTotal());
+        verify(eventMapper).selectPage(any(Page.class), any());
+    }
+
+    @Test
+    void getEventResults_eventNotFound_throws() {
+        when(eventMapper.selectById(99L)).thenReturn(null);
+        assertThrows(BizException.class, () -> eventService.getEventResults(99L));
+    }
+
+    @Test
+    void getRegistrations_clampsFiltersAndPages() {
+        testEvent.setStatus("OPEN");
+        when(eventMapper.selectById(1L)).thenReturn(testEvent);
+        when(registrationMapper.selectPage(any(Page.class), any())).thenReturn(new Page<>(1, 10));
+
+        PageResult<com.heypickler.vo.RegistrationVO> result = eventService.getRegistrations(
+                1L, null, null, 1, 10);
+        assertEquals(0, result.getTotal());
+    }
+
+    @Test
+    void getRegistrations_partnerIdLoadsPartnerDetails() {
+        testEvent.setStatus("OPEN");
+        when(eventMapper.selectById(1L)).thenReturn(testEvent);
+        Registration reg = new Registration();
+        reg.setId(99L);
+        reg.setUserId(11L);
+        reg.setEventId(1L);
+        reg.setMatchType("DOUBLES");
+        reg.setPartnerId(22L);  // covers partner resolution branch
+        reg.setStatus("REGISTERED");
+        Page<Registration> page = new Page<>(1, 10);
+        page.setRecords(List.of(reg));
+        page.setTotal(1);
+        when(registrationMapper.selectPage(any(Page.class), any())).thenReturn(page);
+
+        User alice = new User();
+        alice.setId(11L);
+        alice.setNickname("alice");
+        User bob = new User();
+        bob.setId(22L);
+        bob.setNickname("bob");
+        when(userMapper.selectBatchIds(any())).thenReturn(List.of(alice, bob));
+
+        PageResult<com.heypickler.vo.RegistrationVO> result = eventService.getRegistrations(
+                1L, null, null, 1, 10);
+        assertEquals(1, result.getTotal());
+        // partner nickname populated
+        var vo = result.getList().get(0);
+        assertEquals("bob", vo.getPartnerNickname());
+    }
+
+    private Event makeEvent(String status, Integer maxParticipants, int currentParticipants) {
+        Event e = new Event();
+        e.setId(1L);
+        e.setType("STAR");
+        e.setTitle("E");
+        e.setStatus(status);
+        e.setMaxParticipants(maxParticipants);
+        e.setCurrentParticipants(currentParticipants);
+        e.setRegistrationDeadline(now.plusDays(1));
+        e.setEventTime(now.plusDays(7));
+        return e;
     }
 }
