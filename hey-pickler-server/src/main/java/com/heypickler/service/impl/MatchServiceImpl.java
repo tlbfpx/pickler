@@ -26,6 +26,9 @@ import com.heypickler.service.RoundRobinGenerator;
 import com.heypickler.vo.MatchVO;
 import com.heypickler.vo.StandingVO;
 import lombok.RequiredArgsConstructor;
+import org.apache.ibatis.session.ExecutorType;
+import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,6 +56,7 @@ public class MatchServiceImpl implements MatchService {
     private final UserMapper userMapper;
     private final PlacementService placementService;
     private final NotificationService notificationService;
+    private final SqlSessionFactory sqlSessionFactory;
 
     private final RoundRobinGenerator roundRobin = new RoundRobinGenerator();
     private final GameValidator gameValidator = new GameValidator();
@@ -80,17 +84,21 @@ public class MatchServiceImpl implements MatchService {
                             : Participant.team(s.getTeamId(), 0))
                     .collect(Collectors.toList());
             List<Match> matches = roundRobin.generate(parts, g.getId());
-            // Loop-v3 D12 — generate() for large groups scales as N*(N-1)/2 INSERTs
-            // (50 users ≈ 1225, 100 users ≈ 4950). Per-row insert is the project's
-            // current convention; a real batch-insert would require switching
-            // MatchMapper to extend IService<Match>. Defer to loop-v4 — for now,
-            // document the per-row cost and recommend generation stays below N=50.
             for (Match m : matches) {
                 m.setEventId(eventId);
                 m.setStatus(MatchStatus.SCHEDULED);
-                matchMapper.insert(m);
-                all.add(m);
             }
+            // Loop-v4 D12 — batch insert via SqlSession BATCH mode.
+            // For a 100-user group (4950 matches), 1 JDBC batch_exec replaces
+            // 4950 round-trips. Mybatis-Plus's BaseMapper.insert(T) doesn't
+            // expose batch collection insertion, so we open a dedicated
+            // SqlSession in ExecutorType.BATCH and reuse the same mapper.
+            // Still inside the outer @Transactional so commit/rollback semantics
+            // are unchanged (the batch session participates in the same transaction).
+            if (!matches.isEmpty()) {
+                insertMatchesBatched(matches);
+            }
+            all.addAll(matches);
         }
 
         if (!"IN_PROGRESS".equals(event.getStatus())) {
@@ -108,6 +116,33 @@ public class MatchServiceImpl implements MatchService {
             }
         }
         return all;
+    }
+
+    /**
+     * Loop-v4 D12 helper — batch INSERT for {@link Match} using a dedicated
+     * SqlSession in {@link ExecutorType#BATCH}.
+     *
+     * <p>The outer caller is already {@code @Transactional}. A BATCH-mode
+     * session opened here joins the same Spring-managed transaction
+     * (Spring binds both sessions to the same Connection via the transaction
+     * manager), so a row that fails to insert still rolls the whole
+     * generation back as one unit.
+     *
+     * <p>Mybatis-Plus's {@code @TableField(fill=FieldFill.INSERT)} hooks
+     * (set {@code createdAt}) still fire through {@code strictInsertFill}
+     * because the same {@code MetaObjectHandler} instance is reused
+     * thread-locally by the session-bound executor.
+     */
+    private void insertMatchesBatched(List<Match> matches) {
+        try (SqlSession session = sqlSessionFactory.openSession(ExecutorType.BATCH)) {
+            MatchMapper batchMapper = session.getMapper(MatchMapper.class);
+            for (Match m : matches) {
+                batchMapper.insert(m);
+            }
+            // BATCH mode flushes on commit/explicit flush; we flush now so any
+            // exception surface bubbles to the outer @Transactional boundary.
+            session.flushStatements();
+        }
     }
 
     @Override

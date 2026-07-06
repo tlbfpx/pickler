@@ -50,8 +50,24 @@ class MatchServiceImplTest {
     @Mock private TeamMapper teamMapper;
     @Mock private UserMapper userMapper;
     @Mock private com.heypickler.service.PlacementService placementService;
+    // Loop-v4 D12 — generate() now opens a BATCH-mode SqlSession for bulk insert.
+    @Mock private org.apache.ibatis.session.SqlSessionFactory sqlSessionFactory;
 
     @InjectMocks private MatchServiceImpl matchService;
+
+    @org.junit.jupiter.api.BeforeEach
+    void wireBatchSession() {
+        // Make the batch session return the same MatchMapper mock the test
+        // already stubs, so `session.getMapper(MatchMapper.class).insert(m)`
+        // reuses the existing matchMapper.insert(any()) expectations.
+        org.apache.ibatis.session.SqlSession session =
+                org.mockito.Mockito.mock(org.apache.ibatis.session.SqlSession.class);
+        org.mockito.Mockito.when(sqlSessionFactory.openSession(
+                org.apache.ibatis.session.ExecutorType.BATCH)).thenReturn(session);
+        org.mockito.Mockito.when(session.getMapper(MatchMapper.class)).thenReturn(matchMapper);
+        // Do not set strict stubs; flushStatements() must be a no-op.
+        org.mockito.Mockito.when(session.flushStatements()).thenReturn(java.util.Collections.emptyList());
+    }
 
     @BeforeAll
     static void warmLambdaCache() {
