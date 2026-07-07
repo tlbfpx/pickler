@@ -224,11 +224,21 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    public PageResult<EventVO> adminListEvents(String type, String status, String keyword, String location, String startTime, String endTime, int page, int size) {
+    public PageResult<EventVO> adminListEvents(String type, String status, String keyword, String location, String startTime, String endTime, String sort, int page, int size) {
         LambdaQueryWrapper<Event> wrapper = new LambdaQueryWrapper<>();
 
+        // Loop-v16A — multi-keyword search: split by whitespace, each token
+        // matches (title OR description), all tokens must match (AND).
         if (keyword != null && !keyword.isEmpty()) {
-            wrapper.like(Event::getTitle, keyword);
+            String[] tokens = keyword.trim().split("\\s+");
+            if (tokens.length > 0 && !tokens[0].isEmpty()) {
+                wrapper.and(w -> {
+                    for (String t : tokens) {
+                        w.or().like(Event::getTitle, t)
+                         .or().like(Event::getDescription, t);
+                    }
+                });
+            }
         }
         if (type != null && !type.isEmpty()) {
             wrapper.eq(Event::getType, type);
@@ -246,13 +256,45 @@ public class EventServiceImpl implements EventService {
             wrapper.le(Event::getEventTime, endTime);
         }
 
-        wrapper.orderByDesc(Event::getEventTime);
+        // Loop-v16A — sort: default event_time desc. Allowed: *_asc / *_desc.
+        applySort(wrapper, sort);
 
         Page<Event> eventPage = eventMapper.selectPage(new Page<>(page, size), wrapper);
 
         List<EventVO> voList = convertAllToVO(eventPage.getRecords());
 
         return PageResult.of(eventPage.getTotal(), (int) eventPage.getCurrent(), size, voList);
+    }
+
+    /**
+     * Loop-v16A — apply a sort clause to the wrapper. Supported values:
+     *   event_time_desc (default), event_time_asc, created_at_desc,
+     *   created_at_asc, current_participants_desc, current_participants_asc.
+     * Unknown values fall back to the default (event_time desc).
+     */
+    private void applySort(LambdaQueryWrapper<Event> wrapper, String sort) {
+        if (sort == null || sort.isEmpty()) {
+            wrapper.orderByDesc(Event::getEventTime);
+            return;
+        }
+        boolean asc = sort.endsWith("_asc");
+        String field = asc
+                ? sort.substring(0, sort.length() - 4)
+                : sort.endsWith("_desc")
+                    ? sort.substring(0, sort.length() - 5)
+                    : sort;
+        switch (field) {
+            case "created_at":
+                wrapper.orderBy(true, asc, Event::getCreatedAt);
+                break;
+            case "current_participants":
+                wrapper.orderBy(true, asc, Event::getCurrentParticipants);
+                break;
+            case "event_time":
+            default:
+                wrapper.orderBy(true, asc, Event::getEventTime);
+                break;
+        }
     }
 
     @Override

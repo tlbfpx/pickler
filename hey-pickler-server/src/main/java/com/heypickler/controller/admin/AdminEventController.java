@@ -50,8 +50,9 @@ public class AdminEventController {
             @RequestParam(required = false) String startTime,
             @RequestParam(required = false) String endTime,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return Result.ok(eventService.adminListEvents(type, status, keyword, location, startTime, endTime, page, size));
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String sort) {
+        return Result.ok(eventService.adminListEvents(type, status, keyword, location, startTime, endTime, sort, page, size));
     }
 
     @PostMapping
