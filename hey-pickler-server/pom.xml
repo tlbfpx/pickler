@@ -302,6 +302,30 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- Loop-v16B — OWASP dependency-check. Scans project deps against
+                 the NVD CVE database on `mvn verify`. Generates
+                 target/dependency-check-report.html. Threshold 7 = block
+                 PR build on CVSS >= 7.0 (high/critical). Run with
+                 NVD_API_KEY env to lift the rate limit; otherwise the
+                 report is throttled but still produced. -->
+            <plugin>
+                <groupId>org.owasp</groupId>
+                <artifactId>dependency-check-maven</artifactId>
+                <version>9.2.0</version>
+                <configuration>
+                    <failBuildOnCVSS>7.0</failBuildOnCVSS>
+                    <skipTestScope>true</skipTestScope>
+                    <format>HTML</format>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 </project>
