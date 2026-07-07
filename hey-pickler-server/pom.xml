@@ -52,6 +52,15 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- Loop-v17 — actuator for Docker HEALTHCHECK and liveness probes.
+             Exposes /actuator/health (and /actuator/info when configured).
+             All other endpoints are disabled in application.yml to keep
+             the attack surface minimal. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
         <!-- Spring Boot Validation -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
