@@ -21,11 +21,13 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 
 /**
  * Loop-v8 coverage sprint — moves AdminEventController from 52.4% to ~75%+.
@@ -123,5 +125,25 @@ class AdminEventControllerTest {
     void getPlacements_delegates() {
         doReturn(List.of()).when(placementService).listByEventId(7L);
         controller.getPlacements(7L);
+    }
+
+    // ──────────────── Loop-v13 — getEventSummary endpoint ────────────────
+
+    @Test
+    void getEventSummary_delegatesToService() {
+        com.heypickler.vo.EventSummaryVO stub = new com.heypickler.vo.EventSummaryVO();
+        stub.setEventId(7L);
+        stub.setTitle("Cup");
+        doReturn(stub).when(eventService).getEventSummary(7L);
+        assertEquals(stub, controller.getEventSummary(7L).getData());
+    }
+
+    @Test
+    void getEventSummary_serviceThrowsPropagates() {
+        doThrow(new com.heypickler.common.exception.BizException(
+                com.heypickler.common.exception.ErrorCode.NOT_FOUND, "not found"))
+                .when(eventService).getEventSummary(99L);
+        assertThrows(com.heypickler.common.exception.BizException.class,
+                () -> controller.getEventSummary(99L));
     }
 }
