@@ -222,4 +222,97 @@ class AdminUserServiceTest {
         verify(adminUserMapper, never()).updateById(any());
         verify(redisTemplate, never()).delete(anyString());
     }
+
+    // ──────────────── Loop-v12 — coverage paths ────────────────
+
+    @Test
+    void listAdminUsers_emptyPage_returnsEmptyResult() {
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<com.heypickler.entity.AdminUser> page =
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(1, 10);
+        page.setTotal(0L);
+        page.setRecords(java.util.List.of());
+        org.mockito.Mockito.doReturn(page).when(adminUserMapper).selectPage(
+                any(com.baomidou.mybatisplus.extension.plugins.pagination.Page.class), any());
+
+        var result = adminUserService.listAdminUsers(1, 10);
+        assertEquals(0L, result.getTotal());
+    }
+
+    @Test
+    void listAdminUsers_sizeClampedTo100() {
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<com.heypickler.entity.AdminUser> page =
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(1, 100);
+        page.setTotal(0L);
+        org.mockito.Mockito.doReturn(page).when(adminUserMapper).selectPage(
+                any(com.baomidou.mybatisplus.extension.plugins.pagination.Page.class), any());
+        var result = adminUserService.listAdminUsers(1, 999);
+        assertEquals(0, result.getList().size());
+    }
+
+    @Test
+    void getAdminUser_notFound_throwsNotFound() {
+        when(adminUserMapper.selectById(99L)).thenReturn(null);
+        assertThrows(com.heypickler.common.exception.BizException.class,
+                () -> adminUserService.getAdminUser(99L));
+    }
+
+    @Test
+    void updateAdminUser_invalidStatus_throwsParam() {
+        // VALID_STATUSES = {ACTIVE, INACTIVE}; BANNED is rejected
+        assertThrows(com.heypickler.common.exception.BizException.class,
+                () -> adminUserService.updateAdminUser(1L, null, "BANNED"));
+    }
+
+    @Test
+    void updateAdminUser_invalidRole_throwsParam() {
+        assertThrows(com.heypickler.common.exception.BizException.class,
+                () -> adminUserService.updateAdminUser(1L, "INVALID", null));
+    }
+
+    @Test
+    void updateAdminUser_validUpdate_callsMapper() {
+        when(adminUserMapper.updateById(any())).thenReturn(1);
+
+        adminUserService.updateAdminUser(1L, "OPERATOR", "INACTIVE");
+        verify(adminUserMapper).updateById(any());
+    }
+
+    @Test
+    void deleteAdminUser_selfDelete_throwsParam() {
+        com.heypickler.common.exception.BizException ex = assertThrows(
+                com.heypickler.common.exception.BizException.class,
+                () -> adminUserService.deleteAdminUser(7L, 7L));
+        assertEquals(1001, ex.getCode());
+    }
+
+    @Test
+    void deleteAdminUser_notFound_throwsNotFound() {
+        when(adminUserMapper.selectById(99L)).thenReturn(null);
+        assertThrows(com.heypickler.common.exception.BizException.class,
+                () -> adminUserService.deleteAdminUser(99L, 1L));
+    }
+
+    @Test
+    void deleteAdminUser_superAdmin_throwsParam() {
+        com.heypickler.entity.AdminUser u = new com.heypickler.entity.AdminUser();
+        u.setId(1L);
+        u.setRole("SUPER_ADMIN");
+        when(adminUserMapper.selectById(1L)).thenReturn(u);
+        assertThrows(com.heypickler.common.exception.BizException.class,
+                () -> adminUserService.deleteAdminUser(1L, 2L));
+    }
+
+    @Test
+    void deleteAdminUser_normal_clearsSessionAndDeletes() {
+        com.heypickler.entity.AdminUser u = new com.heypickler.entity.AdminUser();
+        u.setId(1L);
+        u.setRole("ADMIN");
+        when(adminUserMapper.selectById(1L)).thenReturn(u);
+        when(redisTemplate.delete(anyString())).thenReturn(true);
+        when(adminUserMapper.deleteById(1L)).thenReturn(1);
+
+        adminUserService.deleteAdminUser(1L, 2L);
+        verify(redisTemplate).delete(anyString());
+        verify(adminUserMapper).deleteById(1L);
+    }
 }

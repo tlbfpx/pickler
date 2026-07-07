@@ -51,6 +51,7 @@ class MatchServiceImplTest {
     @Mock private TeamMapper teamMapper;
     @Mock private UserMapper userMapper;
     @Mock private com.heypickler.service.PlacementService placementService;
+    @Mock private com.heypickler.service.NotificationService notificationService;
     // Loop-v4 D12 — generate() now opens a BATCH-mode SqlSession for bulk insert.
     @Mock private org.apache.ibatis.session.SqlSessionFactory sqlSessionFactory;
 
@@ -551,5 +552,120 @@ class MatchServiceImplTest {
         MatchVO vo = matchService.toVO(m);
         assertNotNull(vo.getGames());
         assertTrue(vo.getGames().isEmpty());
+    }
+
+    // ──────────────── Loop-v12 — 90% gate: complete + standings paths ────────────────
+
+    @Test
+    void complete_alreadyCompleted_isNoOp() {
+        Event e = event(1L, "SINGLES", true, "COMPLETED");
+        when(eventMapper.selectById(1L)).thenReturn(e);
+        matchService.complete(1L);
+        verify(matchMapper, never()).selectList(any());
+    }
+
+    @Test
+    void complete_unfinishedMatches_throwsParam() {
+        Event e = event(1L, "SINGLES", true, "IN_PROGRESS");
+        when(eventMapper.selectById(1L)).thenReturn(e);
+        Match m = new Match();
+        m.setStatus(MatchStatus.SCHEDULED);
+        when(matchMapper.selectList(any())).thenReturn(List.of(m));
+
+        com.heypickler.common.exception.BizException ex =
+                assertThrows(com.heypickler.common.exception.BizException.class,
+                        () -> matchService.complete(1L));
+        assertEquals(1001, ex.getCode());
+        assertEquals(true, ex.getMessage().contains("1 场比赛未完成"));
+    }
+
+    @Test
+    void complete_allFinished_callsPlacementAndNotifies() {
+        Event e = event(1L, "SINGLES", true, "IN_PROGRESS");
+        e.setCreatedBy(99L);
+        e.setTitle("Cup");
+        when(eventMapper.selectById(1L)).thenReturn(e);
+        Match m = new Match();
+        m.setStatus(MatchStatus.COMPLETED);
+        when(matchMapper.selectList(any())).thenReturn(List.of(m));
+        when(eventMapper.update(eq(null), any())).thenReturn(1);
+
+        matchService.complete(1L);
+
+        verify(placementService).issue(1L);
+        verify(notificationService).push(99L, "EVENT_COMPLETED", "赛事已结束",
+                "《Cup》已结束，名次积分已发放", "/events/1?tab=result");
+    }
+
+    @Test
+    void complete_allFinished_noCreator_skipsNotify() {
+        Event e = event(1L, "SINGLES", true, "IN_PROGRESS");
+        e.setCreatedBy(null);
+        when(eventMapper.selectById(1L)).thenReturn(e);
+        Match m = new Match();
+        m.setStatus(MatchStatus.COMPLETED);
+        when(matchMapper.selectList(any())).thenReturn(List.of(m));
+
+        matchService.complete(1L);
+        verify(notificationService, never()).push(anyLong(), anyString(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void standings_doublesWithTeamId_routesThroughTeamMap() {
+        Event e = event(1L, "DOUBLES", true, "IN_PROGRESS");
+        when(eventMapper.selectById(1L)).thenReturn(e);
+        MatchGroup g = new MatchGroup();
+        g.setId(10L);
+        when(matchGroupMapper.selectList(any())).thenReturn(List.of(g));
+        Match m = new Match();
+        m.setId(11L);
+        m.setGroupId(10L);
+        m.setSlotATeamId(99L);
+        m.setSlotBTeamId(88L);
+        m.setStatus(MatchStatus.COMPLETED);
+        m.setGamesWonA(2);
+        m.setGamesWonB(0);
+        when(matchMapper.selectList(any())).thenReturn(List.of(m));
+        Team t1 = new Team();
+        t1.setId(99L);
+        t1.setMember1UserId(7L);
+        Team t2 = new Team();
+        t2.setId(88L);
+        t2.setMember1UserId(8L);
+        when(teamMapper.selectBatchIds(any())).thenReturn(List.of(t1, t2));
+        User u1 = new User();
+        u1.setId(7L);
+        u1.setNickname("alice");
+        User u2 = new User();
+        u2.setId(8L);
+        u2.setNickname("bob");
+        when(userMapper.selectBatchIds(any())).thenReturn(List.of(u1, u2));
+
+        List<List<com.heypickler.vo.StandingVO>> result = matchService.standings(1L);
+        assertEquals(1, result.size());
+        assertEquals(2, result.get(0).size());
+        // Winning team (99) ranks first
+        assertEquals(1, result.get(0).get(0).getRank());
+        assertEquals(2, result.get(0).get(1).getRank());
+    }
+
+    @Test
+    void standings_skipsMatchesWithoutStatusCompleted() {
+        Event e = event(1L, "SINGLES", true, "IN_PROGRESS");
+        when(eventMapper.selectById(1L)).thenReturn(e);
+        MatchGroup g = new MatchGroup();
+        g.setId(10L);
+        when(matchGroupMapper.selectList(any())).thenReturn(List.of(g));
+        Match scheduled = new Match();
+        scheduled.setId(11L);
+        scheduled.setGroupId(10L);
+        scheduled.setSlotAUserId(7L);
+        scheduled.setSlotBUserId(8L);
+        scheduled.setStatus(MatchStatus.SCHEDULED);
+        when(matchMapper.selectList(any())).thenReturn(List.of(scheduled));
+
+        List<List<com.heypickler.vo.StandingVO>> result = matchService.standings(1L);
+        assertEquals(1, result.size());
+        assertEquals(0, result.get(0).size());  // SCHEDULED matches don't count
     }
 }

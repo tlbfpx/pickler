@@ -58,6 +58,7 @@ class PlacementServiceImplTest {
     @Mock private MatchMapper matchMapper;
     @Mock private TeamMapper teamMapper;
     @Mock private PointService pointService;
+    @Mock private com.heypickler.mapper.UserMapper userMapper;
 
     private final PlacementProperties defaultProps = new PlacementProperties();
 
@@ -427,5 +428,78 @@ class PlacementServiceImplTest {
         m.setGamesWonA(wonA);
         m.setGamesWonB(wonB);
         return m;
+    }
+
+    // ──────────────── Loop-v12 — listByEventId paths ────────────────
+
+    @Test
+    void listByEventId_noRecords_returnsEmpty() {
+        when(eventMapper.selectById(1L)).thenReturn(event(1L, "Cup"));
+        when(pointRecordMapper.selectList(any())).thenReturn(java.util.List.of());
+        assertTrue(placementService.listByEventId(1L).isEmpty());
+    }
+
+    @Test
+    void listByEventId_withRecords_rendersRankAndNickname() {
+        when(eventMapper.selectById(1L)).thenReturn(event(1L, "Cup"));
+        com.heypickler.entity.PointRecord r1 = new com.heypickler.entity.PointRecord();
+        r1.setId(1L);
+        r1.setUserId(11L);
+        r1.setPoints(80);
+        r1.setReason("champion");
+        r1.setCreatedAt(java.time.LocalDateTime.now());
+        com.heypickler.entity.PointRecord r2 = new com.heypickler.entity.PointRecord();
+        r2.setId(2L);
+        r2.setUserId(22L);
+        r2.setPoints(50);
+        r2.setReason("runner-up");
+        r2.setCreatedAt(java.time.LocalDateTime.now());
+        when(pointRecordMapper.selectList(any())).thenReturn(java.util.List.of(r1, r2));
+        com.heypickler.entity.User u1 = new com.heypickler.entity.User();
+        u1.setId(11L);
+        u1.setNickname("alice");
+        com.heypickler.entity.User u2 = new com.heypickler.entity.User();
+        u2.setId(22L);
+        u2.setNickname("bob");
+        when(userMapper.selectBatchIds(any())).thenReturn(java.util.List.of(u1, u2));
+
+        var result = placementService.listByEventId(1L);
+        assertEquals(2, result.size());
+        assertEquals(1, result.get(0).getRank());
+        assertEquals("alice", result.get(0).getNickname());
+        assertEquals(2, result.get(1).getRank());
+        assertEquals("bob", result.get(1).getNickname());
+    }
+
+    @Test
+    void listByEventId_nullUserId_skipsUserLookup() {
+        when(eventMapper.selectById(1L)).thenReturn(event(1L, "Cup"));
+        com.heypickler.entity.PointRecord r = new com.heypickler.entity.PointRecord();
+        r.setId(1L);
+        r.setUserId(null);
+        r.setPoints(0);
+        when(pointRecordMapper.selectList(any())).thenReturn(java.util.List.of(r));
+        when(userMapper.selectBatchIds(any())).thenReturn(java.util.List.of());
+
+        var result = placementService.listByEventId(1L);
+        assertEquals(1, result.size());
+        assertNull(result.get(0).getUserId());
+        assertNull(result.get(0).getNickname());
+    }
+
+    @Test
+    void listByEventId_userNotInBatchMap_nicknameNull() {
+        when(eventMapper.selectById(1L)).thenReturn(event(1L, "Cup"));
+        com.heypickler.entity.PointRecord r = new com.heypickler.entity.PointRecord();
+        r.setId(1L);
+        r.setUserId(99L);
+        r.setPoints(80);
+        when(pointRecordMapper.selectList(any())).thenReturn(java.util.List.of(r));
+        // batch returns empty — user 99 not found in userMap
+        when(userMapper.selectBatchIds(any())).thenReturn(java.util.List.of());
+
+        var result = placementService.listByEventId(1L);
+        assertEquals(1, result.size());
+        assertNull(result.get(0).getNickname());
     }
 }
