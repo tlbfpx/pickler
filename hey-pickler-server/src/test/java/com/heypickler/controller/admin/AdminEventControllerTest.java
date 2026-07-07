@@ -45,9 +45,9 @@ class AdminEventControllerTest {
     void listEvents_returnsPage() {
         PageResult<EventVO> stub = PageResult.of(0, 1, 10, java.util.List.of());
         doReturn(stub).when(eventService).adminListEvents(
-                any(), any(), any(), any(), any(), any(), anyInt(), anyInt());
+                any(), any(), any(), any(), any(), any(), any(), anyInt(), anyInt());
         PageResult<EventVO> result = controller.listEvents(
-                "STAR", "OPEN", "loop", "BJ", null, null, 1, 10).getData();
+                "STAR", "OPEN", "loop", "BJ", null, null, 1, 10, null).getData();
         assertEquals(0L, result.getTotal());
     }
 

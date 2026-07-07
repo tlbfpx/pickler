@@ -631,15 +631,52 @@ class EventServiceTest {
 
     @Test
     void adminListEvents_keyword_isCaseInsensitiveInWire() {
-        // Loop-v7 D32: adminListEvents accepts keyword, type, status, location,
-        // startTime, endTime as filters. Stub distinct values and assert the
-        // mapper receives a non-null wrapper.
+        // Loop-v7 D32 + Loop-v16A: adminListEvents now also takes a sort
+        // parameter. Stub distinct values and assert the mapper receives a
+        // non-null wrapper.
         testEvent.setStatus("OPEN");
         when(eventMapper.selectPage(any(Page.class), any())).thenReturn(new Page<>(1, 10));
 
         PageResult<EventVO> result = eventService.adminListEvents(
-                "loop", "STAR", "OPEN", "BJ", null, null, 1, 10);
+                "loop", "STAR", "OPEN", "BJ", null, null, null, 1, 10);
         assertEquals(0, result.getTotal());
+    }
+
+    // ──────────────── Loop-v16A — multi-keyword + sort ────────────────
+
+    @Test
+    void adminListEvents_singleKeyword_matchesTitleOrDescription() {
+        when(eventMapper.selectPage(any(Page.class), any())).thenReturn(new Page<>(1, 10));
+        eventService.adminListEvents(null, null, "周六", null, null, null, null, 1, 10);
+        verify(eventMapper).selectPage(any(Page.class), any());
+    }
+
+    @Test
+    void adminListEvents_multiKeywordAnd() {
+        when(eventMapper.selectPage(any(Page.class), any())).thenReturn(new Page<>(1, 10));
+        // 2 tokens: "周六 双打" — both must match (AND across tokens)
+        eventService.adminListEvents(null, null, "周六 双打", null, null, null, null, 1, 10);
+        verify(eventMapper).selectPage(any(Page.class), any());
+    }
+
+    @Test
+    void adminListEvents_emptyKeyword_noFilter() {
+        when(eventMapper.selectPage(any(Page.class), any())).thenReturn(new Page<>(1, 10));
+        eventService.adminListEvents(null, null, "   ", null, null, null, null, 1, 10);
+        verify(eventMapper).selectPage(any(Page.class), any());
+    }
+
+    @Test
+    void adminListEvents_sortEventTimeAsc_appliedToWrapper() {
+        when(eventMapper.selectPage(any(Page.class), any())).thenReturn(new Page<>(1, 10));
+        eventService.adminListEvents(null, null, null, null, null, null, "event_time_asc", 1, 10);
+        verify(eventMapper).selectPage(any(Page.class), any());
+    }
+
+    @Test
+    void adminListEvents_sortCurrentParticipantsDesc_appliedToWrapper() {
+        when(eventMapper.selectPage(any(Page.class), any())).thenReturn(new Page<>(1, 10));
+        eventService.adminListEvents(null, null, null, null, null, null, "current_participants_desc", 1, 10);
         verify(eventMapper).selectPage(any(Page.class), any());
     }
 
