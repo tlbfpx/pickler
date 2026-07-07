@@ -7,6 +7,7 @@ import com.heypickler.dto.app.RegisterRequest;
 import com.heypickler.vo.EventDetailVO;
 import com.heypickler.vo.EventParticipantVO;
 import com.heypickler.vo.EventResultVO;
+import com.heypickler.vo.EventSummaryVO;
 import com.heypickler.vo.EventVO;
 import com.heypickler.vo.RegistrationVO;
 
@@ -38,4 +39,12 @@ public interface EventService {
     PageResult<RegistrationVO> getRegistrations(Long eventId, String status, String matchType, int page, int size);
 
     void updateRegistrationStatus(Long eventId, Long registrationId, String status);
+
+    /**
+     * Loop-v13 — operational summary aggregating registrations / teams /
+     * matches / fees for an event. Read-only, no side effects.
+     * Throws {@code BizException(NOT_FOUND)} when eventId is missing or
+     * soft-deleted.
+     */
+    EventSummaryVO getEventSummary(Long eventId);
 }
