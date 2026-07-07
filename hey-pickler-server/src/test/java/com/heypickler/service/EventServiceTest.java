@@ -703,4 +703,121 @@ class EventServiceTest {
         e.setEventTime(now.plusDays(7));
         return e;
     }
+
+    // ──────────────── Loop-v13 — getEventSummary ────────────────
+
+    private com.heypickler.mapper.TeamMapper teamMapper;
+    private com.heypickler.mapper.MatchMapper matchMapper;
+
+    @org.junit.jupiter.api.BeforeEach
+    void registerSummaryMappers() {
+        teamMapper = org.mockito.Mockito.mock(com.heypickler.mapper.TeamMapper.class);
+        matchMapper = org.mockito.Mockito.mock(com.heypickler.mapper.MatchMapper.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(eventService, "teamMapper", teamMapper);
+        org.springframework.test.util.ReflectionTestUtils.setField(eventService, "matchMapper", matchMapper);
+    }
+
+    private java.util.Map<String, Object> row(String status, long cnt) {
+        java.util.Map<String, Object> m = new java.util.HashMap<>();
+        m.put("status", status);
+        m.put("cnt", cnt);
+        return m;
+    }
+
+    @Test
+    void getEventSummary_singles_happyPath() {
+        Event e = testEvent;
+        e.setType("SINGLES");
+        e.setMaxParticipants(10);
+        e.setCurrentParticipants(5);
+        e.setFee(new java.math.BigDecimal(20));
+        when(eventMapper.selectById(1L)).thenReturn(e);
+        when(registrationMapper.countByEventGroupedByStatus(1L)).thenReturn(java.util.List.of(
+                row("REGISTERED", 5L)));
+        when(teamMapper.countByEventGroupedByStatus(1L)).thenReturn(java.util.List.of());
+        when(matchMapper.countByEventGroupedByStatus(1L)).thenReturn(java.util.List.of());
+
+        com.heypickler.vo.EventSummaryVO vo = eventService.getEventSummary(1L);
+        assertEquals(5, vo.getCurrentParticipants());
+        assertEquals(0.5, vo.getFillRate(), 0.0001);
+        assertEquals(5, vo.getRegistration().getRegistered());
+        assertEquals(0, vo.getRegistration().getCheckedIn());
+        assertEquals(0.0, vo.getRegistration().getCheckInRate(), 0.0001);
+        assertEquals(100L, vo.getFees().getTotalCollected());  // 5 × 20
+        assertEquals("CNY", vo.getFees().getCurrency());
+    }
+
+    @Test
+    void getEventSummary_doublesWithTeamsAndMatches() {
+        Event e = testEvent;
+        e.setType("DOUBLES");
+        e.setMaxParticipants(8);
+        e.setCurrentParticipants(8);
+        when(eventMapper.selectById(1L)).thenReturn(e);
+        when(registrationMapper.countByEventGroupedByStatus(1L)).thenReturn(java.util.List.of(
+                row("REGISTERED", 6L), row("CHECKED_IN", 2L)));
+        when(teamMapper.countByEventGroupedByStatus(1L)).thenReturn(java.util.List.of(
+                row("PENDING", 1L), row("CONFIRMED", 3L)));
+        when(matchMapper.countByEventGroupedByStatus(1L)).thenReturn(java.util.List.of(
+                row("COMPLETED", 6L)));
+
+        com.heypickler.vo.EventSummaryVO vo = eventService.getEventSummary(1L);
+        assertEquals(1.0, vo.getFillRate(), 0.0001);
+        assertEquals(6, vo.getRegistration().getRegistered());  // 6 REGISTERED, not 8 (6+2 CHECKED_IN)
+        assertEquals(2, vo.getRegistration().getCheckedIn());
+        assertEquals(0.333, vo.getRegistration().getCheckInRate(), 0.001);  // 2/6 — checkInRate is checkedIn/registered, not /total
+        assertEquals(1, vo.getTeams().getPending());
+        assertEquals(3, vo.getTeams().getConfirmed());
+        assertEquals(6, vo.getMatches().getCompleted());
+    }
+
+    @Test
+    void getEventSummary_maxParticipantsNull_fillRateIsZero() {
+        Event e = testEvent;
+        e.setMaxParticipants(null);
+        e.setCurrentParticipants(5);
+        when(eventMapper.selectById(1L)).thenReturn(e);
+        when(registrationMapper.countByEventGroupedByStatus(1L)).thenReturn(java.util.List.of());
+        when(teamMapper.countByEventGroupedByStatus(1L)).thenReturn(java.util.List.of());
+        when(matchMapper.countByEventGroupedByStatus(1L)).thenReturn(java.util.List.of());
+
+        com.heypickler.vo.EventSummaryVO vo = eventService.getEventSummary(1L);
+        assertEquals(0.0, vo.getFillRate(), 0.0001);
+    }
+
+    @Test
+    void getEventSummary_noRegistrations_checkInRateIsZero() {
+        Event e = testEvent;
+        e.setMaxParticipants(10);
+        e.setCurrentParticipants(0);
+        when(eventMapper.selectById(1L)).thenReturn(e);
+        when(registrationMapper.countByEventGroupedByStatus(1L)).thenReturn(java.util.List.of());
+        when(teamMapper.countByEventGroupedByStatus(1L)).thenReturn(java.util.List.of());
+        when(matchMapper.countByEventGroupedByStatus(1L)).thenReturn(java.util.List.of());
+
+        com.heypickler.vo.EventSummaryVO vo = eventService.getEventSummary(1L);
+        assertEquals(0.0, vo.getRegistration().getCheckInRate(), 0.0001);
+    }
+
+    @Test
+    void getEventSummary_includesTransitionableStatuses() {
+        Event e = testEvent;
+        e.setStatus("OPEN");
+        when(eventMapper.selectById(1L)).thenReturn(e);
+        when(registrationMapper.countByEventGroupedByStatus(1L)).thenReturn(java.util.List.of());
+        when(teamMapper.countByEventGroupedByStatus(1L)).thenReturn(java.util.List.of());
+        when(matchMapper.countByEventGroupedByStatus(1L)).thenReturn(java.util.List.of());
+
+        com.heypickler.vo.EventSummaryVO vo = eventService.getEventSummary(1L);
+        // OPEN can transition to FULL, IN_PROGRESS, CANCELLED
+        assertEquals(true, vo.getTransitionableStatuses().contains("FULL"));
+        assertEquals(true, vo.getTransitionableStatuses().contains("IN_PROGRESS"));
+        assertEquals(true, vo.getTransitionableStatuses().contains("CANCELLED"));
+    }
+
+    @Test
+    void getEventSummary_eventNotFound_throwsNotFound() {
+        when(eventMapper.selectById(99L)).thenReturn(null);
+        assertThrows(BizException.class, () -> eventService.getEventSummary(99L));
+    }
 }

@@ -18,13 +18,16 @@ import com.heypickler.entity.Registration;
 import com.heypickler.entity.User;
 import com.heypickler.mapper.AdminUserMapper;
 import com.heypickler.mapper.EventMapper;
+import com.heypickler.mapper.MatchMapper;
 import com.heypickler.mapper.PointRecordMapper;
 import com.heypickler.mapper.RegistrationMapper;
+import com.heypickler.mapper.TeamMapper;
 import com.heypickler.mapper.UserMapper;
 import com.heypickler.service.EventService;
 import com.heypickler.service.TeamService;
 import com.heypickler.vo.EventDetailVO;
 import com.heypickler.vo.EventParticipantVO;
+import com.heypickler.vo.EventSummaryVO;
 import com.heypickler.vo.EventResultVO;
 import com.heypickler.vo.EventVO;
 import com.heypickler.vo.RegistrationVO;
@@ -46,6 +49,8 @@ public class EventServiceImpl implements EventService {
     private final UserMapper userMapper;
     private final PointRecordMapper pointRecordMapper;
     private final AdminUserMapper adminUserMapper;
+    private final TeamMapper teamMapper;
+    private final MatchMapper matchMapper;
     private final TeamService teamService;
 
     @Override
@@ -671,5 +676,84 @@ public class EventServiceImpl implements EventService {
         EventDetailVO vo = new EventDetailVO();
         BeanUtils.copyProperties(event, vo);
         return vo;
+    }
+
+    // ──────────────── Loop-v13 — getEventSummary ────────────────
+
+    @Override
+    public EventSummaryVO getEventSummary(Long eventId) {
+        Event event = requireEvent(eventId);
+        EventSummaryVO vo = new EventSummaryVO();
+        vo.setEventId(event.getId());
+        vo.setTitle(event.getTitle());
+        vo.setType(event.getType());
+        vo.setStatus(event.getStatus());
+        vo.setEventTime(event.getEventTime());
+        vo.setMaxParticipants(event.getMaxParticipants());
+        vo.setCurrentParticipants(event.getCurrentParticipants() == null ? 0 : event.getCurrentParticipants());
+        int max = event.getMaxParticipants() == null ? 0 : event.getMaxParticipants();
+        vo.setFillRate(max > 0 ? (double) vo.getCurrentParticipants() / max : 0.0);
+
+        vo.setRegistration(buildRegistrationCounts(eventId));
+        vo.setTeams(buildTeamCounts(eventId));
+        vo.setMatches(buildMatchCounts(eventId));
+        vo.setFees(buildFeeSummary(event, vo.getRegistration().getRegistered()));
+        vo.setTransitionableStatuses(
+                new java.util.ArrayList<>(
+                        com.heypickler.common.util.StatusTransitionValidator.getAllowedTargets(event.getStatus())));
+        return vo;
+    }
+
+    private EventSummaryVO.RegistrationCountVO buildRegistrationCounts(Long eventId) {
+        EventSummaryVO.RegistrationCountVO rc = new EventSummaryVO.RegistrationCountVO();
+        int registered = 0, checkedIn = 0, withdrawn = 0;
+        for (java.util.Map<String, Object> row : registrationMapper.countByEventGroupedByStatus(eventId)) {
+            String status = (String) row.get("status");
+            long cnt = ((Number) row.get("cnt")).longValue();
+            if ("REGISTERED".equals(status)) registered = (int) cnt;
+            else if ("CHECKED_IN".equals(status)) checkedIn = (int) cnt;
+            else if ("WITHDRAWN".equals(status)) withdrawn = (int) cnt;
+        }
+        rc.setRegistered(registered);
+        rc.setCheckedIn(checkedIn);
+        rc.setWithdrawn(withdrawn);
+        rc.setCheckInRate(registered > 0 ? (double) checkedIn / registered : 0.0);
+        return rc;
+    }
+
+    private EventSummaryVO.TeamCountVO buildTeamCounts(Long eventId) {
+        EventSummaryVO.TeamCountVO tc = new EventSummaryVO.TeamCountVO();
+        tc.setPending(0);
+        tc.setConfirmed(0);
+        for (java.util.Map<String, Object> row : teamMapper.countByEventGroupedByStatus(eventId)) {
+            String status = (String) row.get("status");
+            long cnt = ((Number) row.get("cnt")).longValue();
+            if ("PENDING".equals(status)) tc.setPending((int) cnt);
+            else if ("CONFIRMED".equals(status)) tc.setConfirmed((int) cnt);
+        }
+        return tc;
+    }
+
+    private EventSummaryVO.MatchCountVO buildMatchCounts(Long eventId) {
+        EventSummaryVO.MatchCountVO mc = new EventSummaryVO.MatchCountVO();
+        mc.setScheduled(0);
+        mc.setInProgress(0);
+        mc.setCompleted(0);
+        for (java.util.Map<String, Object> row : matchMapper.countByEventGroupedByStatus(eventId)) {
+            String status = (String) row.get("status");
+            long cnt = ((Number) row.get("cnt")).longValue();
+            if ("SCHEDULED".equals(status)) mc.setScheduled((int) cnt);
+            else if ("IN_PROGRESS".equals(status)) mc.setInProgress((int) cnt);
+            else if ("COMPLETED".equals(status)) mc.setCompleted((int) cnt);
+        }
+        return mc;
+    }
+
+    private EventSummaryVO.FeeSummaryVO buildFeeSummary(Event event, int activeRegistrations) {
+        EventSummaryVO.FeeSummaryVO fee = new EventSummaryVO.FeeSummaryVO();
+        long feeYuan = event.getFee() == null ? 0L : event.getFee().longValue();
+        fee.setTotalCollected(feeYuan * activeRegistrations);
+        fee.setCurrency("CNY");
+        return fee;
     }
 }
