@@ -69,6 +69,16 @@ jobs:
           REDIS_PORT: '6379'
         run: mvn -B -ntp test -Dtest='*IntegrationTest'
 
+      # Loop-v17 — OWASP dependency-check (PR #37). Run after unit +
+      # integration; NVD_API_KEY secret lifts rate-limit. Without a key
+      # the report is still produced but throttled by NVD's public limit.
+      - name: Dependency check (CVE scan)
+        working-directory: hey-pickler-server
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: mvn -B -ntp org.owasp:dependency-check-maven:check -DskipTests || true
+        continue-on-error: true   # the report is the deliverable; don't fail CI on first hit
+
   frontend:
     name: Frontend (Node 18 + Vite)
     runs-on: ubuntu-latest
