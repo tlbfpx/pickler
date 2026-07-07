@@ -30,3 +30,17 @@ hey-pickler:
       2: 60
       3: 30
       4: 15
+
+# Loop-v17 — actuator endpoints. /health is exposed for Docker HEALTHCHECK
+# and Kubernetes liveness probes. All other endpoints are disabled to keep
+# the attack surface minimal. /info is also off (no app metadata configured).
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never   # never | always | when_authorized
+      probes:
+        enabled: true       # /actuator/health/liveness + /readiness
