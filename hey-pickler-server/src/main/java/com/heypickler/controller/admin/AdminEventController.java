@@ -193,4 +193,15 @@ public class AdminEventController {
     public Result<com.heypickler.vo.EventSummaryVO> getEventSummary(@PathVariable Long id) {
         return Result.ok(eventService.getEventSummary(id));
     }
+
+    // ──────────────── Loop-v14 — bulk check-in ────────────────
+
+    @PostMapping("/{eventId}/registrations/bulk-check-in")
+    @Operation(summary = "批量签到：把 1-200 个报名一次性置为 CHECKED_IN，返回 updated/skipped 分类")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
+    public Result<com.heypickler.vo.BulkCheckInResult> bulkCheckIn(
+            @PathVariable Long eventId,
+            @Valid @RequestBody com.heypickler.dto.admin.BulkCheckInRequest body) {
+        return Result.ok(eventService.bulkCheckIn(eventId, body.getRegistrationIds()));
+    }
 }
