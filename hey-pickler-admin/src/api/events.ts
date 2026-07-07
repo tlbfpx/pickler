@@ -1,5 +1,5 @@
 import request from './request'
-import type { Event, CreateEventRequest, UpdateEventRequest, Registration, ApiResponse, PageParams, PageResult } from '@/types'
+import type { Event, CreateEventRequest, UpdateEventRequest, Registration, ApiResponse, PageParams, PageResult, EventSummaryVO, BulkCheckInRequest, BulkCheckInResult } from '@/types'
 
 export interface EventParticipant {
   userId: number
@@ -57,6 +57,17 @@ export const updateRegistrationStatus = (eventId: number, registrationId: number
     `/events/${eventId}/registrations/${registrationId}/status`, { status }
   )
 }
+
+// Loop-v15 — Loop-v13 backend integration
+export const getEventSummary = (eventId: number) =>
+  request.get<unknown, ApiResponse<EventSummaryVO>>(`/events/${eventId}/summary`)
+
+// Loop-v15 — Loop-v14 backend integration
+export const bulkCheckIn = (eventId: number, registrationIds: number[]) =>
+  request.post<BulkCheckInRequest, ApiResponse<BulkCheckInResult>>(
+    `/events/${eventId}/registrations/bulk-check-in`,
+    { registrationIds }
+  )
 
 export const getEventPlacements = (id: number) =>
   request.get<unknown, ApiResponse<PlacementDetail[]>>(`/events/${id}/placements`)
