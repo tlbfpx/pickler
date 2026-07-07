@@ -29,6 +29,7 @@ import com.heypickler.vo.EventDetailVO;
 import com.heypickler.vo.EventParticipantVO;
 import com.heypickler.vo.EventSummaryVO;
 import com.heypickler.vo.EventResultVO;
+import com.heypickler.vo.BulkCheckInResult;
 import com.heypickler.vo.EventVO;
 import com.heypickler.vo.RegistrationVO;
 import lombok.RequiredArgsConstructor;
@@ -755,5 +756,70 @@ public class EventServiceImpl implements EventService {
         fee.setTotalCollected(feeYuan * activeRegistrations);
         fee.setCurrency("CNY");
         return fee;
+    }
+
+    // ──────────────── Loop-v14 — bulk check-in ────────────────
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public com.heypickler.vo.BulkCheckInResult bulkCheckIn(Long eventId, java.util.List<Long> registrationIds) {
+        if (registrationIds == null || registrationIds.isEmpty()) {
+            throw new com.heypickler.common.exception.BizException(
+                    com.heypickler.common.exception.ErrorCode.PARAM_ERROR,
+                    "registrationIds 不能为空");
+        }
+        if (registrationIds.size() > 200) {
+            throw new com.heypickler.common.exception.BizException(
+                    com.heypickler.common.exception.ErrorCode.PARAM_ERROR,
+                    "registrationIds 单次最多 200 条，当前 " + registrationIds.size());
+        }
+        for (Long id : registrationIds) {
+            if (id == null || id <= 0) {
+                throw new com.heypickler.common.exception.BizException(
+                        com.heypickler.common.exception.ErrorCode.PARAM_ERROR,
+                        "registrationIds 含非法 id: " + id);
+            }
+        }
+        requireEvent(eventId);
+
+        java.util.List<Long> notFound = new java.util.ArrayList<>();
+        java.util.List<Long> withdrawn = new java.util.ArrayList<>();
+        java.util.List<Long> toUpdate = new java.util.ArrayList<>();
+        java.util.Set<Long> seen = new java.util.HashSet<>();
+
+        // One SELECT to get current state
+        for (Registration r : registrationMapper.findByEventAndIds(eventId, registrationIds)) {
+            if (r == null || r.getId() == null) continue;
+            if (!seen.add(r.getId())) continue;
+            String status = r.getStatus();
+            if ("WITHDRAWN".equals(status)) {
+                withdrawn.add(r.getId());
+            } else if ("REGISTERED".equals(status)) {
+                toUpdate.add(r.getId());
+            }
+            // CHECKED_IN → alreadyCheckedIn (not exposed in v1 result)
+        }
+        // Ids not present in result → notFound
+        for (Long id : registrationIds) {
+            if (!seen.contains(id)) {
+                notFound.add(id);
+            }
+        }
+
+        int updated = 0;
+        if (!toUpdate.isEmpty()) {
+            updated = registrationMapper.updateStatusToCheckedIn(toUpdate);
+        }
+
+        com.heypickler.vo.BulkCheckInResult out = new com.heypickler.vo.BulkCheckInResult();
+        out.setEventId(eventId);
+        out.setRequested(registrationIds.size());
+        out.setUpdated(updated);
+        com.heypickler.vo.BulkCheckInResult.Skipped sk = new com.heypickler.vo.BulkCheckInResult.Skipped();
+        sk.setNotFound(notFound);
+        sk.setWithdrawn(withdrawn);
+        out.setSkipped(sk);
+        out.setUpdatedRegistrationIds(toUpdate);
+        return out;
     }
 }

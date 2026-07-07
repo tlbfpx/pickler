@@ -146,4 +146,31 @@ class AdminEventControllerTest {
         assertThrows(com.heypickler.common.exception.BizException.class,
                 () -> controller.getEventSummary(99L));
     }
+
+    // ──────────────── Loop-v14 — bulkCheckIn endpoint ────────────────
+
+    @Test
+    void bulkCheckIn_happyPath_delegatesToService() {
+        com.heypickler.dto.admin.BulkCheckInRequest req =
+                new com.heypickler.dto.admin.BulkCheckInRequest();
+        req.setRegistrationIds(java.util.List.of(101L, 102L, 103L));
+        com.heypickler.vo.BulkCheckInResult stub = new com.heypickler.vo.BulkCheckInResult();
+        stub.setEventId(1L);
+        stub.setRequested(3);
+        stub.setUpdated(3);
+        doReturn(stub).when(eventService).bulkCheckIn(anyLong(), any());
+        assertEquals(stub, controller.bulkCheckIn(1L, req).getData());
+    }
+
+    @Test
+    void bulkCheckIn_servicePropagatesException() {
+        com.heypickler.dto.admin.BulkCheckInRequest req =
+                new com.heypickler.dto.admin.BulkCheckInRequest();
+        req.setRegistrationIds(java.util.List.of(1L));
+        doThrow(new com.heypickler.common.exception.BizException(
+                com.heypickler.common.exception.ErrorCode.NOT_FOUND, "not found"))
+                .when(eventService).bulkCheckIn(anyLong(), any());
+        assertThrows(com.heypickler.common.exception.BizException.class,
+                () -> controller.bulkCheckIn(99L, req));
+    }
 }

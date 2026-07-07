@@ -19,6 +19,7 @@ import com.heypickler.mapper.RegistrationMapper;
 import com.heypickler.mapper.UserMapper;
 import com.heypickler.service.impl.EventServiceImpl;
 import com.heypickler.vo.EventResultVO;
+import com.heypickler.vo.BulkCheckInResult;
 import com.heypickler.vo.EventVO;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -819,5 +820,74 @@ class EventServiceTest {
     void getEventSummary_eventNotFound_throwsNotFound() {
         when(eventMapper.selectById(99L)).thenReturn(null);
         assertThrows(BizException.class, () -> eventService.getEventSummary(99L));
+    }
+
+    // ──────────────── Loop-v14 — bulkCheckIn ────────────────
+
+    private com.heypickler.entity.Registration reg(Long id, String status) {
+        com.heypickler.entity.Registration r = new com.heypickler.entity.Registration();
+        r.setId(id);
+        r.setEventId(1L);
+        r.setStatus(status);
+        return r;
+    }
+
+    @Test
+    void bulkCheckIn_mixed_classifies() {
+        when(eventMapper.selectById(1L)).thenReturn(testEvent);
+        when(registrationMapper.findByEventAndIds(eq(1L), any()))
+                .thenReturn(java.util.List.of(reg(101L, "REGISTERED"), reg(102L, "REGISTERED"),
+                        reg(103L, "WITHDRAWN"), reg(104L, "CHECKED_IN")));
+        when(registrationMapper.updateStatusToCheckedIn(any())).thenReturn(2);
+
+        BulkCheckInResult result = eventService.bulkCheckIn(
+                1L, java.util.List.of(101L, 102L, 103L, 104L, 999L));
+
+        assertEquals(1L, result.getEventId());
+        assertEquals(5, result.getRequested());
+        assertEquals(2, result.getUpdated());
+        assertEquals(java.util.List.of(101L, 102L), result.getUpdatedRegistrationIds());
+        assertEquals(java.util.List.of(999L), result.getSkipped().getNotFound());
+        assertEquals(java.util.List.of(103L), result.getSkipped().getWithdrawn());
+    }
+
+    @Test
+    void bulkCheckIn_allWithdrawn_updatedZero() {
+        when(eventMapper.selectById(1L)).thenReturn(testEvent);
+        when(registrationMapper.findByEventAndIds(eq(1L), any()))
+                .thenReturn(java.util.List.of(reg(101L, "WITHDRAWN"), reg(102L, "WITHDRAWN")));
+
+        BulkCheckInResult result = eventService.bulkCheckIn(1L, java.util.List.of(101L, 102L));
+        assertEquals(0, result.getUpdated());
+        assertEquals(java.util.List.of(101L, 102L), result.getSkipped().getWithdrawn());
+    }
+
+    @Test
+    void bulkCheckIn_emptyList_throws() {
+        assertThrows(BizException.class, () -> eventService.bulkCheckIn(1L, java.util.List.of()));
+    }
+
+    @Test
+    void bulkCheckIn_nullList_throws() {
+        assertThrows(BizException.class, () -> eventService.bulkCheckIn(1L, null));
+    }
+
+    @Test
+    void bulkCheckIn_sizeOver200_throws() {
+        java.util.List<Long> tooMany = new java.util.ArrayList<>();
+        for (int i = 0; i < 201; i++) tooMany.add((long) i);
+        assertThrows(BizException.class, () -> eventService.bulkCheckIn(1L, tooMany));
+    }
+
+    @Test
+    void bulkCheckIn_nonPositiveId_throws() {
+        assertThrows(BizException.class, () -> eventService.bulkCheckIn(1L, java.util.List.of(1L, 0L, 2L)));
+        assertThrows(BizException.class, () -> eventService.bulkCheckIn(1L, java.util.List.of(1L, -1L)));
+    }
+
+    @Test
+    void bulkCheckIn_eventNotFound_throws() {
+        when(eventMapper.selectById(99L)).thenReturn(null);
+        assertThrows(BizException.class, () -> eventService.bulkCheckIn(99L, java.util.List.of(1L)));
     }
 }

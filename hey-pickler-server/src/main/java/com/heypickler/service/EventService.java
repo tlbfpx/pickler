@@ -9,6 +9,7 @@ import com.heypickler.vo.EventParticipantVO;
 import com.heypickler.vo.EventResultVO;
 import com.heypickler.vo.EventSummaryVO;
 import com.heypickler.vo.EventVO;
+import com.heypickler.vo.BulkCheckInResult;
 import com.heypickler.vo.RegistrationVO;
 
 import java.util.List;
@@ -47,4 +48,10 @@ public interface EventService {
      * soft-deleted.
      */
     EventSummaryVO getEventSummary(Long eventId);
+
+    /**
+     * Loop-v14 — bulk transition registrations to CHECKED_IN. Returns a
+     * bucketed result (updated / notFound / withdrawn). Single transaction.
+     */
+    BulkCheckInResult bulkCheckIn(Long eventId, java.util.List<Long> registrationIds);
 }
