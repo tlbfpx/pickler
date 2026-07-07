@@ -246,7 +246,7 @@ import { ref, reactive, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Pagination from '@/components/common/Pagination.vue'
 import GroupingPanel from './GroupingPanel.vue'
-import { getEventRegistrations, updateRegistrationStatus } from '@/api/events'
+import { getEventRegistrations, updateRegistrationStatus, bulkCheckIn } from '@/api/events'
 import { formatDate, formatEventType, formatEventStatus, getEventTypeColor, getEventStatusColor } from '@/utils'
 import type { Event, Registration } from '@/types'
 
@@ -273,19 +273,29 @@ const onSelectionChange = (rows: Registration[]) => { selected.value = rows }
 
 const handleBulkCheckIn = async () => {
   if (!props.event) return
+  // Loop-v15 — 改用后端批量签到 (PR #34)。先过滤 REGISTERED 状态；
+  // bulk endpoint 自带 1-200 size 校验，但前端预过滤更友好。
   const targets = selected.value.filter(r => r.status === 'REGISTERED')
-  if (!targets.length) { ElMessage.info('无可签到的已报名项'); return }
+  if (!targets.length) { ElMessage.info('所选项中无 REGISTERED 状态，无法签到'); return }
+  if (targets.length > 200) { ElMessage.error('单次最多 200 条'); return }
   bulkLoading.value = true
-  let ok = 0; const failed: string[] = []
-  for (const r of targets) {                       // 串行，规避 per-IP 限流
-    try {
-      const res = await updateRegistrationStatus(props.event!.id, r.id, 'CHECKED_IN')
-      if (res.code === 0) ok++; else failed.push(r.nickname || `#${r.id}`)
-    } catch { failed.push(r.nickname || `#${r.id}`) }
+  try {
+    const res = await bulkCheckIn(props.event.id, targets.map(r => r.id))
+    if (res.code === 0) {
+      const data = res.data!
+      let msg = `签到成功 ${data.updated} 人`
+      const skipped = data.skipped.notFound.length + data.skipped.withdrawn.length
+      if (skipped > 0) msg += `，跳过 ${skipped} (未找到/已撤回)`
+      ElMessage.success(msg)
+      await fetchRegistrations(); emit('changed')
+    } else {
+      ElMessage.error(res.message || '批量签到失败')
+    }
+  } catch (e: any) {
+    ElMessage.error(e?.message || '批量签到失败')
+  } finally {
+    bulkLoading.value = false
   }
-  bulkLoading.value = false
-  ElMessage.success(`签到成功 ${ok} / ${targets.length}` + (failed.length ? `；失败 ${failed.length}` : ''))
-  await fetchRegistrations(); emit('changed')
 }
 
 const handleExport = async () => {

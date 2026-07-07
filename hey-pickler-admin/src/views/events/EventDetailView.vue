@@ -92,6 +92,53 @@
       </div>
     </el-card>
 
+    <!-- Loop-v15 — operational summary card (4 metrics) -->
+    <el-card
+      v-if="summary"
+      shadow="never"
+      class="summary-card"
+      :body-style="{ padding: '16px 24px' }"
+    >
+      <el-row :gutter="20">
+        <el-col :span="6">
+          <div class="metric-label">已报名 / 容量</div>
+          <div class="metric-value">
+            {{ summary.currentParticipants }} / {{ summary.maxParticipants ?? '∞' }}
+            <small v-if="summary.maxParticipants" class="metric-sub">
+              ({{ (summary.fillRate * 100).toFixed(0) }}%)
+            </small>
+          </div>
+        </el-col>
+        <el-col :span="6">
+          <div class="metric-label">签到率</div>
+          <div class="metric-value">
+            {{ (summary.registration.checkInRate * 100).toFixed(0) }}%
+            <small class="metric-sub">
+              {{ summary.registration.checkedIn }} / {{ summary.registration.registered }}
+            </small>
+          </div>
+        </el-col>
+        <el-col :span="6">
+          <div class="metric-label">已确认队伍</div>
+          <div class="metric-value">
+            {{ summary.teams.confirmed }}
+            <small class="metric-sub">
+              待确认 {{ summary.teams.pending }}
+            </small>
+          </div>
+        </el-col>
+        <el-col :span="6">
+          <div class="metric-label">完赛场次</div>
+          <div class="metric-value">
+            {{ summary.matches.completed }}
+            <small class="metric-sub">
+              进行中 {{ summary.matches.inProgress }} / 计划 {{ summary.matches.scheduled }}
+            </small>
+          </div>
+        </el-col>
+      </el-row>
+    </el-card>
+
     <!-- Stepper -->
     <el-card
       v-if="event"
@@ -265,7 +312,8 @@ import { ElMessage } from 'element-plus'
 import {
   ArrowLeft, Edit, Location, Clock, Calendar, User, Promotion, Right, CircleClose, CopyDocument
 } from '@element-plus/icons-vue'
-import { getEventDetail, changeEventStatus } from '@/api/events'
+import { getEventDetail, changeEventStatus, getEventSummary } from '@/api/events'
+import type { EventSummaryVO } from '@/types'
 import { formatStatus, statusColor, statusTooltip, getAllowedTargets, type EventStatus } from '@/constants/eventStatus'
 import { formatDate, formatEventType, formatEventFormat, getEventTypeColor } from '@/utils'
 import EventFormDialog, { type EventDuplicatePrefill } from './EventFormDialog.vue'
@@ -285,6 +333,7 @@ if (!Number.isFinite(id)) {
 const validId = Number.isFinite(id)
 const loading = ref(false)
 const event = ref<Event | null>(null)
+const summary = ref<EventSummaryVO | null>(null)
 const editOpen = ref(false)
 const activeTab = ref('info')
 const duplicateLoading = ref(false)
@@ -312,7 +361,20 @@ const reload = async () => {
     else ElMessage.error(r.message || '加载失败')
   } finally { loading.value = false }
 }
-if (validId) onMounted(reload)
+
+// Loop-v15 — fetch operational summary in parallel with detail
+const reloadSummary = async () => {
+  if (!validId) return
+  try {
+    const r = await getEventSummary(id)
+    if (r.code === 0) summary.value = r.data
+    // non-fatal if summary fails (detail page still works)
+  } catch { /* silent */ }
+}
+if (validId) {
+  onMounted(reload)
+  onMounted(reloadSummary)
+}
 
 const STAGE_ORDER: Record<string, number> = { DRAFT: 0, OPEN: 1, FULL: 1, IN_PROGRESS: 2, COMPLETED: 3, CANCELLED: 0 }
 const activeStepIndex = computed(() => {
@@ -440,6 +502,12 @@ const onFormSuccess = (newEventId?: number) => {
   margin: 0 auto;
   padding-bottom: 24px;
 }
+
+/* Loop-v15 — summary card metrics */
+.summary-card { margin-bottom: 16px; border: 1px solid #e5e7eb; }
+.metric-label { color: #6b7280; font-size: 12px; margin-bottom: 4px; }
+.metric-value { font-size: 22px; font-weight: 600; color: #111827; }
+.metric-sub { color: #6b7280; font-size: 12px; font-weight: 400; margin-left: 6px; }
 
 /* Hero card */
 .hero-card {

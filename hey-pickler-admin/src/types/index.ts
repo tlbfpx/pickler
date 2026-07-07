@@ -302,3 +302,7 @@ export interface StandingRow {
   participantKey: number | null; rank: number | null; wins: number | null; losses: number | null
   gamesFor: number | null; gamesAgainst: number | null; displayName: string | null
 }
+
+// ==================== Loop-v15 types ====================
+export * from './event-summary'
+export * from './bulk-check-in'
