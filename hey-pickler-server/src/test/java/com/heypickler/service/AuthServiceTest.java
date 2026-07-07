@@ -4,6 +4,7 @@ import com.heypickler.common.exception.BizException;
 import com.heypickler.common.exception.ErrorCode;
 import com.heypickler.common.util.AesUtil;
 import com.heypickler.common.util.JwtUtil;
+import com.heypickler.common.util.WxBizDataCrypt;
 import com.heypickler.entity.AdminUser;
 import com.heypickler.entity.User;
 import com.heypickler.mapper.AdminUserMapper;
@@ -26,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
@@ -34,9 +36,11 @@ class AuthServiceTest {
     @Mock private AdminUserMapper adminUserMapper;
     @Mock private JwtUtil jwtUtil;
     @Mock private AesUtil aesUtil;
+    @Mock private WxBizDataCrypt wxBizDataCrypt;
     @Mock private RedisTemplate<String, Object> redisTemplate;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private ValueOperations<String, Object> valueOperations;
+    @Mock private org.springframework.web.client.RestTemplate restTemplate;
 
     @InjectMocks
     private AuthServiceImpl authService;
@@ -202,5 +206,103 @@ class AuthServiceTest {
         BizException ex = assertThrows(BizException.class,
                 () -> authService.appLogin("mock-code"));
         assertEquals(ErrorCode.USER_BANNED.getCode(), ex.getCode());
+    }
+
+    // ──────────────── Loop-v11 — AuthServiceImpl coverage sprint ────────────────
+
+    @Test
+    void appLogin_devMode_insertsNewUserAndReturnsToken() {
+        ReflectionTestUtils.setField(authService, "devMode", true);
+        // No existing user → new User is inserted (id remains null until refresh;
+        // AuthServiceImpl calls jwtUtil.generateAppToken(user.getId()) which
+        // is null at this point — stub lenient or use doReturn-style).
+        when(userMapper.selectOne(any())).thenReturn(null);
+        lenient().when(jwtUtil.generateAppToken(any())).thenReturn("app-token");
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+        Map<String, Object> result = authService.appLogin("test-code");
+        assertEquals("app-token", result.get("token"));
+        assertEquals(true, result.get("needBindPhone"));
+        verify(userMapper).insert(any(User.class));
+    }
+
+    @Test
+    void appLogin_devMode_existingUserNoPhone_needsBind() {
+        ReflectionTestUtils.setField(authService, "devMode", true);
+        User existing = new User();
+        existing.setId(1L);
+        existing.setOpenid("dev_test-code");
+        existing.setStatus("NORMAL");
+        when(userMapper.selectOne(any())).thenReturn(existing);
+        when(jwtUtil.generateAppToken(1L)).thenReturn("app-token");
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+        Map<String, Object> result = authService.appLogin("test-code");
+        assertEquals("app-token", result.get("token"));
+        assertEquals(true, result.get("needBindPhone"));
+        verify(userMapper).updateById(existing);
+    }
+
+    @Test
+    void appLogin_devMode_existingUserWithPhone_noBindNeeded() {
+        ReflectionTestUtils.setField(authService, "devMode", true);
+        User existing = new User();
+        existing.setId(1L);
+        existing.setOpenid("dev_test-code");
+        existing.setPhone("13800001111");
+        existing.setStatus("NORMAL");
+        when(userMapper.selectOne(any())).thenReturn(existing);
+        when(jwtUtil.generateAppToken(1L)).thenReturn("app-token");
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+        Map<String, Object> result = authService.appLogin("test-code");
+        assertEquals(false, result.get("needBindPhone"));
+    }
+
+    @Test
+    void appLogin_bannedUser_throwsUserBanned() {
+        ReflectionTestUtils.setField(authService, "devMode", true);
+        User banned = new User();
+        banned.setId(1L);
+        banned.setStatus("BANNED");
+        when(userMapper.selectOne(any())).thenReturn(banned);
+
+        BizException ex = assertThrows(BizException.class,
+                () -> authService.appLogin("any-code"));
+        assertEquals(ErrorCode.USER_BANNED.getCode(), ex.getCode());
+    }
+
+    @Test
+    void bindPhone_userNotFound_throwsNotFound() {
+        when(userMapper.selectById(7L)).thenReturn(null);
+        assertThrows(BizException.class, () -> authService.bindPhone(7L, "enc", "iv"));
+    }
+
+    @Test
+    void bindPhone_sessionExpired_throwsParam() {
+        User u = new User();
+        u.setId(7L);
+        u.setOpenid("oid");
+        when(userMapper.selectById(7L)).thenReturn(u);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get(anyString())).thenReturn(null);
+        assertThrows(BizException.class, () -> authService.bindPhone(7L, "enc", "iv"));
+    }
+
+    @Test
+    void bindPhone_validRequest_decryptsAndPersists() {
+        User u = new User();
+        u.setId(7L);
+        u.setOpenid("oid");
+        when(userMapper.selectById(7L)).thenReturn(u);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get(anyString())).thenReturn("session-key");
+        when(wxBizDataCrypt.decryptPhoneNumber("session-key", "enc", "iv"))
+                .thenReturn("13800001111");
+        when(aesUtil.encrypt("13800001111")).thenReturn("encrypted");
+
+        authService.bindPhone(7L, "enc", "iv");
+        assertEquals("encrypted", u.getPhone());
+        verify(userMapper).updateById(u);
     }
 }
