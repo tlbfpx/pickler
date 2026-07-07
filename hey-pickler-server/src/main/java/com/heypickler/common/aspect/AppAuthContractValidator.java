@@ -3,6 +3,7 @@ package com.heypickler.common.aspect;
 import com.heypickler.common.annotation.PublicAnonymousAccess;
 import com.heypickler.common.annotation.RequireAppUser;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
@@ -30,7 +31,7 @@ public class AppAuthContractValidator implements ApplicationRunner {
 
     private final RequestMappingHandlerMapping mapping;
 
-    public AppAuthContractValidator(RequestMappingHandlerMapping mapping) {
+    public AppAuthContractValidator(@Qualifier("requestMappingHandlerMapping") RequestMappingHandlerMapping mapping) {
         this.mapping = mapping;
     }
 

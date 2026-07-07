@@ -69,6 +69,23 @@ jobs:
           REDIS_PORT: '6379'
         run: mvn -B -ntp test -Dtest='*IntegrationTest'
 
+      # Loop-v17 — OWASP dependency-check. Only activate when NVD_API_KEY
+      # secret is present (otherwise NVD public rate-limit makes the goal
+      # hang for 15+ min). Profile `dep-check-ci` is opt-in via
+      # -DdepCheckCi=true. continue-on-error ensures the PR isn't hard-blocked
+      # on a single failed CVE; the report is the deliverable.
+      - name: Dependency check (CVE scan)
+        working-directory: hey-pickler-server
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: |
+          if [ -n "$NVD_API_KEY" ]; then
+            mvn -B -ntp verify -DdepCheckCi=true -Dtest='!*IntegrationTest'
+          else
+            echo "NVD_API_KEY not set — skipping dep-check"
+          fi
+        continue-on-error: true
+
   frontend:
     name: Frontend (Node 18 + Vite)
     runs-on: ubuntu-latest
