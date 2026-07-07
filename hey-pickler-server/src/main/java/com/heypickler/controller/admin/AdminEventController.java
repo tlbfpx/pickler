@@ -184,4 +184,13 @@ public class AdminEventController {
     public Result<List<PlacementDetailVO>> getPlacements(@PathVariable Long id) {
         return Result.ok(placementService.listByEventId(id));
     }
+
+    // ──────────────── Loop-v13 — operational summary endpoint ────────────────
+
+    @GetMapping("/{id}/summary")
+    @Operation(summary = "赛事运营汇总（报名/签到/队伍/比赛/费用/可转换状态）")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
+    public Result<com.heypickler.vo.EventSummaryVO> getEventSummary(@PathVariable Long id) {
+        return Result.ok(eventService.getEventSummary(id));
+    }
 }
