@@ -23,7 +23,7 @@ public interface EventService {
 
     void cancelRegistration(Long userId, Long eventId);
 
-    PageResult<EventVO> adminListEvents(String type, String status, String keyword, String location, String startTime, String endTime, int page, int size);
+    PageResult<EventVO> adminListEvents(String type, String status, String keyword, String location, String startTime, String endTime, String sort, int page, int size);
 
     EventVO getEventDetail(Long eventId);
 
