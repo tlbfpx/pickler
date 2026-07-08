@@ -18,6 +18,15 @@ public class PointChangeListener {
     @Async("rankingExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onPointChange(PointChangeEvent event) {
+        if (event.seasonCode() == null) {
+            // No current season — ranking.season is NOT NULL (V1), so a refresh would
+            // throw SQLException. Point records were still written (PlacementService
+            // tolerates a null season); skip ranking refresh until a season-bound event
+            // arrives. Common in dev/seed environments without a configured CURRENT season.
+            log.warn("Skipping ranking refresh for type={} — no current season (seasonCode=null).",
+                    event.type());
+            return;
+        }
         try {
             rankingService.refreshRankings(event.type(), event.seasonCode());
         } catch (Exception e) {
