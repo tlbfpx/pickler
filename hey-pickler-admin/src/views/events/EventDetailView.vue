@@ -13,68 +13,131 @@
       <div class="hero-top">
         <div class="hero-title-block">
           <div class="hero-back-row">
-            <el-button link size="small" @click="$router.back()">
+            <el-button
+              link
+              size="small"
+              @click="$router.back()"
+            >
               <el-icon><ArrowLeft /></el-icon>返回赛事列表
             </el-button>
           </div>
-          <h1 class="hero-title">{{ event.title }}</h1>
+          <h1 class="hero-title">
+            {{ event.title }}
+          </h1>
           <div class="hero-tags">
             <el-tooltip
               :content="statusTooltip(event.status)"
               placement="top"
             >
-              <el-tag :color="statusColor(event.status)" effect="dark" size="large" round>
+              <el-tag
+                :color="statusColor(event.status)"
+                effect="dark"
+                size="large"
+                round
+              >
                 {{ formatStatus(event.status) }}
               </el-tag>
             </el-tooltip>
-            <el-tag :color="getEventTypeColor(event.type)" effect="dark" size="default" round>
+            <el-tag
+              :color="getEventTypeColor(event.type)"
+              effect="dark"
+              size="default"
+              round
+            >
               {{ formatEventType(event.type) }}
             </el-tag>
-            <el-tag v-if="event.format" effect="plain" size="default">
+            <el-tag
+              v-if="event.format"
+              effect="plain"
+              size="default"
+            >
               {{ formatEventFormat(event.format) }}
             </el-tag>
-            <el-tag v-if="event.fee > 0" type="warning" size="default" effect="plain">
+            <el-tag
+              v-if="event.fee > 0"
+              type="warning"
+              size="default"
+              effect="plain"
+            >
               ¥{{ event.fee }}
             </el-tag>
-            <el-tag v-else type="success" size="default" effect="plain">
+            <el-tag
+              v-else
+              type="success"
+              size="default"
+              effect="plain"
+            >
               免费
             </el-tag>
           </div>
         </div>
-        <el-button type="primary" :icon="Edit" plain @click="editOpen = true">
+        <el-button
+          type="primary"
+          :icon="Edit"
+          plain
+          @click="editOpen = true"
+        >
           编辑信息
         </el-button>
-        <el-button type="success" :icon="CopyDocument" plain :loading="duplicateLoading" @click="handleDuplicate">
+        <el-button
+          type="success"
+          :icon="CopyDocument"
+          plain
+          :loading="duplicateLoading"
+          @click="handleDuplicate"
+        >
           复制并新建
         </el-button>
       </div>
       <el-divider class="hero-divider" />
       <div class="hero-stats">
         <div class="stat-cell">
-          <el-icon class="stat-icon"><Location /></el-icon>
+          <el-icon class="stat-icon">
+            <Location />
+          </el-icon>
           <div class="stat-content">
-            <div class="stat-label">比赛地点</div>
-            <div class="stat-value">{{ event.location || '未设置' }}</div>
+            <div class="stat-label">
+              比赛地点
+            </div>
+            <div class="stat-value">
+              {{ event.location || '未设置' }}
+            </div>
           </div>
         </div>
         <div class="stat-cell">
-          <el-icon class="stat-icon"><Clock /></el-icon>
+          <el-icon class="stat-icon">
+            <Clock />
+          </el-icon>
           <div class="stat-content">
-            <div class="stat-label">比赛时间</div>
-            <div class="stat-value">{{ event.eventTime ? formatDate(event.eventTime) : '未设置' }}</div>
+            <div class="stat-label">
+              比赛时间
+            </div>
+            <div class="stat-value">
+              {{ event.eventTime ? formatDate(event.eventTime) : '未设置' }}
+            </div>
           </div>
         </div>
         <div class="stat-cell">
-          <el-icon class="stat-icon"><Calendar /></el-icon>
+          <el-icon class="stat-icon">
+            <Calendar />
+          </el-icon>
           <div class="stat-content">
-            <div class="stat-label">报名截止</div>
-            <div class="stat-value">{{ event.registrationDeadline ? formatDate(event.registrationDeadline) : '未设置' }}</div>
+            <div class="stat-label">
+              报名截止
+            </div>
+            <div class="stat-value">
+              {{ event.registrationDeadline ? formatDate(event.registrationDeadline) : '未设置' }}
+            </div>
           </div>
         </div>
         <div class="stat-cell stat-cell-registration">
-          <el-icon class="stat-icon"><User /></el-icon>
+          <el-icon class="stat-icon">
+            <User />
+          </el-icon>
           <div class="stat-content">
-            <div class="stat-label">报名人数</div>
+            <div class="stat-label">
+              报名人数
+            </div>
             <div class="stat-value">
               <span class="big-num">{{ event.currentParticipants }}</span>
               <span class="small-num"> / {{ event.maxParticipants ?? '∞' }}</span>
@@ -101,16 +164,23 @@
     >
       <el-row :gutter="20">
         <el-col :span="6">
-          <div class="metric-label">已报名 / 容量</div>
+          <div class="metric-label">
+            已报名 / 容量
+          </div>
           <div class="metric-value">
             {{ summary.currentParticipants }} / {{ summary.maxParticipants ?? '∞' }}
-            <small v-if="summary.maxParticipants" class="metric-sub">
+            <small
+              v-if="summary.maxParticipants"
+              class="metric-sub"
+            >
               ({{ (summary.fillRate * 100).toFixed(0) }}%)
             </small>
           </div>
         </el-col>
         <el-col :span="6">
-          <div class="metric-label">签到率</div>
+          <div class="metric-label">
+            签到率
+          </div>
           <div class="metric-value">
             {{ (summary.registration.checkInRate * 100).toFixed(0) }}%
             <small class="metric-sub">
@@ -119,7 +189,9 @@
           </div>
         </el-col>
         <el-col :span="6">
-          <div class="metric-label">已确认队伍</div>
+          <div class="metric-label">
+            已确认队伍
+          </div>
           <div class="metric-value">
             {{ summary.teams.confirmed }}
             <small class="metric-sub">
@@ -128,7 +200,9 @@
           </div>
         </el-col>
         <el-col :span="6">
-          <div class="metric-label">完赛场次</div>
+          <div class="metric-label">
+            完赛场次
+          </div>
           <div class="metric-value">
             {{ summary.matches.completed }}
             <small class="metric-sub">
@@ -198,7 +272,10 @@
         v-model="activeTab"
         class="stage-tabs"
       >
-        <el-tab-pane label="基本信息" name="info">
+        <el-tab-pane
+          label="基本信息"
+          name="info"
+        >
           <el-descriptions
             :column="2"
             border
@@ -208,19 +285,35 @@
               {{ event.title }}
             </el-descriptions-item>
             <el-descriptions-item label="类型">
-              <el-tag :color="getEventTypeColor(event.type)" effect="dark" size="small">
+              <el-tag
+                :color="getEventTypeColor(event.type)"
+                effect="dark"
+                size="small"
+              >
                 {{ formatEventType(event.type) }}
               </el-tag>
             </el-descriptions-item>
-            <el-descriptions-item v-if="event.format" label="比赛形式">
-              <el-tag size="small" effect="plain">{{ formatEventFormat(event.format) }}</el-tag>
+            <el-descriptions-item
+              v-if="event.format"
+              label="比赛形式"
+            >
+              <el-tag
+                size="small"
+                effect="plain"
+              >
+                {{ formatEventFormat(event.format) }}
+              </el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="状态">
               <el-tooltip
                 :content="statusTooltip(event.status)"
                 placement="top"
               >
-                <el-tag :color="statusColor(event.status)" effect="dark" size="small">
+                <el-tag
+                  :color="statusColor(event.status)"
+                  effect="dark"
+                  size="small"
+                >
                   {{ formatStatus(event.status) }}
                 </el-tag>
               </el-tooltip>
@@ -238,13 +331,26 @@
               {{ event.currentParticipants }} / {{ event.maxParticipants ?? '∞' }}
             </el-descriptions-item>
             <el-descriptions-item label="报名费">
-              <span v-if="event.fee > 0" style="color: #d97706; font-weight: 600">¥{{ event.fee }}</span>
-              <span v-else style="color: #16a34a">免费</span>
+              <span
+                v-if="event.fee > 0"
+                style="color: #d97706; font-weight: 600"
+              >¥{{ event.fee }}</span>
+              <span
+                v-else
+                style="color: #16a34a"
+              >免费</span>
             </el-descriptions-item>
-            <el-descriptions-item v-if="event.minPoints" label="积分门槛">
+            <el-descriptions-item
+              v-if="event.minPoints"
+              label="积分门槛"
+            >
               <span style="color: #d97706">{{ event.minPoints }}+ 战力</span>
             </el-descriptions-item>
-            <el-descriptions-item v-if="event.bannerUrl" label="封面图" :span="2">
+            <el-descriptions-item
+              v-if="event.bannerUrl"
+              label="封面图"
+              :span="2"
+            >
               <el-image
                 :src="event.bannerUrl"
                 fit="cover"
