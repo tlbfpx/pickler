@@ -1,0 +1,92 @@
+# Loop-v18 — GitHub Dependabot config.
+#
+# Auto-creates PRs for dependency updates. Two ecosystems:
+# - npm (hey-pickler-admin + hey-pickler-wxapp)
+# - maven (hey-pickler-server)
+#
+# Configuration:
+# - Weekly check (Monday morning)
+# - Group related minor/patch updates into single PRs
+# - Limit open PRs to 10 per ecosystem
+# - Auto-assign to maintainers (loop-v18 backlog)
+# - PR labels: `dependencies`
+# - Commit prefix: `deps(`
+
+version: 2
+updates:
+  # ──────────────── Maven: hey-pickler-server ────────────────
+  - package-ecosystem: maven
+    directory: /hey-pickler-server
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 10
+    labels: [dependencies, java, backend]
+    commit-message:
+      prefix: deps(backend)
+    groups:
+      # Group patch + minor into a single weekly PR to reduce noise
+      patch-minor:
+        update-types: [minor, patch]
+      # Major bumps separated for explicit review
+      major:
+        update-types: [major]
+    ignore:
+      # Skip self-referencing modules
+      - dependency-name: "com.heypickler:*"
+      # Spring Boot 3.x major — manual upgrade per CLAUDE.md
+      - dependency-name: "org.springframework.boot:spring-boot-starter-parent"
+        update-types: [major]
+
+  # ──────────────── npm: hey-pickler-admin (Vue 3) ────────────────
+  - package-ecosystem: npm
+    directory: /hey-pickler-admin
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:30"
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 10
+    labels: [dependencies, frontend, admin]
+    commit-message:
+      prefix: deps(admin)
+    groups:
+      patch-minor:
+        update-types: [minor, patch]
+      major:
+        update-types: [major]
+    # Vue 2 → 3 already done (project on Vue 3.4)
+    ignore:
+      - dependency-name: "vue"
+        update-types: [major]
+
+  # ──────────────── npm: hey-pickler-wxapp (WeChat mini) ────────────────
+  - package-ecosystem: npm
+    directory: /hey-pickler-wxapp
+    schedule:
+      interval: weekly
+      day: monday
+      time: "10:00"
+      timezone: Asia/Shanghai
+    open-pull-requests-limit: 5
+    labels: [dependencies, frontend, wxapp]
+    commit-message:
+      prefix: deps(wxapp)
+    groups:
+      patch-minor:
+        update-types: [minor, patch]
+
+  # ──────────────── GitHub Actions ────────────────
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: tuesday
+      time: "09:00"
+      timezone: Asia/Shanghai
+    labels: [dependencies, ci]
+    commit-message:
+      prefix: deps(ci)
+    open-pull-requests-limit: 5
