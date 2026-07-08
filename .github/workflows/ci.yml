@@ -55,9 +55,15 @@ jobs:
         working-directory: hey-pickler-server
         run: mvn -B -ntp clean package -DskipTests
 
-      - name: Unit tests
+      - name: Unit tests + coverage gate
         working-directory: hey-pickler-server
-        run: mvn -B -ntp test -Dtest='!*IntegrationTest'
+        # Loop-v19 — run to the `verify` phase so jacoco:check (bound to
+        # verify in pom.xml) actually executes. `mvn test` stops at the test
+        # phase and silently skips the 80/60 coverage gate. -DskipITs keeps
+        # failsafe from re-running integration tests (they run in the next
+        # step with DB/Redis services). Verified locally: unit-only data
+        # clears the 80% instruction / 60% branch threshold.
+        run: mvn -B -ntp verify -DskipITs -Dtest='!*IntegrationTest'
 
       - name: Integration tests
         working-directory: hey-pickler-server
@@ -69,22 +75,31 @@ jobs:
           REDIS_PORT: '6379'
         run: mvn -B -ntp test -Dtest='*IntegrationTest'
 
-      # Loop-v17 — OWASP dependency-check. Only activate when NVD_API_KEY
-      # secret is present (otherwise NVD public rate-limit makes the goal
-      # hang for 15+ min). Profile `dep-check-ci` is opt-in via
-      # -DdepCheckCi=true. continue-on-error ensures the PR isn't hard-blocked
-      # on a single failed CVE; the report is the deliverable.
+      # Loop-v17/v19 — OWASP dependency-check. NVD now mandates an API key;
+      # without it the goal fails with NoData / NVD-403 (a scan-infra issue,
+      # not a code problem). The mvn goal runs under continue-on-error because
+      # it ALSO exits non-zero on those infra failures. The real security gate
+      # is the next step (CVE gate), which parses the JSON report and blocks
+      # only on CRITICAL (CVSS>=9) findings — so a transient NVD outage can't
+      # block every PR while a real critical CVE still does.
       - name: Dependency check (CVE scan)
         working-directory: hey-pickler-server
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
-          if [ -n "$NVD_API_KEY" ]; then
-            mvn -B -ntp verify -DdepCheckCi=true -Dtest='!*IntegrationTest'
-          else
-            echo "NVD_API_KEY not set — skipping dep-check"
+          if [ -z "$NVD_API_KEY" ]; then
+            echo "::warning::NVD_API_KEY secret not set — CVE scan skipped. Apply for a free key (https://nvd.nist.gov/developers/request-an-api-key) and add it as a repo secret before production."
+            exit 0
           fi
+          mvn -B -ntp verify -DdepCheckCi=true -Dtest='!*IntegrationTest' \
+            || echo "::warning::dependency-check goal returned non-zero — scan may be incomplete (NVD rate-limit/outage). See target/dependency-check-report.html."
         continue-on-error: true
+
+      - name: CVE gate (block on CRITICAL CVSS≥9)
+        working-directory: hey-pickler-server
+        # NOT continue-on-error — this is the hard gate. Skips gracefully (exit 0)
+        # when no report exists (scan skipped/failed), so infra issues don't block PRs.
+        run: bash ../scripts/cve-gate.sh target/dependency-check-report.json
 
   frontend:
     name: Frontend (Node 18 + Vite)
