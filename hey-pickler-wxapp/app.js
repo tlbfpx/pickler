@@ -1,12 +1,39 @@
 // App.js
+
+// === 上线配置（发布前必改）===
+// 正式版 / 体验版用生产 HTTPS 域名（微信要求已备案）。
+// 开发工具（envVersion=develop）自动回退到 localhost，无需手动切换。
+const PROD_BASE_URL = 'https://api.your-domain.com/api/app' // TODO(上线前): 替换为真实生产域名
+
+function resolveBaseUrl() {
+  try {
+    const envVersion = wx.getAccountInfoSync().miniProgram.envVersion
+    // develop=开发工具, trial=体验版, release=正式版
+    if (envVersion === 'develop') return 'http://localhost:8080/api/app'
+    return PROD_BASE_URL
+  } catch (e) {
+    return PROD_BASE_URL
+  }
+}
+
 App({
   globalData: {
     userInfo: null,
     token: null,
-    baseUrl: 'http://localhost:8080/api/app'
+    baseUrl: resolveBaseUrl()
   },
 
   onLaunch() {
+    // 上线防御：正式/体验版若 baseUrl 仍是占位符或 localhost，立即告警（防发布忘改）
+    const url = this.globalData.baseUrl
+    if (url.includes('your-domain') || url.includes('localhost')) {
+      let env = 'release'
+      try { env = wx.getAccountInfoSync().miniProgram.envVersion } catch (e) {}
+      if (env !== 'develop') {
+        console.error('[上线配置错误] baseUrl=' + url + '，正式/体验版将无法访问后端。请修改 app.js 的 PROD_BASE_URL。')
+      }
+    }
+
     // 检查登录状态
     const token = wx.getStorageSync('token')
     if (token) {
