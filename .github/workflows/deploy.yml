@@ -35,6 +35,12 @@ concurrency:
   group: deploy-${{ inputs.environment }}
   cancel-in-progress: false   # don't cancel an in-flight deploy
 
+# Least privilege — this pipeline builds an image and triggers external deploy
+# webhooks; it does not push back to the repo or create releases, so read-only
+# GITHUB_TOKEN is sufficient.
+permissions:
+  contents: read
+
 jobs:
   preflight:
     name: Preflight (config check)
@@ -49,8 +55,9 @@ jobs:
         env:
           PROD_URL: ${{ secrets.PRODUCTION_URL }}
           STAGING_URL: ${{ secrets.STAGING_URL }}
+          ENVIRONMENT: ${{ inputs.environment }}
         run: |
-          if [ "${{ inputs.environment }}" = "production" ]; then
+          if [ "$ENVIRONMENT" = "production" ]; then
             url="$PROD_URL"; label="PRODUCTION_URL"
           else
             url="$STAGING_URL"; label="STAGING_URL"
@@ -123,14 +130,19 @@ jobs:
       - name: Trigger deploy
         env:
           DEPLOY_HOOK: ${{ secrets.STAGING_DEPLOY_HOOK }}
+          # Pass user-controlled ref via env (not ${{ }} interpolation in run:)
+          # to avoid shell injection. JSON built with jq for proper escaping.
+          REF: ${{ inputs.ref }}
+          IMAGE: hey-pickler-server:${{ github.sha }}
         run: |
           if [ -z "$DEPLOY_HOOK" ]; then
-            echo "::warning::STAGING_DEPLOY_HOOK not set — image not shipped. Configure the webhook to deploy hey-pickler-server:${{ github.sha }}."
+            echo "::warning::STAGING_DEPLOY_HOOK not set — image not shipped. Configure the webhook to deploy $IMAGE."
             exit 0
           fi
+          payload=$(jq -nc --arg image "$IMAGE" --arg ref "$REF" '{image:$image, ref:$ref}')
           curl -fsS -X POST "$DEPLOY_HOOK" \
             -H "Content-Type: application/json" \
-            -d "{\"image\":\"hey-pickler-server:${{ github.sha }}\",\"ref\":\"${{ inputs.ref }}\"}"
+            -d "$payload"
 
       - name: Wait + smoke re-run (the real health gate)
         env:
@@ -207,14 +219,17 @@ jobs:
       - name: Trigger production deploy
         env:
           DEPLOY_HOOK: ${{ secrets.PRODUCTION_DEPLOY_HOOK }}
+          REF: ${{ inputs.ref }}
+          IMAGE: hey-pickler-server:${{ github.sha }}
         run: |
           if [ -z "$DEPLOY_HOOK" ]; then
-            echo "::warning::PRODUCTION_DEPLOY_HOOK not set — image not shipped. Configure the webhook to deploy hey-pickler-server:${{ github.sha }}."
+            echo "::warning::PRODUCTION_DEPLOY_HOOK not set — image not shipped. Configure the webhook to deploy $IMAGE."
             exit 0
           fi
+          payload=$(jq -nc --arg image "$IMAGE" --arg ref "$REF" '{image:$image, ref:$ref}')
           curl -fsS -X POST "$DEPLOY_HOOK" \
             -H "Content-Type: application/json" \
-            -d "{\"image\":\"hey-pickler-server:${{ github.sha }}\",\"ref\":\"${{ inputs.ref }}\"}"
+            -d "$payload"
 
       - name: Wait + smoke re-run (the real health gate)
         env:
@@ -225,5 +240,9 @@ jobs:
 
       - name: Notify
         if: always()
+        env:
+          SHA: ${{ github.sha }}
+          REF: ${{ inputs.ref }}
+          STATUS: ${{ job.status }}
         run: |
-          echo "::notice::Production deploy ${{ github.sha }} (${{ inputs.ref }}) — ${{ job.status }}"
+          echo "::notice::Production deploy $SHA ($REF) — $STATUS"
