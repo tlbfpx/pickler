@@ -365,9 +365,15 @@
                         <artifactId>dependency-check-maven</artifactId>
                         <version>9.2.0</version>
                         <configuration>
+                            <!-- Loop-v19 — failBuildOnCVSS is advisory: CI runs this
+                                 goal under continue-on-error because dependency-check
+                                 ALSO exits non-zero on scan-infra failures (NVD 403 /
+                                 NoData when NVD_API_KEY is unset). The hard gate is
+                                 scripts/cve-gate.sh, which parses the JSON report
+                                 produced via <format> below and blocks on CVSS>=9. -->
                             <failBuildOnCVSS>7.0</failBuildOnCVSS>
                             <skipTestScope>true</skipTestScope>
-                            <format>HTML</format>
+                            <format>HTML,JSON</format>
                         </configuration>
                         <executions>
                             <execution>

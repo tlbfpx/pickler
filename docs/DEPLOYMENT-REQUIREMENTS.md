@@ -78,7 +78,7 @@
 | 软件 | 版本 | 用途 | 配置要求 |
 |------|------|------|---------|
 | MySQL | **8.0+** | 主数据库 | InnoDB, utf8mb4, max_connections=500 |
-| Redis | **6.x+** | 缓存 / 限流 / Session | 开启持久化, maxmemory 2gb |
+| Redis | **6.x+** | 缓存 / 限流 / Session | 开启持久化, maxmemory ≥ 512MB（生产推荐 1GB），eviction 策略 `allkeys-lru` |
 
 ### 3.4 微信平台
 
@@ -133,10 +133,19 @@
 
 ### 4.3 数据库初始化
 
-Flyway 自动执行迁移脚本：
-- `V1__init_schema.sql` — 基础表结构
-- `V2__seed_data.sql` — 种子数据
-- `V3__alter_tables.sql` — 表结构变更
+Flyway 在应用启动时自动执行 `hey-pickler-server/src/main/resources/db/migration/` 下未应用的迁移。当前 head：**V17__add_point_record_idempotency.sql**（共 17 个版本，V1 → V17）。
+
+主要演进：
+- `V1__init_schema.sql` / `V2__init_data.sql` — 基础表结构 + 种子数据
+- `V8__add_operation_log.sql` — 审计日志表（append-only，无软删字段）
+- `V11__dual_points_system.sql` — STAR(战力) / PARTY(活力) 双积分体系
+- `V12__match_form_team_grouping.sql` — 双打/混打组队 + 分组（含 `uk_event_member` 唯一键）
+- `V13__match_play.sql` — 比赛对局表
+- `V14__placement_points.sql` — 名次发分配置表
+- `V16__add_notification.sql` — 站内通知表
+- `V17__add_point_record_idempotency.sql` — 发分幂等（当前 head）
+
+> ⚠️ 完整清单以 `db/migration/` 目录为准（本文档可能滞后于代码）。**已部署环境的旧 migration 禁止改写**——新改动一律追加新版本（V18__...）。MySQL ≥ 8.0.16（V12 的 CHECK 约束依赖此版本）。
 
 ## 五、前端构建详情
 

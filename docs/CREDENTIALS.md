@@ -60,6 +60,25 @@ Login at `/login` with `INITIAL_ADMIN_USERNAME` / `INITIAL_ADMIN_PASSWORD`. Imme
 navigate to `/admins` → own user → change password. The bootstrap password is now stale
 but still in `.env` (consider rotating or zeroing after change).
 
+### 1.5 CI CVE scanning (NVD_API_KEY)
+
+`NVD_API_KEY` is a **GitHub Actions secret** (not a runtime env var) that enables
+OWASP dependency-check in CI. Since 2024 the NVD rejects anonymous API requests
+with HTTP 403, so without a key the CVE scan is skipped and the dependency CVE
+posture is **unknown** — `cve-gate.sh` then has no report to inspect and passes
+by default. Do not go live in this state.
+
+Apply (free, approval usually within a day): https://nvd.nist.gov/developers/request-an-api-key
+
+Add as a repo secret named `NVD_API_KEY` → Settings → Secrets and variables →
+Actions. Once set, CI runs `dependency-check` on every build and
+`scripts/cve-gate.sh` hard-blocks the build on any CRITICAL (CVSS≥9) finding
+while leaving HIGH (7.0–8.9) advisory in `target/dependency-check-report.html`.
+
+**Pre-production checklist**: confirm at least one CI run with `NVD_API_KEY` set
+produces `target/dependency-check-report.html` + `.json` and prints
+"CVE gate passed — no CRITICAL vulnerabilities".
+
 ---
 
 ## 2. Upgrading from pre-hardening version
