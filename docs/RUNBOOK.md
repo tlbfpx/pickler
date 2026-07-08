@@ -82,7 +82,8 @@ WHERE COMMAND != 'Sleep' AND TIME > 5;
 
 ### 5.2 内存爆
 - `INFO memory` 看 used_memory_peak
-- 默认 256MB 不够时调整 maxmemory-policy allkeys-lru
+- 生产基线 `maxmemory` 512MB~1GB、eviction 策略 `allkeys-lru`（见 `DEPLOYMENT-REQUIREMENTS.md` §3.3）
+- `used_memory` 逼近 `maxmemory` 时先排查大 key：`redis-cli --bigkeys`
 
 ## 6. 紧急回滚
 
@@ -100,9 +101,12 @@ java -jar target/hey-pickler-server-1.X.Y.jar
 ```bash
 # 查 migration 历史
 mvn flyway:info
-# 回滚指定 migration（注意破坏性）
-mvn flyway:undo -Dflyway.undo=N
 ```
+
+> ⚠️ **Flyway 社区版不支持 `undo`**（Teams/Enterprise 付费功能）。本项目用 Boot 管理的社区版，`mvn flyway:undo` 会直接报 `Command 'undo' not found`。回滚策略：
+> 1. **优先前向修复**：新增 `V(N+1)__fix_...` 迁移修正问题（Flyway 设计哲学，安全、可重入）。
+> 2. **数据级回滚**：用部署前备份（§4.3 mysqldump 全量 + binlog）恢复到时间点；仅用于无法前向修复的破坏性 schema 变更。
+> 3. **极端情况**（需停服）：维护窗口内手动 `flyway repair` + 点对点 SQL，必须 DBA review。
 
 ### 6.3 紧急停机
 ```bash
