@@ -479,12 +479,7 @@ import { getDashboardStats } from '@/api/dashboard'
 import { getEventList } from '@/api/events'
 import { useAuthStore } from '@/stores/auth'
 import Pagination from '@/components/common/Pagination.vue'
-import * as echarts from 'echarts/core'
-import { LineChart, BarChart, PieChart } from 'echarts/charts'
-import { TitleComponent, TooltipComponent, GridComponent, LegendComponent } from 'echarts/components'
-import { CanvasRenderer } from 'echarts/renderers'
-
-echarts.use([LineChart, BarChart, PieChart, TitleComponent, TooltipComponent, GridComponent, LegendComponent, CanvasRenderer])
+import * as echarts from 'echarts'
 import { TERMS, TIER_NAME, TIER_COLOR } from '@/constants/terms'
 import { statusTooltip } from '@/constants/eventStatus'
 import type { DashboardStats } from '@/types'
@@ -701,7 +696,7 @@ function renderCharts() {
       yAxis: { type: 'value', minInterval: 1, axisLine: { show: false }, axisTick: { show: false }, splitLine: { lineStyle: { color: '#f3f4f6' } }, axisLabel: { color: '#9ca3af', fontSize: 11 } },
       series: [{ type: 'line', data: stats.dailyNewUsers.map(d => d.count), smooth: true, showSymbol: false,
         lineStyle: { color: '#667eea', width: 2.5 }, itemStyle: { color: '#667eea' },
-        areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(102,126,234,0.25)' }, { offset: 1, color: 'rgba(102,126,234,0.01)' }]) }
+        areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(102,126,234,0.25)' }, { offset: 1, color: 'rgba(102,126,234,0.01)' }] } }
       }]
     })
   }
@@ -714,7 +709,7 @@ function renderCharts() {
       xAxis: { type: 'category', data: dates, axisLine: { lineStyle: { color: '#e5e7eb' } }, axisTick: { show: false }, axisLabel: { color: '#9ca3af', fontSize: 11 } },
       yAxis: { type: 'value', minInterval: 1, axisLine: { show: false }, axisTick: { show: false }, splitLine: { lineStyle: { color: '#f3f4f6' } }, axisLabel: { color: '#9ca3af', fontSize: 11 } },
       series: [{ type: 'bar', data: stats.dailyRegistrations.map(d => d.count), barMaxWidth: 14,
-        itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: '#43e97b' }, { offset: 1, color: '#a8edea' }]), borderRadius: [4, 4, 0, 0] }
+        itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#43e97b' }, { offset: 1, color: '#a8edea' }] }, borderRadius: [4, 4, 0, 0] }
       }]
     })
   }
@@ -747,8 +742,8 @@ const fetchStats = async () => {
     const res = await getDashboardStats()
     if (res.code === 0) { Object.assign(stats, res.data); await nextTick(); renderCharts() }
     else ElMessage.error(res.message || '获取数据失败')
-  } catch {
-    
+  } catch (e) {
+    console.error('[fetchStats error]', e)
   }
   finally { loading.value = false }
 }
