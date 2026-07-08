@@ -1,8 +1,18 @@
 name: Deploy (CD)
 
 # Loop-v19 — production deploy pipeline. Manual trigger only (workflow_dispatch).
-# Inherits CI status by checking the most recent successful run on the
-# ref we're deploying from.
+#
+# Two-stage verification:
+#   1. `preflight`  — verifies the target URL secret is configured. Does NOT
+#                     require the target to be reachable, so first-time deploys
+#                     are not dead-locked by a missing/stale environment.
+#   2. post-deploy  — runs scripts/smoke-test.sh against the freshly deployed
+#                     target ("Wait + smoke re-run"). This is the real health gate.
+#
+# NOTE on the deploy *action*: registry push + deploy-hook trigger are gated on
+# configured secrets (REGISTRY / *_DEPLOY_HOOK). When unset, the pipeline still
+# builds and validates but emits ::warning:: and does NOT ship. Wire the secrets
+# up to make it actually deploy.
 
 on:
   workflow_dispatch:
@@ -26,31 +36,46 @@ concurrency:
   cancel-in-progress: false   # don't cancel an in-flight deploy
 
 jobs:
-  smoke-test:
-    name: Smoke test (post-deploy)
+  preflight:
+    name: Preflight (config check)
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      target_url: ${{ steps.url.outputs.value }}
 
     steps:
-      - name: Run smoke test
+      - name: Verify target URL secret is configured
+        id: url
         env:
-          BASE_URL: ${{ inputs.environment == 'production' && secrets.PRODUCTION_URL || secrets.STAGING_URL }}
+          PROD_URL: ${{ secrets.PRODUCTION_URL }}
+          STAGING_URL: ${{ secrets.STAGING_URL }}
         run: |
-          if [ -z "$BASE_URL" ]; then
-            echo "::error::Missing ${{ inputs.environment == 'production' && 'PRODUCTION_URL' || 'STAGING_URL' }} secret"
+          if [ "${{ inputs.environment }}" = "production" ]; then
+            url="$PROD_URL"; label="PRODUCTION_URL"
+          else
+            url="$STAGING_URL"; label="STAGING_URL"
+          fi
+          if [ -z "$url" ]; then
+            echo "::error::Missing $label secret — configure it before deploying."
             exit 1
           fi
-          bash scripts/smoke-test.sh
+          echo "value=$url" >> "$GITHUB_OUTPUT"
+          echo "Resolved target: $url"
 
   deploy-staging:
     name: Deploy to staging
-    needs: smoke-test
-    if: github.event.inputs.environment == 'staging' && github.event_name == 'workflow_dispatch'
+    needs: preflight
+    if: inputs.environment == 'staging'
     runs-on: ubuntu-latest
     environment:
       name: staging
-      url: ${{ secrets.STAGING_URL }}
-    timeout-minutes: 15
+      url: ${{ needs.preflight.outputs.target_url }}
+    timeout-minutes: 20
+    env:
+      # Hoisted to job env so the `if: env.REGISTRY != ''` conditions below
+      # actually evaluate (secrets referenced only inside `with:` are NOT
+      # exposed as env and cannot be tested in `if`).
+      REGISTRY: ${{ secrets.REGISTRY }}
 
     steps:
       - name: Checkout
@@ -74,39 +99,57 @@ jobs:
           docker build -t hey-pickler-server:${{ github.sha }} .
           docker tag hey-pickler-server:${{ github.sha }} hey-pickler-server:staging-latest
 
-      - name: Push to registry
+      - name: Login to registry
+        if: env.REGISTRY != ''
         uses: docker/login-action@v3
         with:
           registry: ${{ secrets.REGISTRY }}
           username: ${{ secrets.REGISTRY_USER }}
           password: ${{ secrets.REGISTRY_PASS }}
+
+      - name: Push to registry
         if: env.REGISTRY != ''
+        run: |
+          docker tag hey-pickler-server:${{ github.sha }} "$REGISTRY/hey-pickler-server:${{ github.sha }}"
+          docker tag hey-pickler-server:${{ github.sha }} "$REGISTRY/hey-pickler-server:staging-latest"
+          docker push "$REGISTRY/hey-pickler-server:${{ github.sha }}"
+          docker push "$REGISTRY/hey-pickler-server:staging-latest"
+
+      - name: Push to registry (skipped — secret not set)
+        if: env.REGISTRY == ''
+        run: |
+          echo "::warning::REGISTRY secret not set — image built locally but NOT pushed. Configure REGISTRY / REGISTRY_USER / REGISTRY_PASS to ship."
 
       - name: Trigger deploy
-        run: |
-          echo "Would deploy hey-pickler-server:${{ github.sha }} to staging"
-          echo "Current infra: ${{ secrets.STAGING_DEPLOY_HOOK }}"
-          # Uncomment in real env:
-          # curl -X POST "$STAGING_DEPLOY_HOOK" \
-          #   -H "Content-Type: application/json" \
-          #   -d "{\"image\":\"hey-pickler-server:${{ github.sha }}\"}"
-
-      - name: Wait + smoke re-run
         env:
-          BASE_URL: ${{ secrets.STAGING_URL }}
+          DEPLOY_HOOK: ${{ secrets.STAGING_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "::warning::STAGING_DEPLOY_HOOK not set — image not shipped. Configure the webhook to deploy hey-pickler-server:${{ github.sha }}."
+            exit 0
+          fi
+          curl -fsS -X POST "$DEPLOY_HOOK" \
+            -H "Content-Type: application/json" \
+            -d "{\"image\":\"hey-pickler-server:${{ github.sha }}\",\"ref\":\"${{ inputs.ref }}\"}"
+
+      - name: Wait + smoke re-run (the real health gate)
+        env:
+          BASE_URL: ${{ needs.preflight.outputs.target_url }}
         run: |
           sleep 30
           bash scripts/smoke-test.sh
 
   deploy-production:
     name: Deploy to production
-    needs: smoke-test
-    if: github.event.inputs.environment == 'production' && github.event_name == 'workflow_dispatch'
+    needs: preflight
+    if: inputs.environment == 'production'
     runs-on: ubuntu-latest
     environment:
       name: production
-      url: ${{ secrets.PRODUCTION_URL }}
+      url: ${{ needs.preflight.outputs.target_url }}
     timeout-minutes: 30
+    env:
+      REGISTRY: ${{ secrets.REGISTRY }}
 
     steps:
       - name: Checkout
@@ -114,15 +157,14 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
-      - name: Pre-deploy backup reminder
+      - name: Pre-deploy backup
         env:
           DB_BACKUP_HOOK: ${{ secrets.DB_BACKUP_HOOK }}
         run: |
           if [ -n "$DB_BACKUP_HOOK" ]; then
-            curl -X POST "$DB_BACKUP_HOOK"
-            echo "Pre-deploy DB backup triggered"
+            curl -fsS -X POST "$DB_BACKUP_HOOK" && echo "Pre-deploy DB backup triggered"
           else
-            echo "::warning::No DB_BACKUP_HOOK secret — skipping backup"
+            echo "::warning::DB_BACKUP_HOOK secret not set — skipping pre-deploy backup. STRONGLY recommended before any production deploy."
           fi
 
       - name: Set up JDK 17
@@ -135,24 +177,48 @@ jobs:
         working-directory: hey-pickler-server
         run: mvn -B -ntp clean package -DskipTests
 
-      - name: Build + push Docker image
+      - name: Build Docker image
         working-directory: hey-pickler-server
         run: |
           docker build -t hey-pickler-server:${{ github.sha }} .
           docker tag hey-pickler-server:${{ github.sha }} hey-pickler-server:production-latest
 
-      - name: Trigger production deploy
-        run: |
-          echo "Would deploy hey-pickler-server:${{ github.sha }} to production"
-          echo "Current infra: ${{ secrets.PRODUCTION_DEPLOY_HOOK }}"
-          # Uncomment in real env:
-          # curl -X POST "$PRODUCTION_DEPLOY_HOOK" \
-          #   -H "Content-Type: application/json" \
-          #   -d "{\"image\":\"hey-pickler-server:${{ github.sha }}\"}"
+      - name: Login to registry
+        if: env.REGISTRY != ''
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_PASS }}
 
-      - name: Wait + smoke re-run
+      - name: Push to registry
+        if: env.REGISTRY != ''
+        run: |
+          docker tag hey-pickler-server:${{ github.sha }} "$REGISTRY/hey-pickler-server:${{ github.sha }}"
+          docker tag hey-pickler-server:${{ github.sha }} "$REGISTRY/hey-pickler-server:production-latest"
+          docker push "$REGISTRY/hey-pickler-server:${{ github.sha }}"
+          docker push "$REGISTRY/hey-pickler-server:production-latest"
+
+      - name: Push to registry (skipped — secret not set)
+        if: env.REGISTRY == ''
+        run: |
+          echo "::warning::REGISTRY secret not set — image built locally but NOT pushed. Configure REGISTRY / REGISTRY_USER / REGISTRY_PASS to ship."
+
+      - name: Trigger production deploy
         env:
-          BASE_URL: ${{ secrets.PRODUCTION_URL }}
+          DEPLOY_HOOK: ${{ secrets.PRODUCTION_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "::warning::PRODUCTION_DEPLOY_HOOK not set — image not shipped. Configure the webhook to deploy hey-pickler-server:${{ github.sha }}."
+            exit 0
+          fi
+          curl -fsS -X POST "$DEPLOY_HOOK" \
+            -H "Content-Type: application/json" \
+            -d "{\"image\":\"hey-pickler-server:${{ github.sha }}\",\"ref\":\"${{ inputs.ref }}\"}"
+
+      - name: Wait + smoke re-run (the real health gate)
+        env:
+          BASE_URL: ${{ needs.preflight.outputs.target_url }}
         run: |
           sleep 60
           bash scripts/smoke-test.sh
@@ -160,4 +226,4 @@ jobs:
       - name: Notify
         if: always()
         run: |
-          echo "::notice::Production deploy ${{ github.sha }} — ${{ job.status }}"
+          echo "::notice::Production deploy ${{ github.sha }} (${{ inputs.ref }}) — ${{ job.status }}"
