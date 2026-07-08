@@ -19,6 +19,7 @@
         :keyword="filterKeyword"
         :type="filterType"
         :status="filterStatus"
+        :sort="filterSort"
         @filter="onFilter"
         @reset="onReset"
       />
@@ -283,6 +284,9 @@ const loading = ref(false)
 const filterKeyword = ref('')
 const filterType = ref('')
 const filterStatus = ref('')
+// Loop-v18 — sort selector. Default 'event_time_desc'. Server supports
+// 6 values per the loop-v16A OpenSpec; expose the 3 most useful here.
+const filterSort = ref('event_time_desc')
 const eventList = ref<Event[]>([])
 
 const pagination = reactive({
@@ -311,7 +315,8 @@ const fetchEvents = async () => {
       size: pagination.size,
       keyword: filterKeyword.value || undefined,
       type: filterType.value,
-      status: filterStatus.value
+      status: filterStatus.value,
+      sort: filterSort.value
     })
     if (res.code === 0) {
       eventList.value = res.data.list || []
@@ -331,10 +336,11 @@ const handleFilter = () => {
   fetchEvents()
 }
 
-const onFilter = (payload: { keyword: string; type: string; status: string }) => {
+const onFilter = (payload: { keyword: string; type: string; status: string; sort: string }) => {
   filterKeyword.value = payload.keyword
   filterType.value = payload.type
   filterStatus.value = payload.status
+  filterSort.value = payload.sort
   handleFilter()
 }
 

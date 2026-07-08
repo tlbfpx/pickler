@@ -265,6 +265,9 @@ export interface PageParams {
   startTime?: string
   endTime?: string
   matchType?: string
+  /** Loop-v18 — server-supported sort key, e.g. event_time_asc/desc,
+   *  created_at_asc/desc, current_participants_asc/desc. */
+  sort?: string
 }
 
 // ==================== File Upload ====================
