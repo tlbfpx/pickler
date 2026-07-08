@@ -278,28 +278,36 @@
       </div>
       <div class="trend-grid">
         <div class="trend-cell">
-          <div class="trend-label">新增用户</div>
+          <div class="trend-label">
+            新增用户
+          </div>
           <div
             ref="trendUsersRef"
             class="chart-xs"
           />
         </div>
         <div class="trend-cell">
-          <div class="trend-label">新增报名</div>
+          <div class="trend-label">
+            新增报名
+          </div>
           <div
             ref="trendRegsRef"
             class="chart-xs"
           />
         </div>
         <div class="trend-cell">
-          <div class="trend-label">新增赛事</div>
+          <div class="trend-label">
+            新增赛事
+          </div>
           <div
             ref="trendEventsRef"
             class="chart-xs"
           />
         </div>
         <div class="trend-cell">
-          <div class="trend-label">完赛率</div>
+          <div class="trend-label">
+            完赛率
+          </div>
           <div
             ref="trendRateRef"
             class="chart-xs"
@@ -471,7 +479,12 @@ import { getDashboardStats } from '@/api/dashboard'
 import { getEventList } from '@/api/events'
 import { useAuthStore } from '@/stores/auth'
 import Pagination from '@/components/common/Pagination.vue'
-import * as echarts from 'echarts'
+import * as echarts from 'echarts/core'
+import { LineChart, BarChart, PieChart } from 'echarts/charts'
+import { TitleComponent, TooltipComponent, GridComponent, LegendComponent } from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
+
+echarts.use([LineChart, BarChart, PieChart, TitleComponent, TooltipComponent, GridComponent, LegendComponent, CanvasRenderer])
 import { TERMS, TIER_NAME, TIER_COLOR } from '@/constants/terms'
 import { statusTooltip } from '@/constants/eventStatus'
 import type { DashboardStats } from '@/types'

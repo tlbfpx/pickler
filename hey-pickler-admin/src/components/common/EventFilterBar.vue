@@ -15,8 +15,14 @@
       style="width: 150px"
       @change="emitFilter"
     >
-      <el-option :label="TERMS.STAR.type" value="STAR" />
-      <el-option :label="TERMS.PARTY.type" value="PARTY" />
+      <el-option
+        :label="TERMS.STAR.type"
+        value="STAR"
+      />
+      <el-option
+        :label="TERMS.PARTY.type"
+        value="PARTY"
+      />
     </el-select>
     <el-select
       v-model="local.status"
@@ -25,12 +31,30 @@
       style="width: 150px"
       @change="emitFilter"
     >
-      <el-option label="草稿" value="DRAFT" />
-      <el-option label="报名中" value="OPEN" />
-      <el-option label="名额已满" value="FULL" />
-      <el-option label="进行中" value="IN_PROGRESS" />
-      <el-option label="已结束" value="COMPLETED" />
-      <el-option label="已取消" value="CANCELLED" />
+      <el-option
+        label="草稿"
+        value="DRAFT"
+      />
+      <el-option
+        label="报名中"
+        value="OPEN"
+      />
+      <el-option
+        label="名额已满"
+        value="FULL"
+      />
+      <el-option
+        label="进行中"
+        value="IN_PROGRESS"
+      />
+      <el-option
+        label="已结束"
+        value="COMPLETED"
+      />
+      <el-option
+        label="已取消"
+        value="CANCELLED"
+      />
     </el-select>
     <!-- Loop-v18 — sort selector (multi-keyword backend support). -->
     <el-select
@@ -39,13 +63,32 @@
       style="width: 160px"
       @change="emitFilter"
     >
-      <el-option label="开赛时间 ↓" value="event_time_desc" />
-      <el-option label="开赛时间 ↑" value="event_time_asc" />
-      <el-option label="创建时间 ↓" value="created_at_desc" />
-      <el-option label="报名数 ↓" value="current_participants_desc" />
+      <el-option
+        label="开赛时间 ↓"
+        value="event_time_desc"
+      />
+      <el-option
+        label="开赛时间 ↑"
+        value="event_time_asc"
+      />
+      <el-option
+        label="创建时间 ↓"
+        value="created_at_desc"
+      />
+      <el-option
+        label="报名数 ↓"
+        value="current_participants_desc"
+      />
     </el-select>
-    <el-button type="primary" @click="emitFilter">查询</el-button>
-    <el-button @click="emitReset">重置</el-button>
+    <el-button
+      type="primary"
+      @click="emitFilter"
+    >
+      查询
+    </el-button>
+    <el-button @click="emitReset">
+      重置
+    </el-button>
     <div class="quick-chips">
       <el-tag
         v-for="c in chips"

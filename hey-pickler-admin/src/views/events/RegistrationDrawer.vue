@@ -291,8 +291,8 @@ const handleBulkCheckIn = async () => {
     } else {
       ElMessage.error(res.message || '批量签到失败')
     }
-  } catch (e: any) {
-    ElMessage.error(e?.message || '批量签到失败')
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '批量签到失败')
   } finally {
     bulkLoading.value = false
   }
