@@ -6,7 +6,7 @@ async function gotoUsers(adminPage: Page) {
   await adminPage.locator('.el-menu-item').filter({ hasText: '用户管理' }).click()
   await adminPage.waitForURL(/\/users$/)
   await expect(adminPage.locator('h1')).toContainText('用户管理')
-  await expect(adminPage.locator('.card .el-table').first()).toBeVisible()
+  await expect(adminPage.locator('.page-card .el-table').first()).toBeVisible()
 }
 
 test.describe('用户管理', () => {
@@ -20,7 +20,7 @@ test.describe('用户管理', () => {
     const searchInput = adminPage.getByPlaceholder('按手机号或昵称搜索')
     await searchInput.fill('test')
     await adminPage.getByRole('button', { name: '搜索' }).click()
-    await expect(adminPage.locator('.card .el-table').first()).toBeVisible()
+    await expect(adminPage.locator('.page-card .el-table').first()).toBeVisible()
   })
 
   test('按城市搜索', async ({ adminPage }) => {
@@ -30,7 +30,7 @@ test.describe('用户管理', () => {
     if (await cityInput.isVisible()) {
       await cityInput.fill('上海')
       await adminPage.getByRole('button', { name: '搜索' }).click()
-      await expect(adminPage.locator('.card .el-table').first()).toBeVisible()
+      await expect(adminPage.locator('.page-card .el-table').first()).toBeVisible()
     }
   })
 
@@ -118,7 +118,7 @@ test.describe('用户管理', () => {
       const option = adminPage.getByRole('option', { name: '20' }).or(adminPage.getByRole('option', { name: '50' }))
       if (await option.first().isVisible()) {
         await option.first().click()
-        await expect(adminPage.locator('.card .el-table').first()).toBeVisible()
+        await expect(adminPage.locator('.page-card .el-table').first()).toBeVisible()
       }
     }
   })

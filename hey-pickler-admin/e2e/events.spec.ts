@@ -7,13 +7,13 @@ async function gotoEvents(adminPage: Page) {
   await adminPage.waitForURL(/\/events$/)
   await expect(adminPage.locator('h1')).toContainText('赛事管理')
   // 用 .card 包裹的 .el-table 锁定本页（避开 dashboard 残留的 2 个表）
-  await expect(adminPage.locator('.card .el-table').first()).toBeVisible()
+  await expect(adminPage.locator('.page-card .el-table').first()).toBeVisible()
 }
 
 test.describe('赛事管理', () => {
   test('赛事列表展示', async ({ adminPage }) => {
     await gotoEvents(adminPage)
-    await expect(adminPage.locator('.card .el-table').first()).toBeVisible()
+    await expect(adminPage.locator('.page-card .el-table').first()).toBeVisible()
   })
 
   test('新建赛事', async ({ adminPage }) => {
@@ -96,7 +96,7 @@ test.describe('赛事管理', () => {
     if (await typeSelect.isVisible()) {
       await typeSelect.click()
       await adminPage.getByRole('option', { name: '竞技赛事', exact: true }).click()
-      await expect(adminPage.locator('.card .el-table').first()).toBeVisible()
+      await expect(adminPage.locator('.page-card .el-table').first()).toBeVisible()
     }
   })
 
@@ -109,7 +109,7 @@ test.describe('赛事管理', () => {
       const firstOption = adminPage.getByRole('option').first()
       if (await firstOption.isVisible()) {
         await firstOption.click()
-        await expect(adminPage.locator('.card .el-table').first()).toBeVisible()
+        await expect(adminPage.locator('.page-card .el-table').first()).toBeVisible()
       }
     }
   })
@@ -122,7 +122,7 @@ test.describe('赛事管理', () => {
       const nextBtn = pagination.locator('.btn-next')
       if (await nextBtn.isEnabled()) {
         await nextBtn.click()
-        await expect(adminPage.locator('.card .el-table').first()).toBeVisible()
+        await expect(adminPage.locator('.page-card .el-table').first()).toBeVisible()
       }
     }
   })
