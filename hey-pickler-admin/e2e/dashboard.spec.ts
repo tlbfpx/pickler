@@ -7,12 +7,12 @@ test.describe('工作台 Dashboard', () => {
     await adminPage.goto('/')
     // KPI 卡片可见
     await expect(adminPage.locator('.kpi-card').first()).toBeVisible({ timeout: 10000 })
-    // 等所有图表渲染：chart-lg(2) + chart-sm(3) + chart-xs(4) = 9
-    await adminPage.waitForTimeout(3000)
-    const totalCanvas = await adminPage.locator('canvas').count()
-    expect(totalCanvas).toBeGreaterThanOrEqual(9)
-    // 所有 canvas 尺寸必须 > 0（防止 echarts 在 0 尺寸容器渲染空白——正是 chart-xs 漏 CSS height 的回归）
-    const sizes = await adminPage.locator('canvas').evaluateAll(cs => cs.map(c => c.width * c.height))
-    expect(sizes.every(s => s > 0)).toBeTruthy()
+    // polling 验证 9 canvas 且所有尺寸 >0（覆盖 nextTick 后布局未完成的时机问题，
+    // 之前的 waitForTimeout(3000) 等够了反而掩盖了这个回归）
+    await expect(async () => {
+      const sizes = await adminPage.locator('canvas').evaluateAll(cs => cs.map(c => c.width * c.height))
+      expect(sizes.length).toBeGreaterThanOrEqual(9)
+      expect(sizes.every(s => s > 0)).toBeTruthy()
+    }).toPass({ timeout: 10000 })
   })
 })
