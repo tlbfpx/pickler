@@ -143,6 +143,44 @@ public class AdminDashboardController {
         }
         data.put("dailyRegistrations", dailyRegs);
 
+        // === Daily new events (last 30 days) ===
+        List<Map<String, Object>> dailyEvents = new ArrayList<>();
+        for (int i = 29; i >= 0; i--) {
+            LocalDate date = LocalDate.now().minusDays(i);
+            LocalDateTime start = date.atStartOfDay();
+            LocalDateTime end = date.atTime(LocalTime.MAX);
+            long count = eventMapper.selectCount(
+                    new LambdaQueryWrapper<Event>().isNull(Event::getDeletedAt)
+                            .ge(Event::getCreatedAt, start).le(Event::getCreatedAt, end));
+            Map<String, Object> point = new LinkedHashMap<>();
+            point.put("date", date.toString());
+            point.put("count", count);
+            dailyEvents.add(point);
+        }
+        data.put("dailyNewEvents", dailyEvents);
+
+        // === Daily cumulative completion rate (last 30 days) ===
+        // 截至该日 eventTime 的赛事中 COMPLETED 占比（滚动完赛率）。
+        List<Event> eventsForRate = eventMapper.selectList(
+                new LambdaQueryWrapper<Event>().isNull(Event::getDeletedAt)
+                        .le(Event::getEventTime, LocalDate.now().atTime(LocalTime.MAX)));
+        List<Map<String, Object>> dailyRate = new ArrayList<>();
+        for (int i = 29; i >= 0; i--) {
+            LocalDate date = LocalDate.now().minusDays(i);
+            LocalDateTime cutoff = date.atTime(LocalTime.MAX);
+            long total = eventsForRate.stream()
+                    .filter(e -> e.getEventTime() != null && !e.getEventTime().isAfter(cutoff)).count();
+            long completed = eventsForRate.stream()
+                    .filter(e -> e.getEventTime() != null && !e.getEventTime().isAfter(cutoff)
+                            && "COMPLETED".equals(e.getStatus())).count();
+            double rate = total == 0 ? 0d : Math.round((double) completed * 1000d / total) / 10d;
+            Map<String, Object> point = new LinkedHashMap<>();
+            point.put("date", date.toString());
+            point.put("rate", rate);
+            dailyRate.add(point);
+        }
+        data.put("dailyCompletionRate", dailyRate);
+
         // === Recent registrations (latest 10) ===
         List<Registration> recentRegs = registrationMapper.selectList(
                 new LambdaQueryWrapper<Registration>()

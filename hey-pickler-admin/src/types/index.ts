@@ -220,6 +220,8 @@ export interface DashboardStats {
   eventTypes: Record<string, number>
   dailyNewUsers: Array<{ date: string; count: number }>
   dailyRegistrations: Array<{ date: string; count: number }>
+  dailyNewEvents: Array<{ date: string; count: number }>
+  dailyCompletionRate: Array<{ date: string; rate: number }>
   recentRegistrations: Array<{
     id: number
     nickname: string | null
