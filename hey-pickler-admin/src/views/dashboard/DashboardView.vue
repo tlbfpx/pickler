@@ -903,6 +903,23 @@ onBeforeUnmount(() => { window.removeEventListener('resize', onResize); charts.f
   width: 100%;
 }
 
+.trend-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.trend-cell {
+  min-width: 0;
+}
+
+.trend-label {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
 /* Table tweaks */
 :deep(.el-table th.el-table__cell) {
   background: #fafbfc;
