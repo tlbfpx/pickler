@@ -734,6 +734,27 @@ function renderCharts() {
 
   if (starTierRef.value) mk(starTierRef.value, { tooltip: pieTip, legend: pieLeg, series: [mkPie(mapTier(stats.starTierDistribution || {}))] })
   if (partyTierRef.value) mk(partyTierRef.value, { tooltip: pieTip, legend: pieLeg, series: [mkPie(mapTier(stats.partyTierDistribution || {}))] })
+
+  // 30 天趋势小图（sparkline 风格，无坐标轴）
+  const mkSpark = (el: HTMLElement, data: { date: string; count: number }[], color: string) => mk(el, {
+    grid: { top: 4, right: 0, bottom: 4, left: 0 },
+    xAxis: { type: 'category', show: false, boundaryGap: false, data: data.map(d => d.date.slice(5)) },
+    yAxis: { type: 'value', show: false, minInterval: 1 },
+    series: [{ type: 'line', data: data.map(d => d.count), smooth: true, showSymbol: false,
+      lineStyle: { color, width: 2 }, itemStyle: { color },
+      areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color }, { offset: 1, color: 'transparent' }] } } }]
+  })
+  if (trendUsersRef.value) mkSpark(trendUsersRef.value, stats.dailyNewUsers || [], '#6366f1')
+  if (trendRegsRef.value) mkSpark(trendRegsRef.value, stats.dailyRegistrations || [], '#43e97b')
+  if (trendEventsRef.value) mkSpark(trendEventsRef.value, stats.dailyNewEvents || [], '#f5576c')
+  if (trendRateRef.value) mk(trendRateRef.value, {
+    grid: { top: 4, right: 0, bottom: 4, left: 0 },
+    xAxis: { type: 'category', show: false, boundaryGap: false, data: (stats.dailyCompletionRate || []).map(d => d.date.slice(5)) },
+    yAxis: { type: 'value', show: false, max: 100 },
+    series: [{ type: 'line', data: (stats.dailyCompletionRate || []).map(d => d.rate), smooth: true, showSymbol: false,
+      lineStyle: { color: '#fa8231', width: 2 }, itemStyle: { color: '#fa8231' },
+      areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#fa8231' }, { offset: 1, color: 'transparent' }] } } }]
+  })
 }
 
 const fetchStats = async () => {
