@@ -761,7 +761,13 @@ const fetchStats = async () => {
   loading.value = true
   try {
     const res = await getDashboardStats()
-    if (res.code === 0) { Object.assign(stats, res.data); await nextTick(); renderCharts() }
+    if (res.code === 0) {
+      Object.assign(stats, res.data)
+      await nextTick()
+      // 双 rAF 确保 DOM 布局完成后再 init echarts：nextTick 只保证 DOM 更新不保证
+      // layout/paint，导致容器 clientHeight=0 → echarts "Can't get DOM width or height" 警告 + 0×0 canvas。
+      requestAnimationFrame(() => requestAnimationFrame(() => renderCharts()))
+    }
     else ElMessage.error(res.message || '获取数据失败')
   } catch (e) {
     console.error('[fetchStats error]', e)
