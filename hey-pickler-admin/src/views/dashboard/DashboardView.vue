@@ -892,6 +892,11 @@ onBeforeUnmount(() => { window.removeEventListener('resize', onResize); charts.f
   width: 100%;
 }
 
+.chart-xs {
+  height: 80px;
+  width: 100%;
+}
+
 /* Table tweaks */
 :deep(.el-table th.el-table__cell) {
   background: #fafbfc;
