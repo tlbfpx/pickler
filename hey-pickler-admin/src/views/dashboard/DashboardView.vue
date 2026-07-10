@@ -279,7 +279,7 @@
       <div class="trend-grid">
         <div class="trend-cell">
           <div class="trend-label">
-            新增用户
+            新增用户 <b class="trend-num">{{ trendSums.users }}</b>
           </div>
           <div
             ref="trendUsersRef"
@@ -288,7 +288,7 @@
         </div>
         <div class="trend-cell">
           <div class="trend-label">
-            新增报名
+            新增报名 <b class="trend-num">{{ trendSums.regs }}</b>
           </div>
           <div
             ref="trendRegsRef"
@@ -297,7 +297,7 @@
         </div>
         <div class="trend-cell">
           <div class="trend-label">
-            新增赛事
+            新增赛事 <b class="trend-num">{{ trendSums.events }}</b>
           </div>
           <div
             ref="trendEventsRef"
@@ -306,7 +306,7 @@
         </div>
         <div class="trend-cell">
           <div class="trend-label">
-            完赛率
+            完赛率 <b class="trend-num">{{ trendSums.rate.toFixed(1) }}%</b>
           </div>
           <div
             ref="trendRateRef"
@@ -515,6 +515,18 @@ const pageSize = ref(10)
 const pagedTodos = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
   return todos.value.slice(start, start + pageSize.value)
+})
+
+// 30 天趋势 sparkline 旁的数字：累计 count（用户/报名/赛事）+ 今日完赛率
+const trendSums = computed(() => {
+  const sum = (arr: { count: number }[] | undefined) => (arr || []).reduce((s, d) => s + d.count, 0)
+  const lastRate = (arr: { rate: number }[] | undefined) => (arr && arr.length ? arr[arr.length - 1].rate : 0)
+  return {
+    users: sum(stats.dailyNewUsers),
+    regs: sum(stats.dailyRegistrations),
+    events: sum(stats.dailyNewEvents),
+    rate: lastRate(stats.dailyCompletionRate),
+  }
 })
 
 const fetchBy = (status: string) =>
@@ -918,6 +930,13 @@ onBeforeUnmount(() => { window.removeEventListener('resize', onResize); charts.f
   color: #6b7280;
   margin-bottom: 4px;
   font-weight: 500;
+
+  .trend-num {
+    color: #111827;
+    font-size: 15px;
+    font-weight: 700;
+    margin-left: 4px;
+  }
 }
 
 /* Table tweaks */
