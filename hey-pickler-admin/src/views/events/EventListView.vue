@@ -55,7 +55,7 @@
             <el-tag
               v-if="row.format"
               :color="getEventFormatColor(row.format)"
-              effect="plain"
+              effect="dark"
               size="small"
             >
               {{ formatEventFormat(row.format) }}
