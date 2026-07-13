@@ -482,7 +482,8 @@ if (validId) {
   onMounted(reloadSummary)
 }
 
-const STAGE_ORDER: Record<string, number> = { DRAFT: 0, OPEN: 1, FULL: 1, IN_PROGRESS: 2, COMPLETED: 3, CANCELLED: 0 }
+// COMPLETED = 5（= 步骤总数）让全部 5 步都进入 finish 完成态，含「发分」
+const STAGE_ORDER: Record<string, number> = { DRAFT: 0, OPEN: 1, FULL: 1, IN_PROGRESS: 2, COMPLETED: 5, CANCELLED: 0 }
 const activeStepIndex = computed(() => {
   if (!event.value) return 0
   if (event.value.status === 'CANCELLED') return 0
