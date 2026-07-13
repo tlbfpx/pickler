@@ -61,13 +61,11 @@ const router = createRouter({
           path: 'rankings',
           name: 'Rankings',
           component: () => import('@/views/rankings/RankingView.vue'),
-          meta: { title: '排名管理', icon: 'Trophy', group: '积分与赛季' }
+          meta: { title: '积分与排名', icon: 'Trophy', group: '积分与排名' }
         },
         {
           path: 'seasons',
-          name: 'Seasons',
-          component: () => import('@/views/seasons/SeasonView.vue'),
-          meta: { title: '赛季管理', icon: 'Timer', group: '积分与赛季' }
+          redirect: '/rankings'
         },
         {
           path: 'banners',

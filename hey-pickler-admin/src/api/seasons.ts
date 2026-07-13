@@ -1,5 +1,5 @@
 import request from './request'
-import type { ApiResponse, PageResult, Season, SeasonRankingEntry } from '@/types'
+import type { ApiResponse, RankingPageVO, Season } from '@/types'
 
 /** 赛季列表（按 type 过滤） */
 export const listSeasons = (type: 'STAR' | 'PARTY') => {
@@ -22,12 +22,12 @@ export const activateSeason = (id: number) => {
   return request.post<unknown, ApiResponse<void>>(`/seasons/${id}/activate`)
 }
 
-/** 归档赛季排名查询 */
+/** 赛季排名查询（当前/归档统一返回 RankingPageVO） */
 export const getSeasonRankings = (
   id: number,
-  params: { page: number; size: number }
+  params: { tier?: string; page: number; size: number }
 ) => {
-  return request.get<unknown, ApiResponse<PageResult<SeasonRankingEntry>>>(
+  return request.get<unknown, ApiResponse<RankingPageVO>>(
     `/seasons/${id}/rankings`,
     { params }
   )

@@ -90,3 +90,22 @@ export function getPointsTypeLabel(type: string | null | undefined): string {
   if (!type) return '-'
   return TERMS[type as PointsType]?.type || type
 }
+
+/**
+ * 积分来源英文 key → 中文展示名（与后端 PointSource 枚举对齐）。
+ * MANUAL/ADJUST 可撤销；PLACEMENT 等系统来源不可撤销（前端隐藏撤销按钮）。
+ */
+export const POINT_SOURCE_LABEL: Record<string, string> = {
+  MANUAL: '管理员手动',
+  ADJUST: '系统纠错',
+  PLACEMENT: '名次发分',
+  REGISTRATION: '报名',
+  CHECK_IN: '签到',
+  REDEEM: '兑换'
+}
+
+/** 取积分来源文案；未命中回退原值。 */
+export function getPointSourceLabel(source: string | null | undefined): string {
+  if (!source) return '-'
+  return POINT_SOURCE_LABEL[source] || source
+}
