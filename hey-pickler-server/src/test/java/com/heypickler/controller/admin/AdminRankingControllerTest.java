@@ -6,7 +6,7 @@ import com.heypickler.dto.app.RankingQuery;
 import com.heypickler.entity.Season;
 import com.heypickler.service.PointService;
 import com.heypickler.service.RankingService;
-import com.heypickler.vo.RankingVO;
+import com.heypickler.vo.RankingPageVO;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +26,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -42,10 +43,13 @@ class AdminRankingControllerTest {
 
     @Test
     void getRankings_uppercasesTypeAndPassesQuery() {
-        PageResult<RankingVO> stub = PageResult.of(0, 1, 100, List.of());
-        doReturn(stub).when(rankingService).getRankings(any(RankingQuery.class));
-        PageResult<RankingVO> result = controller.getRankings("star", "alice").getData();
-        assertEquals(0L, result.getTotal());
+        RankingPageVO stub = new RankingPageVO();
+        stub.setPage(PageResult.of(0, 1, 20, List.of()));
+        stub.setSeasonCode("2026-Q2");
+        stub.setSeasonStatus("CURRENT");
+        doReturn(stub).when(rankingService).getRankingPage(any(RankingQuery.class));
+        RankingPageVO result = controller.getRankings("star", "alice", null, 1, 20).getData();
+        assertEquals("2026-Q2", result.getSeasonCode());
     }
 
     @Test
@@ -98,8 +102,17 @@ class AdminRankingControllerTest {
 
     @Test
     void getRankings_keywordNull_handled() {
-        PageResult<RankingVO> stub = PageResult.of(0, 1, 100, List.of());
-        doReturn(stub).when(rankingService).getRankings(any(RankingQuery.class));
-        controller.getRankings("STAR", null);
+        RankingPageVO stub = new RankingPageVO();
+        stub.setPage(PageResult.of(0, 1, 20, List.of()));
+        doReturn(stub).when(rankingService).getRankingPage(any(RankingQuery.class));
+        controller.getRankings("STAR", null, null, 1, 20);
+    }
+
+    @Test
+    void revertPointRecord_extractsAdminIdAndDelegates() {
+        HttpServletRequest req = mock(HttpServletRequest.class);
+        when(req.getAttribute("adminId")).thenReturn(7L);
+        controller.revertPointRecord(req, 42L);
+        verify(pointService).revertPointRecord(42L, 7L);
     }
 }

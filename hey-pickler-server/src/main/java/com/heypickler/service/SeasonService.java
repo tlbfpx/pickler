@@ -1,9 +1,8 @@
 package com.heypickler.service;
 
-import com.heypickler.common.result.PageResult;
 import com.heypickler.dto.admin.SeasonCreateRequest;
 import com.heypickler.dto.app.RankingQuery;
-import com.heypickler.vo.RankingVO;
+import com.heypickler.vo.RankingPageVO;
 import com.heypickler.vo.SeasonVO;
 
 import java.util.List;
@@ -22,12 +21,12 @@ public interface SeasonService {
 
     /**
      * 切换某赛季为 CURRENT：同 type 下原 CURRENT 归档为 ARCHIVED，目标置为 CURRENT。
-     * 事务保证同 type 唯一 CURRENT。
+     * 事务保证同 type 唯一 CURRENT。激活后同步给新赛季播种排名快照。
      */
     void activate(Long id);
 
     /**
-     * 查询某归档赛季的排名（走 DB，不读缓存）。
+     * 查询某赛季的排名工作台（走 DB，不读缓存；含段位分布 + 赛季元信息）。
      */
-    PageResult<RankingVO> getRankings(Long seasonId, RankingQuery query);
+    RankingPageVO getRankings(Long seasonId, RankingQuery query);
 }

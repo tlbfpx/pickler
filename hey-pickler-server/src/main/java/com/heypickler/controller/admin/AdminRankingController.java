@@ -6,7 +6,6 @@ import com.heypickler.common.enums.PointSource;
 import com.heypickler.common.enums.UserRole;
 import com.heypickler.common.exception.BizException;
 import com.heypickler.common.exception.ErrorCode;
-import com.heypickler.common.result.PageResult;
 import com.heypickler.common.result.Result;
 import com.heypickler.dto.admin.PointEntryRequest;
 import com.heypickler.dto.app.RankingQuery;
@@ -15,7 +14,7 @@ import com.heypickler.mapper.SeasonMapper;
 import com.heypickler.service.PointService;
 import com.heypickler.service.RankingService;
 import com.heypickler.service.dto.PointEntry;
-import com.heypickler.vo.RankingVO;
+import com.heypickler.vo.RankingPageVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,7 +23,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -40,21 +38,25 @@ public class AdminRankingController {
     private final SeasonMapper seasonMapper;
 
     @GetMapping("/{type}")
-    @Operation(summary = "获取排名列表")
+    @Operation(summary = "获取排名工作台（榜单分页+段位分布+当前赛季元信息）")
     @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
-    public Result<PageResult<RankingVO>> getRankings(
+    public Result<RankingPageVO> getRankings(
             @PathVariable String type,
-            @RequestParam(required = false) String keyword) {
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String tier,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size) {
         RankingQuery query = new RankingQuery();
         query.setType(type.toUpperCase());
         query.setKeyword(keyword);
-        query.setPage(1);
-        query.setSize(100);
-        return Result.ok(rankingService.getRankings(query));
+        query.setTier(tier != null ? tier.toUpperCase() : null);
+        query.setPage(page);
+        query.setSize(size);
+        return Result.ok(rankingService.getRankingPage(query));
     }
 
     @PostMapping("/refresh")
-    @Operation(summary = "刷新排名")
+    @Operation(summary = "刷新当前赛季排名")
     @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
     public Result<Void> refreshRankings(@RequestBody(required = false) Map<String, String> body) {
         String type = body != null ? body.getOrDefault("type", "STAR") : "STAR";
@@ -65,7 +67,7 @@ public class AdminRankingController {
     }
 
     @PostMapping("/points")
-    @Operation(summary = "录入积分")
+    @Operation(summary = "录入积分（手动发分，强制 MANUAL 来源）")
     @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
     public Result<Void> enterPoints(
             HttpServletRequest request,
@@ -73,6 +75,17 @@ public class AdminRankingController {
         Long adminId = (Long) request.getAttribute("adminId");
         // 手动发分：强制 MANUAL 来源，不读请求体 source
         pointService.enterPoints(req.getEventId(), req.getType(), toPointEntries(req), PointSource.MANUAL, adminId);
+        return Result.ok();
+    }
+
+    @PostMapping("/points/{recordId}/revert")
+    @Operation(summary = "撤销单条积分记录（写 ADJUST 补偿行，仅限 MANUAL/ADJUST）")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
+    public Result<Void> revertPointRecord(
+            HttpServletRequest request,
+            @PathVariable Long recordId) {
+        Long adminId = (Long) request.getAttribute("adminId");
+        pointService.revertPointRecord(recordId, adminId);
         return Result.ok();
     }
 

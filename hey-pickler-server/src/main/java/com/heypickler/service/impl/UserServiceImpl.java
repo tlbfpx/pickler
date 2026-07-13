@@ -31,6 +31,7 @@ public class UserServiceImpl implements UserService {
     private final RegistrationMapper registrationMapper;
     private final PointRecordMapper pointRecordMapper;
     private final BanRecordMapper banRecordMapper;
+    private final AdminUserMapper adminUserMapper;
     private final AesUtil aesUtil;
     private final TierProperties tierProperties;
 
@@ -172,6 +173,20 @@ public class UserServiceImpl implements UserService {
             eventMap = new HashMap<>();
         }
 
+        // Batch load operator usernames (PLACEMENT rows have null operatorId)
+        List<Long> operatorIds = pageResult.getRecords().stream()
+                .map(PointRecord::getOperatorId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, String> operatorNameMap;
+        if (!operatorIds.isEmpty()) {
+            operatorNameMap = adminUserMapper.selectBatchIds(operatorIds).stream()
+                    .collect(Collectors.toMap(AdminUser::getId, AdminUser::getUsername, (a, b) -> a));
+        } else {
+            operatorNameMap = new HashMap<>();
+        }
+
         // Build VOs
         List<PointRecordVO> vos = pageResult.getRecords().stream()
                 .map(record -> {
@@ -183,6 +198,10 @@ public class UserServiceImpl implements UserService {
                     vo.setType(record.getType());
                     vo.setPoints(record.getPoints());
                     vo.setReason(record.getReason());
+                    vo.setSource(record.getSource());
+                    vo.setSeasonCode(record.getSeasonCode());
+                    vo.setOperatorName(record.getOperatorId() != null
+                            ? operatorNameMap.get(record.getOperatorId()) : null);
                     vo.setCreatedAt(record.getCreatedAt());
                     return vo;
                 })

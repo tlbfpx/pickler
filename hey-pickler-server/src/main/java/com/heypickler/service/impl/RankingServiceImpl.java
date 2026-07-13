@@ -14,6 +14,7 @@ import com.heypickler.mapper.RankingMapper;
 import com.heypickler.mapper.SeasonMapper;
 import com.heypickler.mapper.UserMapper;
 import com.heypickler.service.RankingService;
+import com.heypickler.vo.RankingPageVO;
 import com.heypickler.vo.RankingVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -91,11 +92,11 @@ public class RankingServiceImpl implements RankingService {
         }
 
         // Clear caches after DB is updated.
-        // NOTE: getRankings 缓存 key 为 ranking:{type}:{tier}，tier=null 时 key 形如
-        // "ranking:STAR:null"，必须一并清理，否则不指定 tier 的查询会读到旧数据。
+        // NOTE: getRankings 缓存 key 为 ranking:{type}:{tier}:{seasonCode}，tier=null 时 key 形如
+        // "ranking:STAR:null:2026-Q2"，必须一并清理，否则不指定 tier 的查询会读到旧数据。
         // 档位由 TierProperties 配置驱动（6 档 + null），参数化避免硬编码。
         for (String tier : tierProperties.cacheKeysWithNull()) {
-            redisTemplate.delete(RedisKey.ranking(type, tier));
+            redisTemplate.delete(RedisKey.ranking(type, tier, seasonCode));
         }
         redisTemplate.delete(RedisKey.rankingTop5(type));
     }
@@ -109,23 +110,21 @@ public class RankingServiceImpl implements RankingService {
                 .eq(Ranking::getSeason, seasonCode));
     }
 
-    private String resolveCurrentSeasonCode(String type) {
-        Season season = seasonMapper.selectOne(new LambdaQueryWrapper<Season>()
-                .eq(Season::getType, type)
-                .eq(Season::getStatus, "CURRENT"));
-        if (season == null) {
-            throw new BizException(ErrorCode.NOT_FOUND, "当前赛季不存在: " + type);
-        }
-        return season.getCode();
-    }
-
     @Override
     public PageResult<RankingVO> getRankings(RankingQuery query) {
         // Clamp page size
         int size = Math.min(query.getSize(), MAX_PAGE_SIZE);
         int page = Math.max(query.getPage(), 1);
 
-        String cacheKey = RedisKey.ranking(query.getType(), query.getTier());
+        // 必须按当前赛季过滤：赛季轮转后 ranking 表同时存在当前+归档赛季行
+        // (uk_user_type_season 允许同用户跨赛季各一行)，不过滤会导致用户重复出现。
+        Season current = resolveCurrentSeason(query.getType());
+        if (current == null) {
+            return PageResult.of(0, page, size, Collections.emptyList());
+        }
+        String seasonCode = current.getCode();
+
+        String cacheKey = RedisKey.ranking(query.getType(), query.getTier(), seasonCode);
 
         List<RankingVO> cached = (List<RankingVO>) redisTemplate.opsForValue().get(cacheKey);
         if (cached != null) {
@@ -135,6 +134,7 @@ public class RankingServiceImpl implements RankingService {
 
         LambdaQueryWrapper<Ranking> queryWrapper = new LambdaQueryWrapper<Ranking>()
                 .eq(Ranking::getType, query.getType())
+                .eq(Ranking::getSeason, seasonCode)
                 .eq(query.getTier() != null, Ranking::getTier, query.getTier())
                 .orderByDesc(Ranking::getPoints);
 
@@ -168,24 +168,41 @@ public class RankingServiceImpl implements RankingService {
         return filterAndPaginate(result, query.getKeyword(), page, size);
     }
 
-    /** 按 keyword 在已含 nickname 的列表上内存过滤，再分页。keyword 为空时原样分页。 */
-    private PageResult<RankingVO> filterAndPaginate(List<RankingVO> source, String keyword, int page, int size) {
-        List<RankingVO> filtered = source;
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            String lower = keyword.trim().toLowerCase();
-            filtered = source.stream()
-                .filter(vo -> vo.getNickname() != null && vo.getNickname().toLowerCase().contains(lower))
-                .collect(Collectors.toList());
+    @Override
+    public RankingPageVO getRankingPage(RankingQuery query) {
+        Season current = resolveCurrentSeason(query.getType());
+        if (current == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "当前赛季不存在: " + query.getType());
         }
-        int start = (page - 1) * size;
-        int end = Math.min(start + size, filtered.size());
-        List<RankingVO> pageList = start >= filtered.size()
-            ? Collections.emptyList() : filtered.subList(start, end);
-        return PageResult.of(filtered.size(), page, size, pageList);
+        PageResult<RankingVO> page = getRankings(query);
+        RankingPageVO vo = new RankingPageVO();
+        vo.setPage(page);
+        vo.setTierDistribution(countTierDistribution(query.getType(), current.getCode()));
+        vo.setSeasonCode(current.getCode());
+        vo.setSeasonName(current.getName());
+        vo.setSeasonStatus(current.getStatus());
+        return vo;
+    }
+
+    /** 段位分布：仅含有行的段位，前端对缺失段位补 0。 */
+    private Map<String, Integer> countTierDistribution(String type, String seasonCode) {
+        List<Map<String, Object>> rows = rankingMapper.countByTier(type, seasonCode);
+        Map<String, Integer> dist = new LinkedHashMap<>();
+        for (Map<String, Object> row : rows) {
+            Object tier = row.get("tier");
+            Object cnt = row.get("cnt");
+            if (tier != null && cnt instanceof Number) {
+                dist.put(tier.toString(), ((Number) cnt).intValue());
+            }
+        }
+        return dist;
     }
 
     @Override
     public List<RankingVO> getTop5(String type) {
+        Season current = resolveCurrentSeason(type);
+        if (current == null) return Collections.emptyList();
+
         String cacheKey = RedisKey.rankingTop5(type);
 
         List<RankingVO> cached = (List<RankingVO>) redisTemplate.opsForValue().get(cacheKey);
@@ -193,6 +210,7 @@ public class RankingServiceImpl implements RankingService {
 
         LambdaQueryWrapper<Ranking> queryWrapper = new LambdaQueryWrapper<Ranking>()
                 .eq(Ranking::getType, type)
+                .eq(Ranking::getSeason, current.getCode())
                 .orderByAsc(Ranking::getRank)
                 .last("LIMIT 5");
 
@@ -225,6 +243,22 @@ public class RankingServiceImpl implements RankingService {
         return result;
     }
 
+    /** 按 keyword 在已含 nickname 的列表上内存过滤，再分页。keyword 为空时原样分页。 */
+    private PageResult<RankingVO> filterAndPaginate(List<RankingVO> source, String keyword, int page, int size) {
+        List<RankingVO> filtered = source;
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            String lower = keyword.trim().toLowerCase();
+            filtered = source.stream()
+                .filter(vo -> vo.getNickname() != null && vo.getNickname().toLowerCase().contains(lower))
+                .collect(Collectors.toList());
+        }
+        int start = (page - 1) * size;
+        int end = Math.min(start + size, filtered.size());
+        List<RankingVO> pageList = start >= filtered.size()
+            ? Collections.emptyList() : filtered.subList(start, end);
+        return PageResult.of(filtered.size(), page, size, pageList);
+    }
+
     private Map<Long, User> batchLoadUsers(List<Long> userIds) {
         if (userIds.isEmpty()) return Collections.emptyMap();
         return userMapper.selectBatchIds(userIds).stream()
@@ -239,5 +273,20 @@ public class RankingServiceImpl implements RankingService {
                         .eq(Ranking::getSeason, seasonCode)
                         .in(Ranking::getUserId, userIds));
         return rankings.stream().collect(Collectors.toMap(Ranking::getUserId, r -> r, (a, b) -> a));
+    }
+
+    /** 解析当前赛季（可能为 null，调用方决定如何处理）。 */
+    private Season resolveCurrentSeason(String type) {
+        return seasonMapper.selectOne(new LambdaQueryWrapper<Season>()
+                .eq(Season::getType, type)
+                .eq(Season::getStatus, "CURRENT"));
+    }
+
+    private String resolveCurrentSeasonCode(String type) {
+        Season season = resolveCurrentSeason(type);
+        if (season == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "当前赛季不存在: " + type);
+        }
+        return season.getCode();
     }
 }

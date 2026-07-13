@@ -2,12 +2,11 @@ package com.heypickler.controller.admin;
 
 import com.heypickler.common.annotation.RequireRole;
 import com.heypickler.common.enums.UserRole;
-import com.heypickler.common.result.PageResult;
 import com.heypickler.common.result.Result;
 import com.heypickler.dto.admin.SeasonCreateRequest;
 import com.heypickler.dto.app.RankingQuery;
 import com.heypickler.service.SeasonService;
-import com.heypickler.vo.RankingVO;
+import com.heypickler.vo.RankingPageVO;
 import com.heypickler.vo.SeasonVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -48,9 +47,9 @@ public class AdminSeasonController {
     }
 
     @GetMapping("/{id}/rankings")
-    @Operation(summary = "归档赛季排名查询（走 DB）")
+    @Operation(summary = "赛季排名查询（走 DB；含段位分布+赛季元信息）")
     @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
-    public Result<PageResult<RankingVO>> getRankings(
+    public Result<RankingPageVO> getRankings(
             @PathVariable Long id,
             @RequestParam(required = false) String tier,
             @RequestParam(defaultValue = "1") int page,
