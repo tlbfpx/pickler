@@ -14,7 +14,7 @@
       :body-style="{ padding: '20px 24px' }"
     >
       <div class="panel-head">
-        <span>异常事件</span>
+        <span>待办任务</span>
         <span class="panel-tag">需要处理</span>
       </div>
       <el-table
@@ -28,7 +28,7 @@
       >
         <el-table-column
           label="标签"
-          width="96"
+          width="140"
           align="center"
         >
           <template #default="{ row }">
@@ -96,7 +96,7 @@
         v-else
         class="muted todo-empty"
       >
-        暂无异常事件
+        暂无待办任务
       </div>
       <Pagination
         v-if="todos.length > pageSize"

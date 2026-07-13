@@ -29,4 +29,15 @@ public interface PointService {
      * PointChangeEvent when the calling transaction commits.
      */
     void issuePlacement(Long eventId, Long userId, int points, String reason);
+
+    /**
+     * 撤销一条积分记录：写入 source=ADJUST 的补偿行（负分），仅限 MANUAL/ADJUST 来源。
+     * PLACEMENT 等系统来源不可撤销（名次发分幂等且关联赛事生命周期，撤销会破坏一致性）。
+     * 跨赛季撤销被拒——补偿行必须落在当前赛季，与原记录同赛季才有意义。
+     * 复用 writeRecord：余额钳制≥0、段位重算、存库；PointChangeListener 异步刷新排名+失效缓存。
+     *
+     * @param recordId   原始 point_record.id
+     * @param operatorId 操作管理员 ID
+     */
+    void revertPointRecord(Long recordId, Long operatorId);
 }

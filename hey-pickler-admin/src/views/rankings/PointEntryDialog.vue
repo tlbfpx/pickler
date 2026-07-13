@@ -167,7 +167,8 @@
             <template v-else-if="record.userId">
               <div
                 class="user-cell"
-                @click="startEdit(index)"
+                :class="{ 'user-cell-locked': isUserPreset }"
+                @click="!isUserPreset && startEdit(index)"
               >
                 <el-avatar
                   :src="record.avatarUrl || undefined"
@@ -268,6 +269,7 @@ interface RecordItem {
 const props = defineProps<{
   modelValue: boolean
   presetEvent?: Event | null
+  presetUser?: { userId: number; nickname: string | null; avatarUrl?: string | null; type: 'STAR' | 'PARTY' } | null
 }>()
 
 const emit = defineEmits<{
@@ -275,7 +277,8 @@ const emit = defineEmits<{
   success: []
 }>()
 
-const isPreset = computed(() => !!props.presetEvent)
+const isPreset = computed(() => !!props.presetEvent || !!props.presetUser)
+const isUserPreset = computed(() => !!props.presetUser)
 
 const loading = ref(false)
 const eventsLoading = ref(false)
@@ -306,7 +309,20 @@ watch(() => props.modelValue, (val) => {
     records.length = 0
     participants.value = []
 
-    if (props.presetEvent) {
+    if (props.presetUser) {
+      // 排名页「调整」入口：锁定单用户、MANUAL 模式、类型固定为该排名页 tab
+      entryMode.value = 'MANUAL'
+      manualType.value = props.presetUser.type
+      events.value = []
+      selectedEventId.value = null
+      records.push({
+        userId: props.presetUser.userId,
+        nickname: props.presetUser.nickname,
+        avatarUrl: props.presetUser.avatarUrl ?? null,
+        points: 0,
+        reason: ''
+      })
+    } else if (props.presetEvent) {
       entryMode.value = props.presetEvent.type === 'PARTY' ? 'PARTY' : 'STAR'
       manualType.value = entryMode.value
       events.value = [props.presetEvent]
@@ -553,6 +569,11 @@ const handleConfirm = async () => {
   gap: 8px;
   width: 160px;
   flex-shrink: 0;
+  cursor: pointer;
+}
+
+.user-cell-locked {
+  cursor: default;
 }
 
 .user-info {

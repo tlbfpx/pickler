@@ -138,6 +138,8 @@ export interface Season {
 
 export interface SeasonRankingEntry {
   rank: number
+  /** 排名变化（↑/↓）；归档快照保留刷新时的值 */
+  change: number
   userId: number
   nickname: string | null
   avatarUrl: string | null
@@ -146,6 +148,19 @@ export interface SeasonRankingEntry {
   tier: string
   /** 后端返回的中文段位名（优先展示） */
   tierName?: string
+}
+
+/**
+ * 排名工作台响应：榜单分页 + 段位分布 + 赛季元信息。
+ * 当前赛季与归档赛季查询统一返回此结构，前端按 seasonStatus 决定是否禁用写操作。
+ */
+export interface RankingPageVO {
+  page: PageResult<RankingEntry>
+  /** 段位分布 {BRONZE: 12, ...}，仅含有行的段位，缺失段位前端补 0 */
+  tierDistribution: Record<string, number>
+  seasonCode: string
+  seasonName: string | null
+  seasonStatus: 'CURRENT' | 'ARCHIVED'
 }
 
 // ==================== Admin Types ====================

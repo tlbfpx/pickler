@@ -260,8 +260,11 @@ class PointsSeasonIntegrationTest extends IntegrationTestConfig {
                 HttpMethod.GET, getReq, Map.class);
         assertEquals(0, resultCode(getResp), "归档排名查询应返回 code=0");
         Map<String, Object> pageData = resultData(getResp);
+        // 响应结构为 RankingPageVO：{page:{total,page,size,list}, tierDistribution, seasonCode, ...}
         @SuppressWarnings("unchecked")
-        List<Map<String, Object>> rows = (List<Map<String, Object>>) pageData.get("list");
+        Map<String, Object> pageObj = (Map<String, Object>) pageData.get("page");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> rows = (List<Map<String, Object>>) pageObj.get("list");
         assertNotNull(rows);
         assertFalse(rows.isEmpty(), "归档查询应返回旧赛季的排名行");
         assertEquals(U_AWARD, ((Number) rows.get(0).get("userId")).longValue());

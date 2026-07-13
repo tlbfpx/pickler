@@ -13,7 +13,9 @@ import com.heypickler.entity.User;
 import com.heypickler.mapper.RankingMapper;
 import com.heypickler.mapper.SeasonMapper;
 import com.heypickler.mapper.UserMapper;
+import com.heypickler.service.RankingService;
 import com.heypickler.service.SeasonService;
+import com.heypickler.vo.RankingPageVO;
 import com.heypickler.vo.RankingVO;
 import com.heypickler.vo.SeasonVO;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -37,6 +40,7 @@ public class SeasonServiceImpl implements SeasonService {
     private final RankingMapper rankingMapper;
     private final UserMapper userMapper;
     private final TierProperties tierProperties;
+    private final RankingService rankingService;
 
     @Override
     public List<SeasonVO> list(String type) {
@@ -82,10 +86,15 @@ public class SeasonServiceImpl implements SeasonService {
         // 置目标为 CURRENT
         target.setStatus("CURRENT");
         seasonMapper.updateById(target);
+
+        // 激活后给新赛季播种排名快照（从当前 user 余额重算）并清缓存。
+        // 不刷新则新赛季 ranking 表无行，RankingServiceImpl.getRankings 按当前赛季过滤后查不到数据。
+        // refreshRankings 只删/重算 (type, newSeasonCode)，归档赛季不受影响。
+        rankingService.refreshRankings(target.getType(), target.getCode());
     }
 
     @Override
-    public PageResult<RankingVO> getRankings(Long seasonId, RankingQuery query) {
+    public RankingPageVO getRankings(Long seasonId, RankingQuery query) {
         Season season = seasonMapper.selectById(seasonId);
         if (season == null) {
             throw new BizException(ErrorCode.NOT_FOUND, "赛季不存在: " + seasonId);
@@ -107,7 +116,7 @@ public class SeasonServiceImpl implements SeasonService {
         Map<Long, User> userMap = batchLoadUsers(userIds);
 
         // 过滤孤儿行（user 已被软删/物理删除）
-        List<RankingVO> result = rankings.stream()
+        List<RankingVO> list = rankings.stream()
                 .filter(r -> userMap.containsKey(r.getUserId()))
                 .map(r -> {
                     RankingVO vo = new RankingVO();
@@ -125,11 +134,32 @@ public class SeasonServiceImpl implements SeasonService {
                 }).collect(Collectors.toList());
 
         int start = (page - 1) * size;
-        int end = Math.min(start + size, result.size());
-        if (start >= result.size()) {
-            return PageResult.of(result.size(), page, size, Collections.emptyList());
+        int end = Math.min(start + size, list.size());
+        List<RankingVO> pageList = start >= list.size()
+                ? Collections.emptyList() : list.subList(start, end);
+        PageResult<RankingVO> pageResult = PageResult.of(list.size(), page, size, pageList);
+
+        RankingPageVO vo = new RankingPageVO();
+        vo.setPage(pageResult);
+        vo.setTierDistribution(countTierDistribution(season.getType(), season.getCode()));
+        vo.setSeasonCode(season.getCode());
+        vo.setSeasonName(season.getName());
+        vo.setSeasonStatus(season.getStatus());
+        return vo;
+    }
+
+    /** 段位分布：仅含有行的段位，前端对缺失段位补 0。 */
+    private Map<String, Integer> countTierDistribution(String type, String seasonCode) {
+        List<Map<String, Object>> rows = rankingMapper.countByTier(type, seasonCode);
+        Map<String, Integer> dist = new LinkedHashMap<>();
+        for (Map<String, Object> row : rows) {
+            Object tier = row.get("tier");
+            Object cnt = row.get("cnt");
+            if (tier != null && cnt instanceof Number) {
+                dist.put(tier.toString(), ((Number) cnt).intValue());
+            }
         }
-        return PageResult.of(result.size(), page, size, result.subList(start, end));
+        return dist;
     }
 
     private Map<Long, User> batchLoadUsers(List<Long> userIds) {

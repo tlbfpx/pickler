@@ -1,6 +1,7 @@
 package com.heypickler.service;
 
 import com.heypickler.common.enums.PointSource;
+import com.heypickler.common.exception.BizException;
 import com.heypickler.config.TierProperties;
 import com.heypickler.entity.Event;
 import com.heypickler.entity.Season;
@@ -25,6 +26,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
@@ -109,5 +112,119 @@ class PointServiceImplTest {
         assertEquals(100, u.getStarPoints(), "不应叠加，原因：DB 唯一约束已存在行");
         verify(userMapper, never()).updateById(any(User.class));
         verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    // ---------- revertPointRecord (ADJUST 撤销) ----------
+
+    @Test
+    void revertPointRecord_manual_writesAdjustNegatedRow_andPublishesEvent() {
+        PointRecord original = new PointRecord();
+        original.setId(42L);
+        original.setUserId(1L);
+        original.setType("STAR");
+        original.setSource("MANUAL");
+        original.setSeasonCode("2026-Q2");
+        original.setPoints(100);
+        original.setReason("手动奖励");
+        when(pointRecordMapper.selectById(42L)).thenReturn(original);
+
+        Season s = new Season();
+        s.setType("STAR");
+        s.setCode("2026-Q2");
+        s.setStatus("CURRENT");
+        when(seasonMapper.selectOne(any())).thenReturn(s);
+
+        User u = new User();
+        u.setId(1L);
+        u.setStarPoints(500);
+        u.setStarTier("GOLD");
+        when(userMapper.selectById(1L)).thenReturn(u);
+
+        service.revertPointRecord(42L, 9L);
+
+        ArgumentCaptor<PointRecord> cap = ArgumentCaptor.forClass(PointRecord.class);
+        verify(pointRecordMapper).insert(cap.capture());
+        PointRecord revert = cap.getValue();
+        assertEquals("ADJUST", revert.getSource());
+        assertEquals(-100, revert.getPoints());
+        assertEquals("2026-Q2", revert.getSeasonCode());
+        assertTrue(revert.getReason().contains("撤销 #42"), "原因须引用原记录 id；实际=" + revert.getReason());
+        assertEquals(9L, revert.getOperatorId());
+        assertEquals(400, u.getStarPoints(), "余额须扣减 100");
+        var evt = ArgumentCaptor.forClass(PointChangeListener.PointChangeEvent.class);
+        verify(eventPublisher).publishEvent(evt.capture());
+        assertEquals("2026-Q2", evt.getValue().seasonCode());
+    }
+
+    @Test
+    void revertPointRecord_placement_rejected() {
+        PointRecord original = new PointRecord();
+        original.setId(42L);
+        original.setUserId(1L);
+        original.setType("STAR");
+        original.setSource("PLACEMENT");
+        original.setSeasonCode("2026-Q2");
+        original.setPoints(100);
+        when(pointRecordMapper.selectById(42L)).thenReturn(original);
+
+        assertThrows(BizException.class, () -> service.revertPointRecord(42L, 9L));
+        verify(pointRecordMapper, never()).insert(any(PointRecord.class));
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void revertPointRecord_crossSeason_rejected() {
+        PointRecord original = new PointRecord();
+        original.setId(42L);
+        original.setUserId(1L);
+        original.setType("STAR");
+        original.setSource("MANUAL");
+        original.setSeasonCode("2026-Q1"); // 旧赛季
+        original.setPoints(100);
+        when(pointRecordMapper.selectById(42L)).thenReturn(original);
+
+        Season current = new Season();
+        current.setType("STAR");
+        current.setCode("2026-Q2"); // 当前是 Q2
+        current.setStatus("CURRENT");
+        when(seasonMapper.selectOne(any())).thenReturn(current);
+
+        assertThrows(BizException.class, () -> service.revertPointRecord(42L, 9L));
+        verify(pointRecordMapper, never()).insert(any(PointRecord.class));
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void revertPointRecord_adjust_canBeRevertedAgain() {
+        // ADJUST 行本身也在允许集合内 → 撤销一条 ADJUST(负分) 写 +100 ADJUST
+        PointRecord original = new PointRecord();
+        original.setId(42L);
+        original.setUserId(1L);
+        original.setType("STAR");
+        original.setSource("ADJUST");
+        original.setSeasonCode("2026-Q2");
+        original.setPoints(-100);
+        original.setReason("撤销 #40: xxx");
+        when(pointRecordMapper.selectById(42L)).thenReturn(original);
+
+        Season s = new Season();
+        s.setType("STAR");
+        s.setCode("2026-Q2");
+        s.setStatus("CURRENT");
+        when(seasonMapper.selectOne(any())).thenReturn(s);
+
+        User u = new User();
+        u.setId(1L);
+        u.setStarPoints(400);
+        u.setStarTier("GOLD");
+        when(userMapper.selectById(1L)).thenReturn(u);
+
+        service.revertPointRecord(42L, 9L);
+
+        ArgumentCaptor<PointRecord> cap = ArgumentCaptor.forClass(PointRecord.class);
+        verify(pointRecordMapper).insert(cap.capture());
+        assertEquals("ADJUST", cap.getValue().getSource());
+        assertEquals(100, cap.getValue().getPoints(), "撤销负分行须写正分 -(-100)=100");
+        assertEquals(500, u.getStarPoints());
     }
 }

@@ -10,6 +10,7 @@ import com.heypickler.mapper.RankingMapper;
 import com.heypickler.mapper.SeasonMapper;
 import com.heypickler.mapper.UserMapper;
 import com.heypickler.service.impl.RankingServiceImpl;
+import com.heypickler.vo.RankingPageVO;
 import com.heypickler.vo.RankingVO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -377,5 +378,41 @@ class RankingServiceTest {
         assertEquals(1, result.getList().size(), "缓存命中时也必须按 keyword 过滤");
         assertEquals(1L, result.getList().get(0).getUserId());
         assertEquals("Test User", result.getList().get(0).getNickname());
+    }
+
+    @Test
+    void getRankingPage_returnsTierDistributionAndSeasonMeta() {
+        Ranking r1 = new Ranking();
+        r1.setUserId(1L);
+        r1.setType("STAR");
+        r1.setTier("BRONZE");
+        r1.setRank(1);
+        r1.setPoints(100);
+        r1.setChange(0);
+        r1.setSeason(CURRENT_SEASON_CODE);
+
+        RankingQuery query = new RankingQuery();
+        query.setType("STAR");
+        query.setPage(1);
+        query.setSize(20);
+
+        org.springframework.data.redis.core.ValueOperations<String, Object> valueOps =
+            mock(org.springframework.data.redis.core.ValueOperations.class);
+        when(valueOps.get(any())).thenReturn(null); // 缓存未命中
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        when(rankingMapper.selectList(any())).thenReturn(Arrays.asList(r1));
+        when(userMapper.selectBatchIds(anyList())).thenReturn(Collections.singletonList(testUser));
+        // countByTier 返回 BRONZE:1
+        java.util.Map<String, Object> row = new java.util.HashMap<>();
+        row.put("tier", "BRONZE");
+        row.put("cnt", 1);
+        when(rankingMapper.countByTier("STAR", CURRENT_SEASON_CODE)).thenReturn(Arrays.asList(row));
+
+        RankingPageVO vo = rankingService.getRankingPage(query);
+
+        assertEquals(CURRENT_SEASON_CODE, vo.getSeasonCode());
+        assertEquals("CURRENT", vo.getSeasonStatus());
+        assertEquals(1, vo.getTierDistribution().get("BRONZE"));
+        assertEquals(1, vo.getPage().getList().size());
     }
 }

@@ -11,6 +11,7 @@ import com.heypickler.mapper.RankingMapper;
 import com.heypickler.mapper.SeasonMapper;
 import com.heypickler.mapper.UserMapper;
 import com.heypickler.service.impl.SeasonServiceImpl;
+import com.heypickler.vo.RankingPageVO;
 import com.heypickler.vo.RankingVO;
 import com.heypickler.vo.SeasonVO;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,8 @@ class SeasonServiceImplTest {
     UserMapper userMapper;
     @Mock
     com.heypickler.config.TierProperties tierProperties;
+    @Mock
+    RankingService rankingService;
 
     @Test
     void activate_archivesOldCurrent_andSetsNew_forSameType() {
@@ -67,6 +70,8 @@ class SeasonServiceImplTest {
         List<Season> updated = cap.getAllValues();
         assertTrue(updated.stream().anyMatch(s -> s.getId().equals(1L) && "ARCHIVED".equals(s.getStatus())));
         assertTrue(updated.stream().anyMatch(s -> s.getId().equals(2L) && "CURRENT".equals(s.getStatus())));
+        // 激活后须给新赛季播种排名快照
+        verify(rankingService).refreshRankings("STAR", "2026-Q3");
     }
 
     @Test
@@ -108,6 +113,7 @@ class SeasonServiceImplTest {
         season.setId(5L);
         season.setType("PARTY");
         season.setCode("2026-P1");
+        season.setStatus("ARCHIVED");
         when(seasonMapper.selectById(5L)).thenReturn(season);
 
         Ranking r = new Ranking();
@@ -132,11 +138,13 @@ class SeasonServiceImplTest {
         query.setPage(1);
         query.setSize(20);
 
-        PageResult<RankingVO> page = service.getRankings(5L, query);
+        RankingPageVO page = service.getRankings(5L, query);
 
-        assertEquals(1, page.getList().size());
-        assertEquals("alice", page.getList().get(0).getNickname());
-        // 走 DB：未经过滤条件 tier/season 校验只需保证按 type+season 查询
+        assertEquals(1, page.getPage().getList().size());
+        assertEquals("alice", page.getPage().getList().get(0).getNickname());
+        assertEquals("2026-P1", page.getSeasonCode());
+        assertEquals("ARCHIVED", page.getSeasonStatus());
+        // 走 DB：按 type+season 查询
         verify(rankingMapper).selectList(any());
     }
 }

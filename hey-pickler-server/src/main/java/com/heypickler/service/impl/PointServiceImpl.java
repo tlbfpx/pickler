@@ -78,6 +78,39 @@ public class PointServiceImpl implements PointService, PointWallet {
         eventPublisher.publishEvent(new PointChangeListener.PointChangeEvent(target.type(), seasonCode));
     }
 
+    @Override
+    @Transactional
+    public void revertPointRecord(Long recordId, Long operatorId) {
+        PointRecord original = pointRecordMapper.selectById(recordId);
+        if (original == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "积分记录不存在: " + recordId);
+        }
+        String src = original.getSource();
+        if (!PointSource.MANUAL.name().equals(src) && !PointSource.ADJUST.name().equals(src)) {
+            // PLACEMENT / REGISTRATION / CHECK_IN / REDEEM 不可撤销
+            throw new BizException(ErrorCode.PARAM_ERROR,
+                    "仅支持撤销手动录入(MANUAL)与纠错(ADJUST)记录，当前来源=" + src);
+        }
+        // 跨赛季撤销：补偿行必须落在当前赛季，与原记录同赛季才有意义
+        String currentCode = requireCurrentSeasonCode(original.getType());
+        if (!currentCode.equals(original.getSeasonCode())) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "原始记录不属于当前赛季，无法撤销");
+        }
+
+        User user = userMapper.selectById(original.getUserId());
+        if (user == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "用户不存在");
+        }
+
+        // 补偿行：负分、ADJUST 来源、审计可追溯的原因。writeRecord 会钳制余额≥0、重算段位、存库。
+        ResolvedTarget target = new ResolvedTarget(original.getType(), null);
+        String reason = "撤销 #" + original.getId() + ": " + original.getReason();
+        writeRecord(original.getEventId(), user, target, currentCode,
+                PointSource.ADJUST.name(), -original.getPoints(), reason, operatorId);
+
+        eventPublisher.publishEvent(new PointChangeListener.PointChangeEvent(target.type(), currentCode));
+    }
+
     // ---------- internals ----------
 
     private record ResolvedTarget(String type, String title) {}
