@@ -17,7 +17,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -45,7 +47,7 @@ public class DictServiceImpl implements DictService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void updateItems(String dictCode, List<DictItemUpdateRequest> items) {
         for (DictItemUpdateRequest req : items) {
             // @Valid 对 List 元素不级联，service 兜底校验 itemKey 非空
@@ -67,6 +69,9 @@ public class DictServiceImpl implements DictService {
             patch.setStatus(req.getStatus());
             itemMapper.updateById(patch);
         }
+        // NOTE: 版本号自增在 DB 事务内执行 Redis INCR。Redis 不参与 Spring 事务，若 DB 提交失败
+        // 会出现「版本号已自增但数据未落库」的幻影失效——下次读会自愈（多一次 bundle 重拉）。
+        // 字典表 < 50 行、版本号是粗粒度失效信号，此代价可接受；无需 AFTER_COMMIT 事件复杂度。
         cacheService.incrementVersion();
     }
 
