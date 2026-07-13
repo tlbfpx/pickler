@@ -115,8 +115,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ref, watch, nextTick, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getDictList,
   getDictItems,
@@ -133,6 +133,19 @@ const rows = ref<DictItemUpdateRequest[]>([])
 const dictLoading = ref(false)
 const itemLoading = ref(false)
 const saving = ref(false)
+
+// dirty guard：仅追踪用户真实编辑，程序化赋值（加载字典项）不触发
+const dirty = ref(false)
+const suppressDirty = ref(false)
+
+watch(
+  rows,
+  () => {
+    if (suppressDirty.value) return
+    dirty.value = true
+  },
+  { deep: true }
+)
 
 const fetchDicts = async () => {
   dictLoading.value = true
@@ -152,8 +165,29 @@ const fetchDicts = async () => {
 
 const onPickDict = async (d: SysDictVO | null) => {
   if (!d) return
+  // 重复点击已选中行：el-table @current-change 会对同一行重复触发，直接忽略
+  if (d.dictCode === currentDict.value?.dictCode) return
+  // 切换前若有未保存修改，提示确认
+  if (dirty.value) {
+    try {
+      await ElMessageBox.confirm(
+        '当前字典有未保存的修改，确认切换？',
+        '提示',
+        {
+          confirmButtonText: '切换',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+      )
+    } catch {
+      // 用户取消：保持当前字典与编辑数据不变
+      return
+    }
+  }
   currentDict.value = d
   itemLoading.value = true
+  // 程序化赋值（加载）不应触发 dirty：在赋值前抑制、在 watch 触发后的下一 tick 解除
+  suppressDirty.value = true
   try {
     const res = await getDictItems(d.dictCode)
     if (res.code === 0) {
@@ -172,6 +206,9 @@ const onPickDict = async (d: SysDictVO | null) => {
     ElMessage.error('字典项加载失败')
   } finally {
     itemLoading.value = false
+    await nextTick()
+    suppressDirty.value = false
+    dirty.value = false
   }
 }
 
@@ -182,6 +219,7 @@ const handleSave = async () => {
     const res = await updateDictItems(currentDict.value.dictCode, rows.value)
     if (res.code === 0) {
       ElMessage.success('已保存')
+      dirty.value = false
     } else {
       ElMessage.error(res.message || '保存失败')
     }
