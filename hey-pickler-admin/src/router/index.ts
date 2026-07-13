@@ -92,6 +92,12 @@ const router = createRouter({
           meta: { title: '操作日志', icon: 'List', group: '系统' }
         },
         {
+          path: 'dict',
+          name: 'Dict',
+          component: () => import('@/views/dict/DictListView.vue'),
+          meta: { title: '字典管理', icon: 'Collection', group: '系统' }
+        },
+        {
           path: 'notifications',
           name: 'Notifications',
           component: () => import('@/views/notifications/NotificationsView.vue'),
