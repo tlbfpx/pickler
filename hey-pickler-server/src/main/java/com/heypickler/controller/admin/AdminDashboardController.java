@@ -30,6 +30,10 @@ import java.util.stream.Collectors;
 @Tag(name = "管理端-首页")
 public class AdminDashboardController {
 
+    /** tier_code 固定顺序，构建 tierColorMap 时按此遍历保证图例顺序稳定（对齐 RankingServiceImpl.TIER_CODE_ORDER） */
+    private static final List<String> TIER_CODE_ORDER = Arrays.asList(
+            "BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "MASTER");
+
     private final UserMapper userMapper;
     private final EventMapper eventMapper;
     private final RegistrationMapper registrationMapper;
@@ -101,6 +105,9 @@ public class AdminDashboardController {
                 .collect(Collectors.groupingBy(u -> u.getPartyTier() != null ? u.getPartyTier() : defaultTier, Collectors.counting()));
         data.put("starTierDistribution", starTierDist);
         data.put("partyTierDistribution", partyTierDist);
+        // 段位色映射（双轨 per-track，BRONZE..MASTER 全 6 档），供前端 pie/图例染色，与 RankingPageVO.tierColorMap 同源 TierResolver.colorFor
+        data.put("starTierColorMap", buildTierColorMap("STAR"));
+        data.put("partyTierColorMap", buildTierColorMap("PARTY"));
 
         // === Event type distribution ===
         long starEvents = eventMapper.selectCount(
@@ -234,5 +241,14 @@ public class AdminDashboardController {
         data.put("upcomingEvents", upcomingList);
 
         return Result.ok(data);
+    }
+
+    /** 当前 track 全 6 档 tier_code→color，供前端 pie/图例染色。对齐 RankingServiceImpl.buildTierColorMap。 */
+    private Map<String, String> buildTierColorMap(String track) {
+        Map<String, String> map = new LinkedHashMap<>();
+        for (String code : TIER_CODE_ORDER) {
+            map.put(code, tierResolver.colorFor(track, code));
+        }
+        return map;
     }
 }

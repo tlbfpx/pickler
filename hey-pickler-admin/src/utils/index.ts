@@ -99,20 +99,9 @@ export const getEventFormatColor = (format: string | null | undefined): string =
   return store.has('event_format', key) ? store.color('event_format', key) : (FALLBACK_FORMAT_COLOR[key] || '#6B7280')
 }
 
-// ============ 段位 / 角色（非本期字典联动范围，保持原样） ============
-
-export const getTierColor = (tier: string): string => {
-  // 段位 6 档展示色（仅前端展示用）
-  const colorMap: Record<string, string> = {
-    BRONZE: '#A56C2C',
-    SILVER: '#9CA3AF',
-    GOLD: '#E6A23C',
-    PLATINUM: '#409EFF',
-    DIAMOND: '#9C27B0',
-    MASTER: '#EF4444'
-  }
-  return colorMap[tier] || '#6B7280'
-}
+// ============ 段位 / 角色 ============
+// 段位色 Chunk4 起改由后端 VO 装配（TierBadge 组件读 tierColor/starTierColor），
+// 前端不再持有 getTierColor 色表；formatTier 仅保留 tier_code→中文名兜底（历史调用点）。
 
 export const getAdminRoleColor = (role: string): string => {
   const colorMap: Record<string, string> = {

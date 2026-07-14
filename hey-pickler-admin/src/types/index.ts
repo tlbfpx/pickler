@@ -14,6 +14,10 @@ export interface User {
   starTierName?: string
   /** 后端返回的中文段位名（优先展示） */
   partyTierName?: string
+  /** 后端返回的段位色（TierResolver.colorFor，优先展示） */
+  starTierColor?: string
+  /** 后端返回的段位色（TierResolver.colorFor，优先展示） */
+  partyTierColor?: string
   status: 'NORMAL' | 'BANNED'
   createdAt: string
 }
@@ -108,6 +112,8 @@ export interface RankingEntry {
   tier: string
   /** 后端返回的中文段位名（优先展示） */
   tierName?: string
+  /** 后端返回的段位色（TierResolver.colorFor，优先展示） */
+  tierColor?: string
 }
 
 export interface PointEntryRecord {
@@ -148,6 +154,8 @@ export interface SeasonRankingEntry {
   tier: string
   /** 后端返回的中文段位名（优先展示） */
   tierName?: string
+  /** 后端返回的段位色（TierResolver.colorFor，优先展示） */
+  tierColor?: string
 }
 
 /**
@@ -158,6 +166,8 @@ export interface RankingPageVO {
   page: PageResult<RankingEntry>
   /** 段位分布 {BRONZE: 12, ...}，仅含有行的段位，缺失段位前端补 0 */
   tierDistribution: Record<string, number>
+  /** 段位色映射 {BRONZE: #A56C2C, ...}，当前 track 全 6 档，供前端染色图例/徽章 */
+  tierColorMap?: Record<string, string>
   seasonCode: string
   seasonName: string | null
   seasonStatus: 'CURRENT' | 'ARCHIVED'
@@ -232,6 +242,10 @@ export interface DashboardStats {
   weeklyRevenue: number
   starTierDistribution: Record<string, number>
   partyTierDistribution: Record<string, number>
+  /** 段位色映射（STAR 轨 BRONZE..MASTER），供前端 pie 染色 */
+  starTierColorMap?: Record<string, string>
+  /** 段位色映射（PARTY 轨 BRONZE..MASTER），供前端 pie 染色 */
+  partyTierColorMap?: Record<string, string>
   eventTypes: Record<string, number>
   dailyNewUsers: Array<{ date: string; count: number }>
   dailyRegistrations: Array<{ date: string; count: number }>

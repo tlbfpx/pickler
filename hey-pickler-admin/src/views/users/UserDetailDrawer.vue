@@ -64,12 +64,10 @@
               {{ user?.starPoints ?? 0 }}
             </div>
             <div class="points-tier">
-              <span
-                class="tier-badge"
-                :style="{ backgroundColor: getTierColor(user?.starTier) }"
-              >
-                {{ user?.starTierName || formatTierName(user?.starTier) }}
-              </span>
+              <TierBadge
+                :tier-color="user?.starTierColor"
+                :tier-name="user?.starTierName || formatTierName(user?.starTier)"
+              />
             </div>
           </div>
           <div class="points-card party">
@@ -80,12 +78,10 @@
               {{ user?.partyPoints ?? 0 }}
             </div>
             <div class="points-tier">
-              <span
-                class="tier-badge"
-                :style="{ backgroundColor: getTierColor(user?.partyTier) }"
-              >
-                {{ user?.partyTierName || formatTierName(user?.partyTier) }}
-              </span>
+              <TierBadge
+                :tier-color="user?.partyTierColor"
+                :tier-name="user?.partyTierName || formatTierName(user?.partyTier)"
+              />
             </div>
           </div>
         </div>
@@ -353,9 +349,10 @@
 import { ref, watch } from 'vue'
 import { getUserDetail, getUserPoints, getUserEvents } from '@/api/users'
 import type { User, PointRecord, EventRecord } from '@/api/users'
-import { formatDate, getTierColor } from '@/utils'
+import { formatDate } from '@/utils'
 import { getTerms, formatTierName } from '@/constants/terms'
 import DictTag from '@/components/common/DictTag.vue'
+import TierBadge from '@/components/common/TierBadge.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -562,15 +559,6 @@ function maskPhone(phone: string | null | undefined) {
   font-size: 28px;
   font-weight: 700;
   margin: 4px 0;
-}
-
-.tier-badge {
-  display: inline-block;
-  padding: 2px 10px;
-  border-radius: 10px;
-  font-size: 12px;
-  color: #fff;
-  background: rgba(255,255,255,0.3);
 }
 
 .load-more {

@@ -55,6 +55,8 @@ class AdminDashboardControllerTest {
         when(registrationMapper.selectList(any())).thenReturn(Collections.emptyList());
         // TierResolver.defaultKey("STAR") 兜底档 = BRONZE（tier_config V19 seed）
         when(tierResolver.defaultKey(anyString())).thenReturn("BRONZE");
+        // Chunk4 — getStats 装配 starTierColorMap/partyTierColorMap 调用 colorFor(track, code)
+        when(tierResolver.colorFor(anyString(), anyString())).thenReturn("#6B7280");
 
         existingUser = new User();
         existingUser.setId(1L);

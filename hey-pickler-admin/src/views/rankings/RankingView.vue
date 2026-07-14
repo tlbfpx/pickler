@@ -88,7 +88,7 @@
       >
         <span
           class="dist-dot"
-          :style="{ background: TIER_COLOR[key] }"
+          :style="{ background: tierColorMap?.[key] || '#6B7280' }"
         />
         {{ TIER_NAME[key] }}
         <b>{{ tierDistribution[key] || 0 }}</b>
@@ -157,12 +157,11 @@
           width="120"
         >
           <template #default="{ row }">
-            <span
-              class="tier-badge"
-              :style="{ backgroundColor: getTierColor(row.tier) }"
-            >
-              {{ row.tierName || formatTierName(row.tier) }}
-            </span>
+            <TierBadge
+              :tier-color="row.tierColor"
+              :tier-name="row.tierName || formatTierName(row.tier)"
+              size="small"
+            />
           </template>
         </el-table-column>
         <el-table-column
@@ -238,9 +237,9 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getRankings, refreshRankings } from '@/api/rankings'
 import { getSeasonRankings, listSeasons } from '@/api/seasons'
-import { getTierColor } from '@/utils'
-import { getTerms, formatTierName, TIER_NAME, TIER_COLOR } from '@/constants/terms'
+import { getTerms, formatTierName, TIER_NAME } from '@/constants/terms'
 import Pagination from '@/components/common/Pagination.vue'
+import TierBadge from '@/components/common/TierBadge.vue'
 import PointLedgerDrawer from './PointLedgerDrawer.vue'
 import SeasonManageDialog from './SeasonManageDialog.vue'
 import PointEntryDialog from './PointEntryDialog.vue'
@@ -261,6 +260,8 @@ const tierFilter = ref('')
 const seasons = ref<Season[]>([])
 const selectedSeasonId = ref<number | null>(null)
 const tierDistribution = ref<Record<string, number>>({})
+/** 当前 track 全 6 档 tier_code→color（后端 RankingPageVO.tierColorMap 装配，离线回退灰色） */
+const tierColorMap = ref<Record<string, string>>({})
 const seasonCode = ref('')
 const seasonName = ref<string | null>(null)
 const seasonStatus = ref<'CURRENT' | 'ARCHIVED'>('CURRENT')
@@ -317,6 +318,7 @@ const fetchOne = async () => {
       list.value = d.page.list || []
       total.value = d.page.total || 0
       tierDistribution.value = d.tierDistribution || {}
+      tierColorMap.value = d.tierColorMap || {}
       seasonCode.value = d.seasonCode
       seasonName.value = d.seasonName
       seasonStatus.value = d.seasonStatus
@@ -485,14 +487,6 @@ onMounted(() => {
 .user-id {
   font-size: 12px;
   color: #6b7280;
-}
-
-.tier-badge {
-  display: inline-block;
-  padding: 2px 10px;
-  border-radius: 4px;
-  color: #fff;
-  font-size: 12px;
 }
 
 .change-up {
