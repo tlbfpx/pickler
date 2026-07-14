@@ -38,6 +38,9 @@ public class RankingServiceImpl implements RankingService {
     private final SeasonMapper seasonMapper;
 
     private static final int MAX_PAGE_SIZE = 100;
+    /** tier_code 固定顺序，构建 tierColorMap 时按此遍历保证图例顺序稳定 */
+    private static final List<String> TIER_CODE_ORDER = Arrays.asList(
+            "BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "MASTER");
 
     @Override
     @Transactional
@@ -155,6 +158,7 @@ public class RankingServiceImpl implements RankingService {
                     vo.setPoints(ranking.getPoints());
                     vo.setTier(ranking.getTier());
                     vo.setTierName(tierResolver.nameFor(ranking.getType(), ranking.getTier()));
+                    vo.setTierColor(tierResolver.colorFor(ranking.getType(), ranking.getTier()));
 
                     User user = userMap.get(ranking.getUserId());
                     vo.setNickname(user.getNickname());
@@ -178,6 +182,7 @@ public class RankingServiceImpl implements RankingService {
         RankingPageVO vo = new RankingPageVO();
         vo.setPage(page);
         vo.setTierDistribution(countTierDistribution(query.getType(), current.getCode()));
+        vo.setTierColorMap(buildTierColorMap(query.getType()));
         vo.setSeasonCode(current.getCode());
         vo.setSeasonName(current.getName());
         vo.setSeasonStatus(current.getStatus());
@@ -196,6 +201,15 @@ public class RankingServiceImpl implements RankingService {
             }
         }
         return dist;
+    }
+
+    /** 当前 track 全 6 档 tier_code→color，供前端图例/徽章染色。tier_code 顺序固定 BRONZE..MASTER。 */
+    private Map<String, String> buildTierColorMap(String type) {
+        Map<String, String> map = new LinkedHashMap<>();
+        for (String code : TIER_CODE_ORDER) {
+            map.put(code, tierResolver.colorFor(type, code));
+        }
+        return map;
     }
 
     @Override
@@ -231,6 +245,7 @@ public class RankingServiceImpl implements RankingService {
                     vo.setPoints(ranking.getPoints());
                     vo.setTier(ranking.getTier());
                     vo.setTierName(tierResolver.nameFor(ranking.getType(), ranking.getTier()));
+                    vo.setTierColor(tierResolver.colorFor(ranking.getType(), ranking.getTier()));
 
                     User user = userMap.get(ranking.getUserId());
                     vo.setNickname(user.getNickname());

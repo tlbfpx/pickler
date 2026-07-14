@@ -54,6 +54,8 @@ public class UserServiceImpl implements UserService {
         vo.setPartyTier(user.getPartyTier());
         vo.setStarTierName(tierResolver.nameFor("STAR", user.getStarTier()));
         vo.setPartyTierName(tierResolver.nameFor("PARTY", user.getPartyTier()));
+        vo.setStarTierColor(tierResolver.colorFor("STAR", user.getStarTier()));
+        vo.setPartyTierColor(tierResolver.colorFor("PARTY", user.getPartyTier()));
         vo.setTotalEvents(Math.toIntExact(registrationMapper.selectCount(
                 new LambdaQueryWrapper<Registration>().eq(Registration::getUserId, userId))));
         return vo;
@@ -317,6 +319,8 @@ public class UserServiceImpl implements UserService {
         vo.setPartyTier(user.getPartyTier());
         vo.setStarTierName(tierResolver.nameFor("STAR", user.getStarTier()));
         vo.setPartyTierName(tierResolver.nameFor("PARTY", user.getPartyTier()));
+        vo.setStarTierColor(tierResolver.colorFor("STAR", user.getStarTier()));
+        vo.setPartyTierColor(tierResolver.colorFor("PARTY", user.getPartyTier()));
         vo.setStatus(user.getStatus());
         vo.setLastLoginAt(user.getLastLoginAt());
         vo.setCreatedAt(user.getCreatedAt());

@@ -19,5 +19,9 @@ public class UserProfileVO {
     private String starTierName;
     /** 中文档名，由 TierResolver.nameFor("PARTY", partyTier) 装配 */
     private String partyTierName;
+    /** 段位色，由 TierResolver.colorFor("STAR", starTier) 装配 */
+    private String starTierColor;
+    /** 段位色，由 TierResolver.colorFor("PARTY", partyTier) 装配 */
+    private String partyTierColor;
     private Integer totalEvents;
 }

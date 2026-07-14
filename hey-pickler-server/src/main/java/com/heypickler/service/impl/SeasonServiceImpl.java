@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -35,6 +36,9 @@ import java.util.stream.Collectors;
 public class SeasonServiceImpl implements SeasonService {
 
     private static final int MAX_PAGE_SIZE = 100;
+    /** tier_code 固定顺序，构建 tierColorMap 时按此遍历保证图例顺序稳定 */
+    private static final List<String> TIER_CODE_ORDER = Arrays.asList(
+            "BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "MASTER");
 
     private final SeasonMapper seasonMapper;
     private final RankingMapper rankingMapper;
@@ -126,6 +130,7 @@ public class SeasonServiceImpl implements SeasonService {
                     vo.setPoints(r.getPoints());
                     vo.setTier(r.getTier());
                     vo.setTierName(tierResolver.nameFor(r.getType(), r.getTier()));
+                    vo.setTierColor(tierResolver.colorFor(r.getType(), r.getTier()));
                     User u = userMap.get(r.getUserId());
                     vo.setNickname(u.getNickname());
                     vo.setAvatarUrl(u.getAvatarUrl());
@@ -142,6 +147,7 @@ public class SeasonServiceImpl implements SeasonService {
         RankingPageVO vo = new RankingPageVO();
         vo.setPage(pageResult);
         vo.setTierDistribution(countTierDistribution(season.getType(), season.getCode()));
+        vo.setTierColorMap(buildTierColorMap(season.getType()));
         vo.setSeasonCode(season.getCode());
         vo.setSeasonName(season.getName());
         vo.setSeasonStatus(season.getStatus());
@@ -160,6 +166,15 @@ public class SeasonServiceImpl implements SeasonService {
             }
         }
         return dist;
+    }
+
+    /** 当前 track 全 6 档 tier_code→color，供前端图例/徽章染色。tier_code 顺序固定 BRONZE..MASTER。 */
+    private Map<String, String> buildTierColorMap(String type) {
+        Map<String, String> map = new LinkedHashMap<>();
+        for (String code : TIER_CODE_ORDER) {
+            map.put(code, tierResolver.colorFor(type, code));
+        }
+        return map;
     }
 
     private Map<Long, User> batchLoadUsers(List<Long> userIds) {
