@@ -125,6 +125,7 @@ import {
   type SysDictItemVO,
   type DictItemUpdateRequest
 } from '@/api/dict'
+import { useDictStore } from '@/stores/dict'
 
 const dicts = ref<SysDictVO[]>([])
 const currentDict = ref<SysDictVO | null>(null)
@@ -220,6 +221,8 @@ const handleSave = async () => {
     if (res.code === 0) {
       ElMessage.success('已保存')
       dirty.value = false
+      // 同会话即时刷新其他页面的字典缓存
+      useDictStore().refresh()
     } else {
       ElMessage.error(res.message || '保存失败')
     }

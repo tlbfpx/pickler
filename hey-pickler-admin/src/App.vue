@@ -5,8 +5,10 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useDictStore } from '@/stores/dict'
 
 const authStore = useAuthStore()
+const dictStore = useDictStore()
 
 onMounted(() => {
   // Restore admin info from localStorage if available
@@ -18,6 +20,9 @@ onMounted(() => {
       localStorage.removeItem('admin_info')
     }
   }
+
+  // 异步加载字典 bundle，不阻塞渲染；失败时静默保留 localStorage 缓存
+  dictStore.load()
 })
 </script>
 
