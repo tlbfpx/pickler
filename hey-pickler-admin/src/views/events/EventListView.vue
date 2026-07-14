@@ -39,12 +39,11 @@
           width="120"
         >
           <template #default="{ row }">
-            <el-tag
-              :color="getEventTypeColor(row.type)"
-              effect="dark"
-            >
-              {{ formatEventType(row.type) }}
-            </el-tag>
+            <DictTag
+              dict-code="event_type"
+              :item-key="row.type"
+              size="small"
+            />
           </template>
         </el-table-column>
         <el-table-column
@@ -52,14 +51,12 @@
           width="90"
         >
           <template #default="{ row }">
-            <el-tag
+            <DictTag
               v-if="row.format"
-              :color="getEventFormatColor(row.format)"
-              effect="plain"
+              dict-code="event_format"
+              :item-key="row.format"
               size="small"
-            >
-              {{ formatEventFormat(row.format) }}
-            </el-tag>
+            />
             <span
               v-else
               style="color: #9ca3af"
@@ -262,7 +259,7 @@
 import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getEventList, deleteEvent, changeEventStatus } from '@/api/events'
-import { formatDate, formatEventType, formatEventFormat, getEventTypeColor, getEventFormatColor } from '@/utils'
+import { formatDate } from '@/utils'
 import { type EventStatus, statusTooltip } from '@/constants/eventStatus'
 import {
   canEditEvent,
@@ -271,6 +268,7 @@ import {
   canViewRegistrations
 } from '@/constants/eventGuards'
 import Pagination from '@/components/common/Pagination.vue'
+import DictTag from '@/components/common/DictTag.vue'
 import EventStatusBadge from '@/components/common/EventStatusBadge.vue'
 import EventFilterBar from '@/components/common/EventFilterBar.vue'
 import UndoBar from '@/components/common/UndoBar.vue'

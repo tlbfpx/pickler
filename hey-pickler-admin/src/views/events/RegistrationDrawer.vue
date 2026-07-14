@@ -15,22 +15,17 @@
         class="event-summary"
       >
         <div class="summary-row">
-          <el-tag
-            :color="getEventTypeColor(event.type)"
-            effect="dark"
+          <DictTag
+            dict-code="event_type"
+            :item-key="event.type"
             size="small"
-            style="border: none"
-          >
-            {{ formatEventType(event.type) }}
-          </el-tag>
-          <el-tag
-            :color="getEventStatusColor(event.status)"
-            effect="dark"
+          />
+          <DictTag
+            dict-code="event_status"
+            :item-key="event.status"
             size="small"
-            style="border: none; margin-left: 8px"
-          >
-            {{ formatEventStatus(event.status) }}
-          </el-tag>
+            style="margin-left: 8px"
+          />
           <span class="summary-info">{{ event.location || '-' }} · {{ formatDate(event.eventTime!) }}</span>
         </div>
         <div class="capacity-bar">
@@ -245,9 +240,10 @@
 import { ref, reactive, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Pagination from '@/components/common/Pagination.vue'
+import DictTag from '@/components/common/DictTag.vue'
 import GroupingPanel from './GroupingPanel.vue'
 import { getEventRegistrations, updateRegistrationStatus, bulkCheckIn } from '@/api/events'
-import { formatDate, formatEventType, formatEventStatus, getEventTypeColor, getEventStatusColor } from '@/utils'
+import { formatDate } from '@/utils'
 import type { Event, Registration } from '@/types'
 
 const props = defineProps<{
