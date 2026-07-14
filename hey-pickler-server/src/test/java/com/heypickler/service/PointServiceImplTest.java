@@ -2,7 +2,7 @@ package com.heypickler.service;
 
 import com.heypickler.common.enums.PointSource;
 import com.heypickler.common.exception.BizException;
-import com.heypickler.config.TierProperties;
+// TierResolver 注入见下方 @Mock（接口，Mockito 直接 mock）
 import com.heypickler.entity.Event;
 import com.heypickler.entity.Season;
 import com.heypickler.entity.User;
@@ -41,7 +41,7 @@ class PointServiceImplTest {
     @Mock PointRecordMapper pointRecordMapper;
     @Mock UserMapper userMapper;
     @Mock EventMapper eventMapper;
-    @Mock TierProperties tierProperties;
+    @Mock TierResolver tierResolver;
     @Mock ApplicationEventPublisher eventPublisher;
 
     @Test
@@ -56,7 +56,7 @@ class PointServiceImplTest {
         u.setStarPoints(400);
         u.setStarTier("BRONZE");
         when(userMapper.selectBatchIds(any())).thenReturn(java.util.List.of(u));
-        when(tierProperties.keyFor(500, "STAR")).thenReturn("SILVER");
+        when(tierResolver.keyFor(500, "STAR")).thenReturn("SILVER");
 
         service.enterPoints(null, "STAR", List.of(new PointEntry(1L, 100, "手动")), PointSource.MANUAL, 9L);
 

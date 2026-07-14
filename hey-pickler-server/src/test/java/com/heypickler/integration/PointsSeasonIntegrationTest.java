@@ -1,6 +1,6 @@
 package com.heypickler.integration;
 
-import com.heypickler.config.TierProperties;
+import com.heypickler.service.TierResolver;
 import com.heypickler.entity.PointRecord;
 import com.heypickler.entity.Ranking;
 import com.heypickler.entity.Season;
@@ -47,7 +47,7 @@ class PointsSeasonIntegrationTest extends IntegrationTestConfig {
     @Autowired private PointRecordMapper pointRecordMapper;
     @Autowired private RankingMapper rankingMapper;
     @Autowired private SeasonMapper seasonMapper;
-    @Autowired private TierProperties tierProperties;
+    @Autowired private TierResolver tierResolver;
 
     /**
      * 幂等重置 STAR 2026-Q2 为 CURRENT。本地 dev 库可能因手动演练 / 上一轮测试遗留
@@ -150,22 +150,22 @@ class PointsSeasonIntegrationTest extends IntegrationTestConfig {
     // ===================================================================
     @Test
     void tierBoundaries_sixTiers_correctKeyForPoints() {
-        // 直接验证 TierProperties.keyFor（refreshRankings 即调用它）
+        // 直接验证 TierResolver.keyFor（refreshRankings 即调用它）
         // STAR thresholds: [0, 500, 1200, 2500, 5000, 10000]
-        assertEquals("BRONZE",   tierProperties.keyFor(0,    "STAR"));
-        assertEquals("BRONZE",   tierProperties.keyFor(499,  "STAR"));
-        assertEquals("SILVER",   tierProperties.keyFor(500,  "STAR"));
-        assertEquals("SILVER",   tierProperties.keyFor(1199, "STAR"));
-        assertEquals("GOLD",     tierProperties.keyFor(1200, "STAR"));
-        assertEquals("PLATINUM", tierProperties.keyFor(2500, "STAR"));
-        assertEquals("DIAMOND",  tierProperties.keyFor(5000, "STAR"));
-        assertEquals("MASTER",   tierProperties.keyFor(10000,"STAR"));
+        assertEquals("BRONZE",   tierResolver.keyFor(0,    "STAR"));
+        assertEquals("BRONZE",   tierResolver.keyFor(499,  "STAR"));
+        assertEquals("SILVER",   tierResolver.keyFor(500,  "STAR"));
+        assertEquals("SILVER",   tierResolver.keyFor(1199, "STAR"));
+        assertEquals("GOLD",     tierResolver.keyFor(1200, "STAR"));
+        assertEquals("PLATINUM", tierResolver.keyFor(2500, "STAR"));
+        assertEquals("DIAMOND",  tierResolver.keyFor(5000, "STAR"));
+        assertEquals("MASTER",   tierResolver.keyFor(10000,"STAR"));
 
         // PARTY thresholds: [0, 200, 500, 1200, 2500, 5000]
-        assertEquals("BRONZE",   tierProperties.keyFor(0,    "PARTY"));
-        assertEquals("SILVER",   tierProperties.keyFor(200,  "PARTY"));
-        assertEquals("GOLD",     tierProperties.keyFor(500,  "PARTY"));
-        assertEquals("MASTER",   tierProperties.keyFor(5000, "PARTY"));
+        assertEquals("BRONZE",   tierResolver.keyFor(0,    "PARTY"));
+        assertEquals("SILVER",   tierResolver.keyFor(200,  "PARTY"));
+        assertEquals("GOLD",     tierResolver.keyFor(500,  "PARTY"));
+        assertEquals("MASTER",   tierResolver.keyFor(5000, "PARTY"));
 
         // 驱动 refreshRankings 走真实写库路径，验证 3 个边界用户的 tier 写入。
         // 用与场景 1 一致的两步法（INSERT IGNORE 占位 + UPDATE 设分）避免占位符错位。
@@ -296,7 +296,7 @@ class PointsSeasonIntegrationTest extends IntegrationTestConfig {
         for (Map<String, Object> u : users) {
             long userId = ((Number) u.get("id")).longValue();
             int points = ((Number) u.get("star_points")).intValue();
-            String tier = tierProperties.keyFor(points, type);
+            String tier = tierResolver.keyFor(points, type);
             jdbcTemplate.update(
                     "INSERT INTO ranking (user_id, type, tier, `rank`, points, `change`, season, updated_at) " +
                             "VALUES (?, ?, ?, ?, ?, 0, ?, NOW())",

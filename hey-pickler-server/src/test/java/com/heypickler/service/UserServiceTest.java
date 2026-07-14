@@ -6,7 +6,7 @@ import com.heypickler.common.enums.BanAction;
 import com.heypickler.common.enums.UserStatus;
 import com.heypickler.common.result.PageResult;
 import com.heypickler.common.util.AesUtil;
-import com.heypickler.config.TierProperties;
+import com.heypickler.service.TierResolver;
 import com.heypickler.dto.admin.BanRequest;
 import com.heypickler.dto.admin.UserQueryRequest;
 import com.heypickler.dto.app.UserUpdateRequest;
@@ -45,7 +45,7 @@ class UserServiceTest {
     @Mock private PointRecordMapper pointRecordMapper;
     @Mock private BanRecordMapper banRecordMapper;
     @Mock private AesUtil aesUtil;
-    @Mock private TierProperties tierProperties;
+    @Mock private TierResolver tierResolver;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -79,13 +79,15 @@ class UserServiceTest {
         testUser.setStatus(UserStatus.NORMAL.name());
         testUser.setCreatedAt(LocalDateTime.now());
 
-        // Task 2.6: User VO 装配时用 tierProperties.nameFor(key) 填充中文名
-        when(tierProperties.nameFor("BRONZE")).thenReturn("青铜");
-        when(tierProperties.nameFor("SILVER")).thenReturn("白银");
-        when(tierProperties.nameFor("GOLD")).thenReturn("黄金");
-        when(tierProperties.nameFor("PLATINUM")).thenReturn("铂金");
-        when(tierProperties.nameFor("DIAMOND")).thenReturn("钻石");
-        when(tierProperties.nameFor("MASTER")).thenReturn("王者");
+        // Task 2.6: User VO 装配时用 tierResolver.nameFor(track, key) 填充中文名（per-track）
+        when(tierResolver.nameFor("STAR", "BRONZE")).thenReturn("青铜");
+        when(tierResolver.nameFor("STAR", "SILVER")).thenReturn("白银");
+        when(tierResolver.nameFor("STAR", "GOLD")).thenReturn("黄金");
+        when(tierResolver.nameFor("STAR", "PLATINUM")).thenReturn("铂金");
+        when(tierResolver.nameFor("STAR", "DIAMOND")).thenReturn("钻石");
+        when(tierResolver.nameFor("STAR", "MASTER")).thenReturn("王者");
+        // PARTY 球友称号系（per-track 不同档名），测试默认取见习球友
+        when(tierResolver.nameFor("PARTY", "BRONZE")).thenReturn("见习球友");
     }
 
     @Test
@@ -100,12 +102,13 @@ class UserServiceTest {
         assertEquals("测试用户", profile.getNickname());
         assertEquals("138****1234", profile.getPhone());
 
-        // Task 2.6: UserProfileVO 必须装配 starTierName / partyTierName（中文档名）
+        // Task 2.6: UserProfileVO 必须装配 starTierName / partyTierName（per-track 中文名）
         assertEquals("青铜", profile.getStarTierName(),
-                "starTierName 必须由 nameFor(user.starTier) 推导");
-        assertEquals("青铜", profile.getPartyTierName(),
-                "partyTierName 必须由 nameFor(user.partyTier) 推导");
-        verify(tierProperties, times(2)).nameFor("BRONZE");
+                "starTierName 必须由 nameFor(STAR, user.starTier) 推导");
+        assertEquals("见习球友", profile.getPartyTierName(),
+                "partyTierName 必须由 nameFor(PARTY, user.partyTier) 推导");
+        verify(tierResolver).nameFor("STAR", "BRONZE");
+        verify(tierResolver).nameFor("PARTY", "BRONZE");
         verify(userMapper).selectById(1L);
     }
 
@@ -191,10 +194,11 @@ class UserServiceTest {
         assertEquals("测试用户", result.getList().get(0).getNickname());
         verify(userMapper).selectPage(any(Page.class), any());
 
-        // Task 2.6: adminListUsers 装配的 UserAdminVO 必须含中文名
+        // Task 2.6: adminListUsers 装配的 UserAdminVO 必须含 per-track 中文名
+        // STAR BRONZE=青铜；PARTY BRONZE=见习球友（tier_config V19 双轨 seed）
         UserAdminVO adminVO = result.getList().get(0);
         assertEquals("青铜", adminVO.getStarTierName());
-        assertEquals("青铜", adminVO.getPartyTierName());
+        assertEquals("见习球友", adminVO.getPartyTierName());
     }
 
     @Test
@@ -227,9 +231,10 @@ class UserServiceTest {
         assertNotNull(user);
         assertEquals("13812341234", user.getPhone());
 
-        // Task 2.6: adminGetUser 装配的 UserAdminVO 必须含中文名
+        // Task 2.6: adminGetUser 装配的 UserAdminVO 必须含 per-track 中文名
+        // STAR BRONZE=青铜；PARTY BRONZE=见习球友（tier_config V19 双轨 seed）
         assertEquals("青铜", user.getStarTierName());
-        assertEquals("青铜", user.getPartyTierName());
+        assertEquals("见习球友", user.getPartyTierName());
         verify(aesUtil).decrypt("encrypted_phone_13812341234");
     }
 

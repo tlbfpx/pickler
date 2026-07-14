@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.heypickler.common.annotation.RequireRole;
 import com.heypickler.common.enums.UserRole;
 import com.heypickler.common.result.Result;
-import com.heypickler.config.TierProperties;
+import com.heypickler.service.TierResolver;
 import com.heypickler.entity.Event;
 import com.heypickler.entity.Registration;
 import com.heypickler.entity.User;
@@ -33,7 +33,7 @@ public class AdminDashboardController {
     private final UserMapper userMapper;
     private final EventMapper eventMapper;
     private final RegistrationMapper registrationMapper;
-    private final TierProperties tierProperties;
+    private final TierResolver tierResolver;
 
     @GetMapping
     @Operation(summary = "首页统计数据")
@@ -90,7 +90,8 @@ public class AdminDashboardController {
         data.put("weeklyRevenue", Math.round(weeklyRevenue * 100) / 100.0);
 
         // === Tier distribution ===
-        String defaultTier = tierProperties.getKeys().get(0);
+        // tier_config 双轨 defaultKey 均为 BRONZE（V19 seed），STAR/PARTY 分布共用兜底档。
+        String defaultTier = tierResolver.defaultKey("STAR");
         List<User> allUsers = userMapper.selectList(null);
         Map<String, Long> starTierDist = allUsers.stream()
                 .filter(u -> u.getStarPoints() != null && u.getStarPoints() > 0)

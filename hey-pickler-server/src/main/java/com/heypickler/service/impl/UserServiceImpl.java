@@ -6,7 +6,7 @@ import com.heypickler.common.enums.BanAction;
 import com.heypickler.common.enums.UserStatus;
 import com.heypickler.common.result.PageResult;
 import com.heypickler.common.util.AesUtil;
-import com.heypickler.config.TierProperties;
+import com.heypickler.service.TierResolver;
 import com.heypickler.dto.admin.BanRequest;
 import com.heypickler.dto.admin.UserQueryRequest;
 import com.heypickler.dto.app.UserUpdateRequest;
@@ -33,7 +33,7 @@ public class UserServiceImpl implements UserService {
     private final BanRecordMapper banRecordMapper;
     private final AdminUserMapper adminUserMapper;
     private final AesUtil aesUtil;
-    private final TierProperties tierProperties;
+    private final TierResolver tierResolver;
 
     @Override
     public UserProfileVO getProfile(Long userId) {
@@ -52,8 +52,8 @@ public class UserServiceImpl implements UserService {
         vo.setPartyPoints(user.getPartyPoints());
         vo.setStarTier(user.getStarTier());
         vo.setPartyTier(user.getPartyTier());
-        vo.setStarTierName(tierProperties.nameFor(user.getStarTier()));
-        vo.setPartyTierName(tierProperties.nameFor(user.getPartyTier()));
+        vo.setStarTierName(tierResolver.nameFor("STAR", user.getStarTier()));
+        vo.setPartyTierName(tierResolver.nameFor("PARTY", user.getPartyTier()));
         vo.setTotalEvents(Math.toIntExact(registrationMapper.selectCount(
                 new LambdaQueryWrapper<Registration>().eq(Registration::getUserId, userId))));
         return vo;
@@ -315,8 +315,8 @@ public class UserServiceImpl implements UserService {
         vo.setPartyPoints(user.getPartyPoints());
         vo.setStarTier(user.getStarTier());
         vo.setPartyTier(user.getPartyTier());
-        vo.setStarTierName(tierProperties.nameFor(user.getStarTier()));
-        vo.setPartyTierName(tierProperties.nameFor(user.getPartyTier()));
+        vo.setStarTierName(tierResolver.nameFor("STAR", user.getStarTier()));
+        vo.setPartyTierName(tierResolver.nameFor("PARTY", user.getPartyTier()));
         vo.setStatus(user.getStatus());
         vo.setLastLoginAt(user.getLastLoginAt());
         vo.setCreatedAt(user.getCreatedAt());

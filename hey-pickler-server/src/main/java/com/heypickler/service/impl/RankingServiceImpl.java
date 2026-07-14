@@ -5,7 +5,7 @@ import com.heypickler.common.constant.RedisKey;
 import com.heypickler.common.result.PageResult;
 import com.heypickler.common.exception.BizException;
 import com.heypickler.common.exception.ErrorCode;
-import com.heypickler.config.TierProperties;
+import com.heypickler.service.TierResolver;
 import com.heypickler.dto.app.RankingQuery;
 import com.heypickler.entity.Ranking;
 import com.heypickler.entity.Season;
@@ -34,7 +34,7 @@ public class RankingServiceImpl implements RankingService {
     private final UserMapper userMapper;
     private final RankingMapper rankingMapper;
     private final RedisTemplate<String, Object> redisTemplate;
-    private final TierProperties tierProperties;
+    private final TierResolver tierResolver;
     private final SeasonMapper seasonMapper;
 
     private static final int MAX_PAGE_SIZE = 100;
@@ -69,7 +69,7 @@ public class RankingServiceImpl implements RankingService {
         int globalRank = 1;
         for (User user : users) {
             int points = "STAR".equals(type) ? user.getStarPoints() : user.getPartyPoints();
-            String tier = tierProperties.keyFor(points, type);
+            String tier = tierResolver.keyFor(points, type);
 
             Ranking existing = existingRankingMap.get(user.getId());
             int change = existing != null ? existing.getRank() - globalRank : 0;
@@ -94,8 +94,8 @@ public class RankingServiceImpl implements RankingService {
         // Clear caches after DB is updated.
         // NOTE: getRankings 缓存 key 为 ranking:{type}:{tier}:{seasonCode}，tier=null 时 key 形如
         // "ranking:STAR:null:2026-Q2"，必须一并清理，否则不指定 tier 的查询会读到旧数据。
-        // 档位由 TierProperties 配置驱动（6 档 + null），参数化避免硬编码。
-        for (String tier : tierProperties.cacheKeysWithNull()) {
+        // 档位由 TierResolver 驱动（tier_config 表 V19，6 档 + null），参数化避免硬编码。
+        for (String tier : tierResolver.cacheKeysWithNull()) {
             redisTemplate.delete(RedisKey.ranking(type, tier, seasonCode));
         }
         redisTemplate.delete(RedisKey.rankingTop5(type));
@@ -154,7 +154,7 @@ public class RankingServiceImpl implements RankingService {
                     vo.setUserId(ranking.getUserId());
                     vo.setPoints(ranking.getPoints());
                     vo.setTier(ranking.getTier());
-                    vo.setTierName(tierProperties.nameFor(ranking.getTier()));
+                    vo.setTierName(tierResolver.nameFor(ranking.getType(), ranking.getTier()));
 
                     User user = userMap.get(ranking.getUserId());
                     vo.setNickname(user.getNickname());
@@ -230,7 +230,7 @@ public class RankingServiceImpl implements RankingService {
                     vo.setUserId(ranking.getUserId());
                     vo.setPoints(ranking.getPoints());
                     vo.setTier(ranking.getTier());
-                    vo.setTierName(tierProperties.nameFor(ranking.getTier()));
+                    vo.setTierName(tierResolver.nameFor(ranking.getType(), ranking.getTier()));
 
                     User user = userMap.get(ranking.getUserId());
                     vo.setNickname(user.getNickname());

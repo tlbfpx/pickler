@@ -9,6 +9,7 @@ import com.heypickler.entity.AdminUser;
 import com.heypickler.entity.User;
 import com.heypickler.mapper.AdminUserMapper;
 import com.heypickler.mapper.UserMapper;
+import com.heypickler.service.TierResolver;
 import com.heypickler.service.impl.AuthServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,7 @@ class AuthServiceTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private ValueOperations<String, Object> valueOperations;
     @Mock private org.springframework.web.client.RestTemplate restTemplate;
+    @Mock private TierResolver tierResolver;
 
     @InjectMocks
     private AuthServiceImpl authService;

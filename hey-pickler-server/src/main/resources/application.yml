@@ -15,6 +15,8 @@ mybatis-plus:
 
 hey-pickler:
   tier:
+    # DEPRECATED: 段位已迁至 tier_config 表（V19，双轨 per-track），TierResolver 直接读 DB。
+    # 此配置保留供历史参考，不再被任何代码读取（TierProperties 已删除）。
     keys: [BRONZE, SILVER, GOLD, PLATINUM, DIAMOND, MASTER]
     names: [青铜, 白银, 黄金, 铂金, 钻石, 王者]
     star:

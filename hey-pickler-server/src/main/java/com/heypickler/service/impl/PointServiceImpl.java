@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.heypickler.common.enums.PointSource;
 import com.heypickler.common.exception.BizException;
 import com.heypickler.common.exception.ErrorCode;
-import com.heypickler.config.TierProperties;
+import com.heypickler.service.TierResolver;
 import com.heypickler.entity.Event;
 import com.heypickler.entity.PointRecord;
 import com.heypickler.entity.Season;
@@ -37,7 +37,7 @@ public class PointServiceImpl implements PointService, PointWallet {
     private final PointRecordMapper pointRecordMapper;
     private final UserMapper userMapper;
     private final SeasonMapper seasonMapper;
-    private final TierProperties tierProperties;
+    private final TierResolver tierResolver;
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
@@ -185,12 +185,12 @@ public class PointServiceImpl implements PointService, PointWallet {
             int current = user.getStarPoints() != null ? user.getStarPoints() : 0;
             int newPoints = Math.max(0, current + points);
             user.setStarPoints(newPoints);
-            user.setStarTier(tierProperties.keyFor(newPoints, target.type()));
+            user.setStarTier(tierResolver.keyFor(newPoints, target.type()));
         } else {
             int current = user.getPartyPoints() != null ? user.getPartyPoints() : 0;
             int newPoints = Math.max(0, current + points);
             user.setPartyPoints(newPoints);
-            user.setPartyTier(tierProperties.keyFor(newPoints, target.type()));
+            user.setPartyTier(tierResolver.keyFor(newPoints, target.type()));
         }
         userMapper.updateById(user);
     }

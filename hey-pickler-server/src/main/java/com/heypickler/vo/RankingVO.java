@@ -12,6 +12,6 @@ public class RankingVO {
     private String city;
     private Integer points;
     private String tier;
-    /** 中文档名（如 BRONZE→青铜），由 TierProperties.nameFor(tier) 装配 */
+    /** 中文档名（如 BRONZE→青铜），由 TierResolver.nameFor(ranking.getType(), tier) 装配 */
     private String tierName;
 }

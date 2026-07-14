@@ -41,7 +41,7 @@ class SeasonServiceImplTest {
     @Mock
     UserMapper userMapper;
     @Mock
-    com.heypickler.config.TierProperties tierProperties;
+    com.heypickler.service.TierResolver tierResolver;
     @Mock
     RankingService rankingService;
 
@@ -125,8 +125,8 @@ class SeasonServiceImplTest {
         r.setTier("GOLD");
         r.setChange(0);
         when(rankingMapper.selectList(any())).thenReturn(List.of(r));
-        // Task 2.6: SeasonServiceImpl 装配 RankingVO.tierName 走 tierProperties.nameFor
-        when(tierProperties.nameFor("GOLD")).thenReturn("黄金");
+        // Task 2.6: SeasonServiceImpl 装配 RankingVO.tierName 走 tierResolver.nameFor(track, tier)
+        when(tierResolver.nameFor("PARTY", "GOLD")).thenReturn("热血球友");
 
         User u = new User();
         u.setId(7L);
