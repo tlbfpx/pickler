@@ -8,6 +8,10 @@
  * 段位 6 档（与后端 TierName 对齐）：
  *   BRONZE 青铜 / SILVER 白银 / GOLD 黄金
  *   PLATINUM 铂金 / DIAMOND 钻石 / MASTER 王者
+ *
+ * 段位色 Chunk4 起改由后端 VO 装配（tierColor / starTierColor / partyTierColor /
+ * tierColorMap），前端不再持有 TIER_COLOR 色表；TIER_NAME/formatTierName 仅作
+ * tier_code→中文名兜底（离线或缺字段场景）。
  */
 
 import { useDictStore } from '@/stores/dict'
@@ -87,18 +91,6 @@ export const TIER_NAME: Record<string, string> = {
 }
 
 /**
- * 段位展示色（仅前端展示用，不影响业务逻辑）。
- */
-export const TIER_COLOR: Record<string, string> = {
-  BRONZE: '#A56C2C',
-  SILVER: '#9CA3AF',
-  GOLD: '#E6A23C',
-  PLATINUM: '#409EFF',
-  DIAMOND: '#9C27B0',
-  MASTER: '#EF4444'
-}
-
-/**
  * 取段位中文展示名。
  * - 优先使用后端返回的中文 tierName（已为中文时直接返回）
  * - 否则按英文 key 查 TIER_NAME
@@ -107,14 +99,6 @@ export const TIER_COLOR: Record<string, string> = {
 export function formatTierName(tier: string | null | undefined): string {
   if (!tier) return '-'
   return TIER_NAME[tier] || tier
-}
-
-/**
- * 取段位展示色，未命中时回退灰色。
- */
-export function getTierColor(tier: string | null | undefined): string {
-  if (!tier) return '#6B7280'
-  return TIER_COLOR[tier] || '#6B7280'
 }
 
 /**

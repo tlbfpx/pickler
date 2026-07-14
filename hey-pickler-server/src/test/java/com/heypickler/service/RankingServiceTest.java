@@ -1,7 +1,7 @@
 package com.heypickler.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.heypickler.config.TierProperties;
+import com.heypickler.service.TierResolver;
 import com.heypickler.dto.app.RankingQuery;
 import com.heypickler.entity.Ranking;
 import com.heypickler.entity.Season;
@@ -42,7 +42,7 @@ class RankingServiceTest {
     @Mock
     private RedisTemplate<String, Object> redisTemplate;
     @Mock
-    private TierProperties tierProperties;
+    private TierResolver tierResolver;
     @Mock
     private SeasonMapper seasonMapper;
 
@@ -85,30 +85,31 @@ class RankingServiceTest {
         currentStar.setStatus("CURRENT");
         when(seasonMapper.selectOne(any())).thenReturn(currentStar);
 
-        // tierProperties stubs——避免 NPE
+        // tierResolver stubs——避免 NPE
         // keyFor：points>=1000 → MASTER, >=500 → GOLD, else BRONZE（仅用于断言匹配）
-        when(tierProperties.keyFor(anyInt(), eq("STAR"))).thenAnswer(inv -> {
+        when(tierResolver.keyFor(anyInt(), eq("STAR"))).thenAnswer(inv -> {
             int p = inv.getArgument(0);
             if (p >= 1000) return "MASTER";
             if (p >= 500) return "GOLD";
             return "BRONZE";
         });
-        when(tierProperties.keyFor(anyInt(), eq("PARTY"))).thenAnswer(inv -> {
+        when(tierResolver.keyFor(anyInt(), eq("PARTY"))).thenAnswer(inv -> {
             int p = inv.getArgument(0);
             if (p >= 1000) return "MASTER";
             if (p >= 500) return "GOLD";
             return "BRONZE";
         });
-        when(tierProperties.cacheKeysWithNull()).thenReturn(
+        when(tierResolver.cacheKeysWithNull()).thenReturn(
                 Arrays.asList("BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "MASTER", null));
 
-        // nameFor 契约：英文 key → 中文档名。装配 RankingVO 时填充 tierName 必须走此方法。
-        when(tierProperties.nameFor(eq("BRONZE"))).thenReturn("青铜");
-        when(tierProperties.nameFor(eq("SILVER"))).thenReturn("白银");
-        when(tierProperties.nameFor(eq("GOLD"))).thenReturn("黄金");
-        when(tierProperties.nameFor(eq("PLATINUM"))).thenReturn("铂金");
-        when(tierProperties.nameFor(eq("DIAMOND"))).thenReturn("钻石");
-        when(tierProperties.nameFor(eq("MASTER"))).thenReturn("王者");
+        // nameFor(track, key) 契约：英文 key → 中文档名（per-track，测试仅用 STAR 档名）。
+        // 装配 RankingVO 时填充 tierName 必须走此方法。
+        when(tierResolver.nameFor(eq("STAR"), eq("BRONZE"))).thenReturn("青铜");
+        when(tierResolver.nameFor(eq("STAR"), eq("SILVER"))).thenReturn("白银");
+        when(tierResolver.nameFor(eq("STAR"), eq("GOLD"))).thenReturn("黄金");
+        when(tierResolver.nameFor(eq("STAR"), eq("PLATINUM"))).thenReturn("铂金");
+        when(tierResolver.nameFor(eq("STAR"), eq("DIAMOND"))).thenReturn("钻石");
+        when(tierResolver.nameFor(eq("STAR"), eq("MASTER"))).thenReturn("王者");
     }
 
     @Test
@@ -195,7 +196,7 @@ class RankingServiceTest {
         verify(rankingMapper, times(3)).insert(argThat(ranking -> {
             int points = ranking.getPoints();
             String tier = ranking.getTier();
-            // tier 由 TierProperties.keyFor 决定；globalRank 自增（1/2/3）
+            // tier 由 TierResolver.keyFor 决定；globalRank 自增（1/2/3）
             if (points >= 1000) return "MASTER".equals(tier) && ranking.getRank().equals(1);
             if (points >= 500) return "GOLD".equals(tier) && ranking.getRank().equals(2);
             return "BRONZE".equals(tier) && ranking.getRank().equals(3);
@@ -211,7 +212,7 @@ class RankingServiceTest {
         rankingService.refreshRankings("STAR", CURRENT_SEASON_CODE);
 
         // 6 档 tier key + null + 1 个 top5 = cacheKeysWithNull().size() + 1 = 8 次
-        int expected = tierProperties.cacheKeysWithNull().size() + 1;
+        int expected = tierResolver.cacheKeysWithNull().size() + 1;
         verify(redisTemplate, times(expected)).delete(contains("ranking:STAR:"));
     }
 
@@ -289,11 +290,11 @@ class RankingServiceTest {
         assertEquals(1L, result.getList().get(0).getUserId());
         assertEquals("Test User", result.getList().get(0).getNickname());
 
-        // Task 2.6: RankingVO 必须填充 tierName（中文档名），由 tierProperties.nameFor(tier) 推导
+        // Task 2.6: RankingVO 必须填充 tierName（中文档名），由 tierResolver.nameFor(track, tier) 推导
         RankingVO first = result.getList().get(0);
         assertEquals("青铜", first.getTierName(),
-                "tierName 必须由 tierProperties.nameFor(tier) 装配；实际 tier=" + first.getTier());
-        verify(tierProperties).nameFor("BRONZE");
+                "tierName 必须由 tierResolver.nameFor(track, tier) 装配；实际 tier=" + first.getTier());
+        verify(tierResolver).nameFor("STAR", "BRONZE");
     }
 
     @Test

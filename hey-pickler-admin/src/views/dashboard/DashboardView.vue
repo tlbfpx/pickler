@@ -478,7 +478,7 @@ import { useDictStore } from '@/stores/dict'
 import Pagination from '@/components/common/Pagination.vue'
 import DictTag from '@/components/common/DictTag.vue'
 import * as echarts from 'echarts'
-import { getTerms, TIER_NAME, TIER_COLOR } from '@/constants/terms'
+import { getTerms, TIER_NAME } from '@/constants/terms'
 import { formatMatchType } from '@/constants/registration'
 import { statusTooltip } from '@/constants/eventStatus'
 import type { DashboardStats } from '@/types'
@@ -749,13 +749,15 @@ function renderCharts() {
     })
   }
 
-  const tc = TIER_COLOR
   const tn = TIER_NAME
 
-  const mapTier = (td: Record<string, number>) => Object.entries(td).map(([k, v]) => ({ value: v, name: tn[k] || k, itemStyle: { color: tc[k] || '#6B7280' } }))
+  // 段位色来自后端 starTierColorMap/partyTierColorMap（TierResolver.colorFor per-track）；
+  // 段位名仍用 TIER_NAME 兜底（后端 dashboard VO 不带 name）。
+  const mapTier = (td: Record<string, number>, colorMap: Record<string, string> | undefined) =>
+    Object.entries(td).map(([k, v]) => ({ value: v, name: tn[k] || k, itemStyle: { color: (colorMap && colorMap[k]) || '#6B7280' } }))
 
-  if (starTierRef.value) mk(starTierRef.value, { tooltip: pieTip, legend: pieLeg, series: [mkPie(mapTier(stats.starTierDistribution || {}))] })
-  if (partyTierRef.value) mk(partyTierRef.value, { tooltip: pieTip, legend: pieLeg, series: [mkPie(mapTier(stats.partyTierDistribution || {}))] })
+  if (starTierRef.value) mk(starTierRef.value, { tooltip: pieTip, legend: pieLeg, series: [mkPie(mapTier(stats.starTierDistribution || {}, stats.starTierColorMap))] })
+  if (partyTierRef.value) mk(partyTierRef.value, { tooltip: pieTip, legend: pieLeg, series: [mkPie(mapTier(stats.partyTierDistribution || {}, stats.partyTierColorMap))] })
 
   // 30 天趋势小图（sparkline 风格，无坐标轴）
   const mkSpark = (el: HTMLElement, data: { date: string; count: number }[], color: string) => mk(el, {

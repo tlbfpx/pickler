@@ -14,6 +14,8 @@ public class RankingPageVO {
     private PageResult<RankingVO> page;
     /** 段位分布 {BRONZE: 12, SILVER: 5, ...}，仅含有行的段位 */
     private Map<String, Integer> tierDistribution;
+    /** 段位色映射 {BRONZE: #A56C2C, ...}，当前 track 全 6 档，供前端染色图例/徽章 */
+    private Map<String, String> tierColorMap;
     private String seasonCode;
     private String seasonName;
     /** CURRENT | ARCHIVED */

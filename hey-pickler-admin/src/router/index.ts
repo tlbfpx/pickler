@@ -98,6 +98,12 @@ const router = createRouter({
           meta: { title: '字典管理', icon: 'Collection', group: '系统' }
         },
         {
+          path: 'tier',
+          name: 'Tier',
+          component: () => import('@/views/tier/TierListView.vue'),
+          meta: { title: '段位管理', icon: 'Medal', group: '系统' }
+        },
+        {
           path: 'notifications',
           name: 'Notifications',
           component: () => import('@/views/notifications/NotificationsView.vue'),

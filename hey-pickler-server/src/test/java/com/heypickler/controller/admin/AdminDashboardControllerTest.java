@@ -1,7 +1,7 @@
 package com.heypickler.controller.admin;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.heypickler.config.TierProperties;
+import com.heypickler.service.TierResolver;
 import com.heypickler.entity.Event;
 import com.heypickler.entity.Registration;
 import com.heypickler.entity.User;
@@ -37,7 +37,7 @@ class AdminDashboardControllerTest {
     @Mock
     private RegistrationMapper registrationMapper;
     @Mock
-    private TierProperties tierProperties;
+    private TierResolver tierResolver;
 
     @InjectMocks
     private AdminDashboardController controller;
@@ -53,8 +53,10 @@ class AdminDashboardControllerTest {
         when(userMapper.selectList(any())).thenReturn(Collections.emptyList());
         when(eventMapper.selectList(any())).thenReturn(Collections.emptyList());
         when(registrationMapper.selectList(any())).thenReturn(Collections.emptyList());
-        // TierProperties.getKeys().get(0) 兜底档 = BRONZE（与 yml keys[0] 一致）
-        when(tierProperties.getKeys()).thenReturn(Arrays.asList("BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "MASTER"));
+        // TierResolver.defaultKey("STAR") 兜底档 = BRONZE（tier_config V19 seed）
+        when(tierResolver.defaultKey(anyString())).thenReturn("BRONZE");
+        // Chunk4 — getStats 装配 starTierColorMap/partyTierColorMap 调用 colorFor(track, code)
+        when(tierResolver.colorFor(anyString(), anyString())).thenReturn("#6B7280");
 
         existingUser = new User();
         existingUser.setId(1L);

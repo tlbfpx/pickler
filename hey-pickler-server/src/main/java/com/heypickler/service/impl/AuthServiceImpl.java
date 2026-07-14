@@ -12,6 +12,7 @@ import com.heypickler.entity.User;
 import com.heypickler.mapper.AdminUserMapper;
 import com.heypickler.mapper.UserMapper;
 import com.heypickler.service.AuthService;
+import com.heypickler.service.TierResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -36,6 +37,7 @@ public class AuthServiceImpl implements AuthService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final PasswordEncoder passwordEncoder;
     private final RestTemplate restTemplate;
+    private final TierResolver tierResolver;
 
     @Value("${hey-pickler.wechat.appid}")
     private String appId;
@@ -70,8 +72,9 @@ public class AuthServiceImpl implements AuthService {
             user.setStatus("NORMAL");
             user.setStarPoints(0);
             user.setPartyPoints(0);
-            user.setStarTier("BRONZE");
-            user.setPartyTier("BRONZE");
+            // 默认档由 TierResolver 给（tier_config V19 seed：STAR/PARTY 均 BRONZE）。
+            user.setStarTier(tierResolver.defaultKey("STAR"));
+            user.setPartyTier(tierResolver.defaultKey("PARTY"));
             userMapper.insert(user);
             needBindPhone = true;
         } else {

@@ -42,4 +42,14 @@ public class RedisKey {
     public static String dictVersion() {
         return PREFIX + "dict:version";
     }
+
+    /**
+     * 段位配置缓存键（per-track：STAR / PARTY）。
+     * <p>
+     * 本期 TierResolver 暂未启用 Redis 缓存（tier_config 仅 12 行，DB 读极快），
+     * 此键预留给 Chunk 2 admin 写时加失效逻辑。
+     */
+    public static String tierConfig(String track) {
+        return PREFIX + "dict:tier:" + track;
+    }
 }
