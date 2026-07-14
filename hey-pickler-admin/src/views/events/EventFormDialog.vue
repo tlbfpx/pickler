@@ -21,11 +21,11 @@
           style="width: 100%"
         >
           <el-option
-            :label="TERMS.STAR.type"
+            :label="getTerms('STAR').type"
             value="STAR"
           />
           <el-option
-            :label="TERMS.PARTY.type"
+            :label="getTerms('PARTY').type"
             value="PARTY"
           />
         </el-select>
@@ -143,7 +143,7 @@
           style="width: 100%"
         />
         <div class="form-tip">
-          设为 0 表示不限制；{{ TERMS.STAR.type }}校验{{ TERMS.STAR.points }}，{{ TERMS.PARTY.type }}校验{{ TERMS.PARTY.points }}
+          设为 0 表示不限制；{{ getTerms('STAR').type }}校验{{ getTerms('STAR').points }}，{{ getTerms('PARTY').type }}校验{{ getTerms('PARTY').points }}
         </div>
       </el-form-item>
       <el-form-item
@@ -184,7 +184,7 @@ import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { createEvent, updateEvent } from '@/api/events'
 import { formatEventStatus } from '@/utils'
-import { TERMS } from '@/constants/terms'
+import { getTerms } from '@/constants/terms'
 import type { Event, CreateEventRequest } from '@/types'
 
 /**

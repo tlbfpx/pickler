@@ -12,7 +12,7 @@
           :loading="refreshing"
           @click="handleRefresh"
         >
-          刷新{{ TERMS[activeTab].ranking }}
+          刷新{{ getTerms(activeTab).ranking }}
         </el-button>
         <el-button
           type="primary"
@@ -29,11 +29,11 @@
       @tab-change="handleTabChange"
     >
       <el-tab-pane
-        :label="TERMS.STAR.ranking"
+        :label="getTerms('STAR').ranking"
         name="STAR"
       />
       <el-tab-pane
-        :label="TERMS.PARTY.ranking"
+        :label="getTerms('PARTY').ranking"
         name="PARTY"
       />
     </el-tabs>
@@ -239,7 +239,7 @@ import { ElMessage } from 'element-plus'
 import { getRankings, refreshRankings } from '@/api/rankings'
 import { getSeasonRankings, listSeasons } from '@/api/seasons'
 import { getTierColor } from '@/utils'
-import { TERMS, formatTierName, TIER_NAME, TIER_COLOR } from '@/constants/terms'
+import { getTerms, formatTierName, TIER_NAME, TIER_COLOR } from '@/constants/terms'
 import Pagination from '@/components/common/Pagination.vue'
 import PointLedgerDrawer from './PointLedgerDrawer.vue'
 import SeasonManageDialog from './SeasonManageDialog.vue'
@@ -321,7 +321,7 @@ const fetchOne = async () => {
       seasonName.value = d.seasonName
       seasonStatus.value = d.seasonStatus
     } else {
-      ElMessage.error(res.message || `获取${TERMS[activeTab.value].ranking}失败`)
+      ElMessage.error(res.message || `获取${getTerms(activeTab.value).ranking}失败`)
     }
   } catch { /* ignore */ } finally {
     loading.value = false
@@ -355,7 +355,7 @@ const handleRefresh = async () => {
   try {
     const res = await refreshRankings(activeTab.value)
     if (res.code === 0) {
-      ElMessage.success(`${TERMS[activeTab.value].ranking}刷新成功`)
+      ElMessage.success(`${getTerms(activeTab.value).ranking}刷新成功`)
       // 排名刷新异步（rankingExecutor），稍候再拉一次确保看到最新
       setTimeout(fetchOne, 800)
     } else {

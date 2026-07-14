@@ -16,11 +16,11 @@
       @change="emitFilter"
     >
       <el-option
-        :label="TERMS.STAR.type"
+        :label="getTerms('STAR').type"
         value="STAR"
       />
       <el-option
-        :label="TERMS.PARTY.type"
+        :label="getTerms('PARTY').type"
         value="PARTY"
       />
     </el-select>
@@ -32,28 +32,10 @@
       @change="emitFilter"
     >
       <el-option
-        label="草稿"
-        value="DRAFT"
-      />
-      <el-option
-        label="报名中"
-        value="OPEN"
-      />
-      <el-option
-        label="名额已满"
-        value="FULL"
-      />
-      <el-option
-        label="进行中"
-        value="IN_PROGRESS"
-      />
-      <el-option
-        label="已结束"
-        value="COMPLETED"
-      />
-      <el-option
-        label="已取消"
-        value="CANCELLED"
+        v-for="o in statusOptions"
+        :key="o.value"
+        :label="o.label"
+        :value="o.value"
       />
     </el-select>
     <!-- Loop-v18 — sort selector (multi-keyword backend support). -->
@@ -104,8 +86,10 @@
   </div>
 </template>
 <script setup lang="ts">
-import { reactive } from 'vue'
-import { TERMS } from '@/constants/terms'
+import { reactive, computed } from 'vue'
+import { getTerms } from '@/constants/terms'
+import { useDictOptions } from '@/composables/useDict'
+import { useDictStore } from '@/stores/dict'
 
 interface FilterPayload {
   keyword: string
@@ -133,12 +117,16 @@ const local = reactive({
   sort: props.sort
 })
 
-const chips = [
-  { label: '草稿', value: 'DRAFT' },
-  { label: '报名中', value: 'OPEN' },
-  { label: '进行中', value: 'IN_PROGRESS' },
-  { label: '已结束', value: 'COMPLETED' }
-]
+// Chunk 2b — 状态下拉走字典（响应式，字典变更即时更新）。
+const statusOptions = useDictOptions('event_status')
+
+// chips 是 quick filter 子集：保留固定 4 个 key，label 走字典（响应式）。
+// 不用 statusOptions.value.slice(0,4) 是因为字典排序变化会意外改变 quick filter 的含义。
+const QUICK_KEYS = ['DRAFT', 'OPEN', 'IN_PROGRESS', 'COMPLETED'] as const
+const store = useDictStore()
+const chips = computed(() =>
+  QUICK_KEYS.map(k => ({ label: store.label('event_status', k), value: k }))
+)
 
 const emitFilter = () =>
   emit('filter', {

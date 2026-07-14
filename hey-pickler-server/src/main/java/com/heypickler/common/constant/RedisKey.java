@@ -32,4 +32,14 @@ public class RedisKey {
     public static String wxSession(String openid) {
         return PREFIX + "wx:session:" + openid;
     }
+
+    /** 全局字典版本号（任何字典写操作自增，前端据此增量刷新）。
+     *  注：字典表数据量小（< 50 行），本期不做 per-dict / bundle 对象缓存——
+     *  RedisConfig 关闭了 default typing，Jackson2JsonRedisSerializer 反序列化会得到
+     *  LinkedHashMap 而非实体，访问 getter 会 ClassCastException，对象缓存坑大收益低。
+     *  仅靠 version 让前端增量重拉 bundle；数据量增长时再以 StringRedisTemplate +
+     *  显式反序列化加类型安全缓存。 */
+    public static String dictVersion() {
+        return PREFIX + "dict:version";
+    }
 }

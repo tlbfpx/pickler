@@ -1,5 +1,5 @@
 /**
- * 积分体系术语常量
+ * 积分体系术语（字典驱动，fallback 保留原硬编码）
  *
  * 后端字段 STAR/PARTY 保持不变，仅前端文案展示用。
  * - STAR  → 竞技赛事 / 战力 / 战力段位
@@ -9,6 +9,8 @@
  *   BRONZE 青铜 / SILVER 白银 / GOLD 黄金
  *   PLATINUM 铂金 / DIAMOND 钻石 / MASTER 王者
  */
+
+import { useDictStore } from '@/stores/dict'
 
 export type PointsType = 'STAR' | 'PARTY'
 
@@ -23,7 +25,7 @@ export interface PointsTypeTerms {
   ranking: string
 }
 
-export const TERMS: Record<PointsType, PointsTypeTerms> = {
+const FALLBACK_TERMS: Record<string, PointsTypeTerms> = {
   STAR: {
     type: '竞技赛事',
     points: '战力',
@@ -36,7 +38,39 @@ export const TERMS: Record<PointsType, PointsTypeTerms> = {
     tier: '活力段位',
     ranking: '活力排名'
   }
-} as const
+}
+
+const FALLBACK_POINT_SOURCE_LABEL: Record<string, string> = {
+  MANUAL: '管理员手动',
+  ADJUST: '系统纠错',
+  PLACEMENT: '名次发分',
+  REGISTRATION: '报名',
+  CHECK_IN: '签到',
+  REDEEM: '兑换'
+}
+
+/**
+ * 取积分体系术语集合。
+ * 字典 track_term 的 extraJson 携带 pointsName/tierName/rankingName/unit；
+ * 命中则字典优先，否则回退 FALLBACK_TERMS。
+ */
+export function getTerms(type: string | null | undefined): PointsTypeTerms {
+  if (!type) return FALLBACK_TERMS.STAR
+  const store = useDictStore()
+  const meta = store.meta('track_term', type) as
+    | { pointsName?: string; tierName?: string; rankingName?: string; unit?: string }
+    | null
+  if (meta && (meta.pointsName || meta.tierName || meta.rankingName)) {
+    const typeLabel = store.label('event_type', type)
+    return {
+      type: typeLabel && typeLabel !== type ? typeLabel : FALLBACK_TERMS[type]?.type || type,
+      points: meta.pointsName || FALLBACK_TERMS[type]?.points || type,
+      tier: meta.tierName || FALLBACK_TERMS[type]?.tier || type,
+      ranking: meta.rankingName || FALLBACK_TERMS[type]?.ranking || type
+    }
+  }
+  return FALLBACK_TERMS[type] || { type, points: type, tier: type, ranking: type }
+}
 
 /**
  * 段位英文 key → 中文展示名。
@@ -84,28 +118,20 @@ export function getTierColor(tier: string | null | undefined): string {
 }
 
 /**
- * 取积分类型对应文案；未命中回退原值（用于类型展示）。
+ * 取积分类型对应文案（事件类型名）；未命中回退原值（用于类型展示）。
+ * 等价于 getTerms(type).type，但直接读 event_type 字典更快。
  */
 export function getPointsTypeLabel(type: string | null | undefined): string {
   if (!type) return '-'
-  return TERMS[type as PointsType]?.type || type
-}
-
-/**
- * 积分来源英文 key → 中文展示名（与后端 PointSource 枚举对齐）。
- * MANUAL/ADJUST 可撤销；PLACEMENT 等系统来源不可撤销（前端隐藏撤销按钮）。
- */
-export const POINT_SOURCE_LABEL: Record<string, string> = {
-  MANUAL: '管理员手动',
-  ADJUST: '系统纠错',
-  PLACEMENT: '名次发分',
-  REGISTRATION: '报名',
-  CHECK_IN: '签到',
-  REDEEM: '兑换'
+  const l = useDictStore().label('event_type', type)
+  if (l && l !== type) return l
+  return FALLBACK_TERMS[type]?.type || type
 }
 
 /** 取积分来源文案；未命中回退原值。 */
 export function getPointSourceLabel(source: string | null | undefined): string {
   if (!source) return '-'
-  return POINT_SOURCE_LABEL[source] || source
+  const l = useDictStore().label('point_source', source)
+  if (l && l !== source) return l
+  return FALLBACK_POINT_SOURCE_LABEL[source] || source
 }

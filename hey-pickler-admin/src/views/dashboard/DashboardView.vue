@@ -244,7 +244,7 @@
           style="flex:1"
         >
           <div class="panel-head">
-            <span>{{ TERMS.STAR.tier }}分布</span>
+            <span>{{ getTerms('STAR').tier }}分布</span>
           </div>
           <div
             ref="starTierRef"
@@ -256,7 +256,7 @@
           style="flex:1"
         >
           <div class="panel-head">
-            <span>{{ TERMS.PARTY.tier }}分布</span>
+            <span>{{ getTerms('PARTY').tier }}分布</span>
           </div>
           <div
             ref="partyTierRef"
@@ -352,7 +352,7 @@
                   size="small"
                   round
                 >
-                  {{ row.type === 'STAR' ? TERMS.STAR.type : TERMS.PARTY.type }}
+                  {{ row.type === 'STAR' ? getTerms('STAR').type : getTerms('PARTY').type }}
                 </el-tag>
               </template>
             </el-table-column>
@@ -384,13 +384,11 @@
                   :content="statusTooltip(row.status)"
                   placement="top"
                 >
-                  <el-tag
-                    :type="sType(row.status)"
+                  <DictTag
+                    dict-code="event_status"
+                    :item-key="row.status"
                     size="small"
-                    round
-                  >
-                    {{ sLabel(row.status) }}
-                  </el-tag>
+                  />
                 </el-tooltip>
               </template>
             </el-table-column>
@@ -433,7 +431,7 @@
               align="center"
             >
               <template #default="{ row }">
-                {{ row.matchType === 'SINGLES' ? '单打' : row.matchType === 'DOUBLES' ? '双打' : '混双' }}
+                {{ formatMatchType(row.matchType) }}
               </template>
             </el-table-column>
             <el-table-column
@@ -442,13 +440,11 @@
               align="center"
             >
               <template #default="{ row }">
-                <el-tag
-                  :type="rType(row.status)"
+                <DictTag
+                  dict-code="registration_status"
+                  :item-key="row.status"
                   size="small"
-                  round
-                >
-                  {{ rLabel(row.status) }}
-                </el-tag>
+                />
               </template>
             </el-table-column>
             <el-table-column
@@ -472,15 +468,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, nextTick, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getDashboardStats } from '@/api/dashboard'
 import { getEventList } from '@/api/events'
 import { useAuthStore } from '@/stores/auth'
+import { useDictStore } from '@/stores/dict'
 import Pagination from '@/components/common/Pagination.vue'
+import DictTag from '@/components/common/DictTag.vue'
 import * as echarts from 'echarts'
-import { TERMS, TIER_NAME, TIER_COLOR } from '@/constants/terms'
+import { getTerms, TIER_NAME, TIER_COLOR } from '@/constants/terms'
+import { formatMatchType } from '@/constants/registration'
 import { statusTooltip } from '@/constants/eventStatus'
 import type { DashboardStats } from '@/types'
 
@@ -684,10 +683,12 @@ const formatDate = (d: string | null) => {
   const dt = new Date(d)
   return `${dt.getFullYear()}-${(dt.getMonth() + 1).toString().padStart(2, '0')}-${dt.getDate().toString().padStart(2, '0')}`
 }
-const sType = (s: string) => ({ OPEN: 'success', IN_PROGRESS: 'warning', FULL: 'danger', DRAFT: 'info' }[s] || 'info')
-const sLabel = (s: string) => ({ OPEN: '报名中', IN_PROGRESS: '进行中', FULL: '已满', DRAFT: '草稿', COMPLETED: '已结束', CANCELLED: '已取消' }[s] || s)
-const rType = (s: string) => ({ REGISTERED: 'success', CANCELLED: 'danger' }[s] || 'info')
-const rLabel = (s: string) => ({ REGISTERED: '已报名', CANCELLED: '已取消' }[s] || s)
+const store = useDictStore()
+
+function disposeAll() {
+  charts.forEach(c => c.dispose())
+  charts.length = 0
+}
 
 function mk(el: HTMLElement, opt: echarts.EChartsOption) {
   const c = echarts.init(el)
@@ -699,6 +700,7 @@ const tooltipStyle = { backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '
 const gridBase = { top: 20, right: 16, bottom: 32, left: 44 }
 
 function renderCharts() {
+  disposeAll()
   if (userChartRef.value) {
     const dates = stats.dailyNewUsers.map(d => d.date.slice(5))
     mk(userChartRef.value, {
@@ -734,10 +736,18 @@ function renderCharts() {
     itemStyle: { borderRadius: 3, borderColor: '#fff', borderWidth: 2 }, data
   })
 
-  if (eventTypeRef.value) mk(eventTypeRef.value, {
-    tooltip: pieTip, legend: pieLeg,
-    series: [mkPie([{ value: stats.eventTypes?.STAR || 0, name: TERMS.STAR.type, itemStyle: { color: '#E6A23C' } }, { value: stats.eventTypes?.PARTY || 0, name: TERMS.PARTY.type, itemStyle: { color: '#F56C6C' } }])]
-  })
+  if (eventTypeRef.value) {
+    const typeKeys = Object.keys(stats.eventTypes || {})
+    const typeData = (typeKeys.length ? typeKeys : ['STAR', 'PARTY']).map((k) => ({
+      value: stats.eventTypes?.[k] || 0,
+      name: store.label('event_type', k),
+      itemStyle: { color: store.color('event_type', k) }
+    }))
+    mk(eventTypeRef.value, {
+      tooltip: pieTip, legend: pieLeg,
+      series: [mkPie(typeData)]
+    })
+  }
 
   const tc = TIER_COLOR
   const tn = TIER_NAME
@@ -788,6 +798,13 @@ const fetchStats = async () => {
 }
 
 const onResize = () => charts.forEach(c => c.resize())
+
+// 字典 bundle 变更后重渲 echarts（pie 标签/颜色与 DictTag 已随 store 响应式自动刷新，仅 echarts 需手动重渲）
+watch(() => store.version, () => {
+  if (stats.dailyNewUsers?.length || stats.dailyRegistrations?.length) {
+    requestAnimationFrame(() => requestAnimationFrame(() => renderCharts()))
+  }
+})
 
 onMounted(() => { fetchStats(); buildTodos(); window.addEventListener('resize', onResize) })
 onBeforeUnmount(() => { window.removeEventListener('resize', onResize); charts.forEach(c => c.dispose()) })

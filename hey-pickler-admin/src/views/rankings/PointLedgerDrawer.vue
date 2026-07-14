@@ -32,12 +32,11 @@
           width="100"
         >
           <template #default="{ row }">
-            <el-tag
+            <DictTag
+              dict-code="point_source"
+              :item-key="row.source"
               size="small"
-              :type="sourceTagType(row.source)"
-            >
-              {{ getPointSourceLabel(row.source) }}
-            </el-tag>
+            />
           </template>
         </el-table-column>
         <el-table-column
@@ -113,8 +112,8 @@ import { ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUserPoints, type PointRecord } from '@/api/users'
 import { revertPointRecord } from '@/api/rankings'
-import { getPointSourceLabel } from '@/constants/terms'
 import Pagination from '@/components/common/Pagination.vue'
+import DictTag from '@/components/common/DictTag.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -156,13 +155,6 @@ const fetch = async () => {
 
 // 仅 MANUAL/ADJUST 可撤销；PLACEMENT 等系统来源不可撤销
 const canRevert = (source: string) => source === 'MANUAL' || source === 'ADJUST'
-
-const sourceTagType = (source: string): 'warning' | 'info' | 'danger' | 'success' => {
-  if (source === 'PLACEMENT') return 'warning'
-  if (source === 'ADJUST') return 'danger'
-  if (source === 'MANUAL') return 'info'
-  return 'success'
-}
 
 const handleRevert = async (row: PointRecord) => {
   try {

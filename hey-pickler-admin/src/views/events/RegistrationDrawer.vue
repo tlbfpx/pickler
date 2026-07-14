@@ -15,22 +15,17 @@
         class="event-summary"
       >
         <div class="summary-row">
-          <el-tag
-            :color="getEventTypeColor(event.type)"
-            effect="dark"
+          <DictTag
+            dict-code="event_type"
+            :item-key="event.type"
             size="small"
-            style="border: none"
-          >
-            {{ formatEventType(event.type) }}
-          </el-tag>
-          <el-tag
-            :color="getEventStatusColor(event.status)"
-            effect="dark"
+          />
+          <DictTag
+            dict-code="event_status"
+            :item-key="event.status"
             size="small"
-            style="border: none; margin-left: 8px"
-          >
-            {{ formatEventStatus(event.status) }}
-          </el-tag>
+            style="margin-left: 8px"
+          />
           <span class="summary-info">{{ event.location || '-' }} · {{ formatDate(event.eventTime!) }}</span>
         </div>
         <div class="capacity-bar">
@@ -137,12 +132,11 @@
           width="80"
         >
           <template #default="{ row }">
-            <el-tag
+            <DictTag
+              dict-code="event_format"
+              :item-key="row.matchType"
               size="small"
-              :type="matchTypeTagType(row.matchType)"
-            >
-              {{ formatMatchType(row.matchType) }}
-            </el-tag>
+            />
           </template>
         </el-table-column>
         <el-table-column
@@ -159,12 +153,11 @@
           width="80"
         >
           <template #default="{ row }">
-            <el-tag
+            <DictTag
+              dict-code="registration_status"
+              :item-key="row.status"
               size="small"
-              :type="regStatusTagType(row.status)"
-            >
-              {{ formatRegStatus(row.status) }}
-            </el-tag>
+            />
           </template>
         </el-table-column>
         <el-table-column
@@ -245,9 +238,10 @@
 import { ref, reactive, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import Pagination from '@/components/common/Pagination.vue'
+import DictTag from '@/components/common/DictTag.vue'
 import GroupingPanel from './GroupingPanel.vue'
 import { getEventRegistrations, updateRegistrationStatus, bulkCheckIn } from '@/api/events'
-import { formatDate, formatEventType, formatEventStatus, getEventTypeColor, getEventStatusColor } from '@/utils'
+import { formatDate } from '@/utils'
 import type { Event, Registration } from '@/types'
 
 const props = defineProps<{
@@ -387,26 +381,6 @@ async function handleWithdraw(row: Registration) {
       ElMessage.error(res.message)
     }
   } catch { /* cancelled */ }
-}
-
-function matchTypeTagType(type: string) {
-  const map: Record<string, string> = { SINGLES: '', DOUBLES: 'warning', MIXED: 'danger' }
-  return map[type] || 'info'
-}
-
-function formatMatchType(type: string) {
-  const map: Record<string, string> = { SINGLES: '单打', DOUBLES: '双打', MIXED: '混双' }
-  return map[type] || type
-}
-
-function regStatusTagType(status: string) {
-  const map: Record<string, string> = { REGISTERED: 'primary', CHECKED_IN: 'success', WITHDRAWN: 'info' }
-  return map[status] || 'info'
-}
-
-function formatRegStatus(status: string) {
-  const map: Record<string, string> = { REGISTERED: '已报名', CHECKED_IN: '已签到', WITHDRAWN: '已退赛' }
-  return map[status] || status
 }
 </script>
 

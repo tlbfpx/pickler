@@ -36,12 +36,11 @@
             </div>
             <div class="info-item">
               <span class="label">状态</span>
-              <el-tag
-                :type="user?.status === 'BANNED' ? 'danger' : 'success'"
+              <DictTag
+                dict-code="user_status"
+                :item-key="user?.status"
                 size="small"
-              >
-                {{ user?.status === 'BANNED' ? '禁赛' : '正常' }}
-              </el-tag>
+              />
             </div>
             <div class="info-item">
               <span class="label">注册时间</span>
@@ -59,7 +58,7 @@
         <div class="points-overview">
           <div class="points-card star">
             <div class="points-label">
-              {{ TERMS.STAR.points }}
+              {{ getTerms('STAR').points }}
             </div>
             <div class="points-value">
               {{ user?.starPoints ?? 0 }}
@@ -75,7 +74,7 @@
           </div>
           <div class="points-card party">
             <div class="points-label">
-              {{ TERMS.PARTY.points }}
+              {{ getTerms('PARTY').points }}
             </div>
             <div class="points-value">
               {{ user?.partyPoints ?? 0 }}
@@ -96,7 +95,7 @@
       <div class="section">
         <el-tabs v-model="activeTab">
           <el-tab-pane
-            :label="`${TERMS.STAR.points}明细`"
+            :label="`${getTerms('STAR').points}明细`"
             name="star-points"
           >
             <el-table
@@ -159,7 +158,7 @@
           </el-tab-pane>
 
           <el-tab-pane
-            :label="`${TERMS.PARTY.points}明细`"
+            :label="`${getTerms('PARTY').points}明细`"
             name="party-points"
           >
             <el-table
@@ -222,7 +221,7 @@
           </el-tab-pane>
 
           <el-tab-pane
-            :label="`${TERMS.STAR.type}记录`"
+            :label="`${getTerms('STAR').type}记录`"
             name="star-events"
           >
             <el-table
@@ -261,12 +260,11 @@
                 width="90"
               >
                 <template #default="{ row }">
-                  <el-tag
+                  <DictTag
+                    dict-code="registration_status"
+                    :item-key="row.registrationStatus"
                     size="small"
-                    :type="regTagType(row.registrationStatus)"
-                  >
-                    {{ formatRegStatus(row.registrationStatus) }}
-                  </el-tag>
+                  />
                 </template>
               </el-table-column>
             </el-table>
@@ -285,7 +283,7 @@
           </el-tab-pane>
 
           <el-tab-pane
-            :label="`${TERMS.PARTY.type}记录`"
+            :label="`${getTerms('PARTY').type}记录`"
             name="party-events"
           >
             <el-table
@@ -324,12 +322,11 @@
                 width="90"
               >
                 <template #default="{ row }">
-                  <el-tag
+                  <DictTag
+                    dict-code="registration_status"
+                    :item-key="row.registrationStatus"
                     size="small"
-                    :type="regTagType(row.registrationStatus)"
-                  >
-                    {{ formatRegStatus(row.registrationStatus) }}
-                  </el-tag>
+                  />
                 </template>
               </el-table-column>
             </el-table>
@@ -357,7 +354,8 @@ import { ref, watch } from 'vue'
 import { getUserDetail, getUserPoints, getUserEvents } from '@/api/users'
 import type { User, PointRecord, EventRecord } from '@/api/users'
 import { formatDate, getTierColor } from '@/utils'
-import { TERMS, formatTierName } from '@/constants/terms'
+import { getTerms, formatTierName } from '@/constants/terms'
+import DictTag from '@/components/common/DictTag.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -455,16 +453,6 @@ function loadMorePoints(type: string) {
 function loadMoreEvents(type: string) {
   const current = type === 'STAR' ? starEvents.value.length : partyEvents.value.length
   loadEvents(type, Math.floor(current / 20) + 1)
-}
-
-function regTagType(status: string) {
-  const map: Record<string, string> = { REGISTERED: 'primary', CHECKED_IN: 'success', WITHDRAWN: 'info' }
-  return map[status] || 'info'
-}
-
-function formatRegStatus(status: string) {
-  const map: Record<string, string> = { REGISTERED: '已报名', CHECKED_IN: '已签到', WITHDRAWN: '已退赛' }
-  return map[status] || status
 }
 
 function maskPhone(phone: string | null | undefined) {

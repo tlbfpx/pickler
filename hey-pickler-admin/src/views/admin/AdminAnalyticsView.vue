@@ -188,10 +188,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import { getAnalyticsDashboard, type AnalyticsDashboard } from '@/api/analytics'
+import { useDictStore } from '@/stores/dict'
 
 const loading = ref(true)
 const data = ref<AnalyticsDashboard | null>(null)
@@ -202,24 +203,9 @@ const typeChartRef = ref<HTMLElement>()
 const statusChartRef = ref<HTMLElement>()
 const charts: echarts.ECharts[] = []
 
-const tooltipStyle = { backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#eee', borderWidth: 1, textStyle: { color: '#333', fontSize: 12 }, extraCssText: 'box-shadow:0 4px 12px rgba(0,0,0,0.08);border-radius:6px;' }
+const store = useDictStore()
 
-const STATUS_LABEL: Record<string, string> = {
-  DRAFT: '草稿',
-  OPEN: '报名中',
-  FULL: '已满员',
-  IN_PROGRESS: '进行中',
-  COMPLETED: '已结束',
-  CANCELLED: '已取消'
-}
-const STATUS_COLOR: Record<string, string> = {
-  DRAFT: '#9ca3af',
-  OPEN: '#43e97b',
-  FULL: '#fa8231',
-  IN_PROGRESS: '#E6A23C',
-  COMPLETED: '#6366f1',
-  CANCELLED: '#F56C6C'
-}
+const tooltipStyle = { backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#eee', borderWidth: 1, textStyle: { color: '#333', fontSize: 12 }, extraCssText: 'box-shadow:0 4px 12px rgba(0,0,0,0.08);border-radius:6px;' }
 
 function formatMoney(v: number) {
   return (Math.round(v * 100) / 100).toFixed(2)
@@ -231,6 +217,11 @@ function formatPct(v: number) {
   return (Math.round(v * 10) / 10).toFixed(1)
 }
 
+function disposeAll() {
+  charts.forEach(c => c.dispose())
+  charts.length = 0
+}
+
 function mk(el: HTMLElement, opt: echarts.EChartsOption) {
   const c = echarts.init(el)
   c.setOption(opt)
@@ -239,6 +230,7 @@ function mk(el: HTMLElement, opt: echarts.EChartsOption) {
 
 function renderCharts() {
   if (!data.value) return
+  disposeAll()
 
   // 12-month line chart
   if (trendChartRef.value) {
@@ -277,8 +269,12 @@ function renderCharts() {
 
   // Type pie
   if (typeChartRef.value) {
-    const star = data.value.byType?.STAR || 0
-    const party = data.value.byType?.PARTY || 0
+    const typeKeys = Object.keys(data.value.byType || {})
+    const pieData = (typeKeys.length ? typeKeys : ['STAR', 'PARTY']).map((k) => ({
+      value: data.value.byType?.[k] || 0,
+      name: store.label('event_type', k),
+      itemStyle: { color: store.color('event_type', k) }
+    }))
     mk(typeChartRef.value, {
       tooltip: { trigger: 'item', ...tooltipStyle, formatter: '{b}: {c} ({d}%)' },
       legend: { bottom: 4, itemWidth: 10, itemHeight: 10, itemGap: 14, textStyle: { fontSize: 11, color: '#6b7280' } },
@@ -286,10 +282,7 @@ function renderCharts() {
         type: 'pie', radius: ['38%', '64%'], center: ['50%', '44%'],
         avoidLabelOverlap: false, label: { show: false },
         itemStyle: { borderRadius: 3, borderColor: '#fff', borderWidth: 2 },
-        data: [
-          { value: star, name: 'STAR 竞技', itemStyle: { color: '#E6A23C' } },
-          { value: party, name: 'PARTY 社交', itemStyle: { color: '#F56C6C' } }
-        ]
+        data: pieData
       }]
     })
   }
@@ -302,7 +295,7 @@ function renderCharts() {
       grid: { top: 16, right: 16, bottom: 36, left: 56 },
       xAxis: {
         type: 'category',
-        data: order.map(s => STATUS_LABEL[s] || s),
+        data: order.map(s => store.label('event_status', s)),
         axisLine: { lineStyle: { color: '#e5e7eb' } },
         axisTick: { show: false },
         axisLabel: { color: '#6b7280', fontSize: 11, interval: 0 }
@@ -312,7 +305,7 @@ function renderCharts() {
         type: 'bar', barMaxWidth: 28, barCategoryGap: '40%',
         itemStyle: {
           borderRadius: [4, 4, 0, 0],
-          color: (params: { dataIndex: number }) => STATUS_COLOR[order[params.dataIndex]] || '#6366f1'
+          color: (params: { dataIndex: number }) => store.color('event_status', order[params.dataIndex])
         },
         data: order.map(s => data.value!.byStatus?.[s] || 0)
       }]
@@ -338,6 +331,13 @@ const fetch = async () => {
     loading.value = false
   }
 }
+
+// 字典 bundle 变更后重渲 echarts（pie 标签/颜色、status bar 标签/颜色随字典刷新）
+watch(() => store.version, () => {
+  if (data.value) {
+    nextTick(() => renderCharts())
+  }
+})
 
 onMounted(() => { fetch(); window.addEventListener('resize', onResize) })
 onBeforeUnmount(() => { window.removeEventListener('resize', onResize); charts.forEach(c => c.dispose()) })

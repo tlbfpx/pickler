@@ -76,7 +76,7 @@
           </template>
         </el-table-column>
         <el-table-column
-          :label="TERMS.STAR.tier"
+          :label="getTerms('STAR').tier"
           width="120"
         >
           <template #default="{ row }">
@@ -84,7 +84,7 @@
           </template>
         </el-table-column>
         <el-table-column
-          :label="TERMS.PARTY.tier"
+          :label="getTerms('PARTY').tier"
           width="120"
         >
           <template #default="{ row }">
@@ -96,9 +96,11 @@
           width="80"
         >
           <template #default="{ row }">
-            <el-tag :type="row.status === 'BANNED' ? 'danger' : 'success'">
-              {{ row.status === 'BANNED' ? '禁赛' : '正常' }}
-            </el-tag>
+            <DictTag
+              dict-code="user_status"
+              :item-key="row.status"
+              size="small"
+            />
           </template>
         </el-table-column>
         <el-table-column
@@ -170,8 +172,9 @@ import { User as UserIcon } from '@element-plus/icons-vue'
 import { getUserList, unbanUser } from '@/api/users'
 import type { User } from '@/api/users'
 import { formatDate } from '@/utils'
-import { TERMS, formatTierName } from '@/constants/terms'
+import { getTerms, formatTierName } from '@/constants/terms'
 import Pagination from '@/components/common/Pagination.vue'
+import DictTag from '@/components/common/DictTag.vue'
 import BanDialog from './BanDialog.vue'
 import UserDetailDrawer from './UserDetailDrawer.vue'
 

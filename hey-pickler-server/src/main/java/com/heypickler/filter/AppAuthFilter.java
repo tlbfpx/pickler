@@ -28,7 +28,8 @@ public class AppAuthFilter extends OncePerRequestFilter {
     private static final Set<String> PUBLIC_GET_PREFIXES = Set.of(
             "/api/app/banners",
             "/api/app/events",
-            "/api/app/rankings"
+            "/api/app/rankings",
+            "/api/app/dict"
     );
 
     private static final Set<String> PUBLIC_PATHS = Set.of(

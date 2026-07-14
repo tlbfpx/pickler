@@ -20,10 +20,10 @@
             @change="handleModeChange"
           >
             <el-radio value="STAR">
-              关联{{ TERMS.STAR.type }}
+              关联{{ getTerms('STAR').type }}
             </el-radio>
             <el-radio value="PARTY">
-              关联{{ TERMS.PARTY.type }}
+              关联{{ getTerms('PARTY').type }}
             </el-radio>
             <el-radio value="MANUAL">
               手动录入
@@ -61,11 +61,11 @@
             style="width: 200px"
           >
             <el-option
-              :label="TERMS.STAR.points"
+              :label="getTerms('STAR').points"
               value="STAR"
             />
             <el-option
-              :label="TERMS.PARTY.points"
+              :label="getTerms('PARTY').points"
               value="PARTY"
             />
           </el-select>
@@ -77,7 +77,7 @@
           class="event-info-card"
         >
           <div class="event-info-row">
-            <span class="event-info-label">{{ entryMode === 'STAR' ? TERMS.STAR.type : TERMS.PARTY.type }}名称</span>
+            <span class="event-info-label">{{ entryMode === 'STAR' ? getTerms('STAR').type : getTerms('PARTY').type }}名称</span>
             <span>{{ selectedEvent.title }}</span>
           </div>
           <div class="event-info-row">
@@ -255,7 +255,7 @@ import { getEventList, getEventParticipants } from '@/api/events'
 import type { EventParticipant } from '@/api/events'
 import { getUserList } from '@/api/users'
 import { formatDate } from '@/utils'
-import { TERMS } from '@/constants/terms'
+import { getTerms } from '@/constants/terms'
 import type { Event, User } from '@/types'
 
 interface RecordItem {
