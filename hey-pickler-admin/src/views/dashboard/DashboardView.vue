@@ -244,7 +244,7 @@
           style="flex:1"
         >
           <div class="panel-head">
-            <span>{{ TERMS.STAR.tier }}分布</span>
+            <span>{{ getTerms('STAR').tier }}分布</span>
           </div>
           <div
             ref="starTierRef"
@@ -256,7 +256,7 @@
           style="flex:1"
         >
           <div class="panel-head">
-            <span>{{ TERMS.PARTY.tier }}分布</span>
+            <span>{{ getTerms('PARTY').tier }}分布</span>
           </div>
           <div
             ref="partyTierRef"
@@ -352,7 +352,7 @@
                   size="small"
                   round
                 >
-                  {{ row.type === 'STAR' ? TERMS.STAR.type : TERMS.PARTY.type }}
+                  {{ row.type === 'STAR' ? getTerms('STAR').type : getTerms('PARTY').type }}
                 </el-tag>
               </template>
             </el-table-column>
@@ -480,7 +480,7 @@ import { getEventList } from '@/api/events'
 import { useAuthStore } from '@/stores/auth'
 import Pagination from '@/components/common/Pagination.vue'
 import * as echarts from 'echarts'
-import { TERMS, TIER_NAME, TIER_COLOR } from '@/constants/terms'
+import { getTerms, TIER_NAME, TIER_COLOR } from '@/constants/terms'
 import { statusTooltip } from '@/constants/eventStatus'
 import type { DashboardStats } from '@/types'
 
@@ -736,7 +736,7 @@ function renderCharts() {
 
   if (eventTypeRef.value) mk(eventTypeRef.value, {
     tooltip: pieTip, legend: pieLeg,
-    series: [mkPie([{ value: stats.eventTypes?.STAR || 0, name: TERMS.STAR.type, itemStyle: { color: '#E6A23C' } }, { value: stats.eventTypes?.PARTY || 0, name: TERMS.PARTY.type, itemStyle: { color: '#F56C6C' } }])]
+    series: [mkPie([{ value: stats.eventTypes?.STAR || 0, name: getTerms('STAR').type, itemStyle: { color: '#E6A23C' } }, { value: stats.eventTypes?.PARTY || 0, name: getTerms('PARTY').type, itemStyle: { color: '#F56C6C' } }])]
   })
 
   const tc = TIER_COLOR

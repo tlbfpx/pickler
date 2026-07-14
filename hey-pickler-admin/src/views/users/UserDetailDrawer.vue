@@ -59,7 +59,7 @@
         <div class="points-overview">
           <div class="points-card star">
             <div class="points-label">
-              {{ TERMS.STAR.points }}
+              {{ getTerms('STAR').points }}
             </div>
             <div class="points-value">
               {{ user?.starPoints ?? 0 }}
@@ -75,7 +75,7 @@
           </div>
           <div class="points-card party">
             <div class="points-label">
-              {{ TERMS.PARTY.points }}
+              {{ getTerms('PARTY').points }}
             </div>
             <div class="points-value">
               {{ user?.partyPoints ?? 0 }}
@@ -96,7 +96,7 @@
       <div class="section">
         <el-tabs v-model="activeTab">
           <el-tab-pane
-            :label="`${TERMS.STAR.points}明细`"
+            :label="`${getTerms('STAR').points}明细`"
             name="star-points"
           >
             <el-table
@@ -159,7 +159,7 @@
           </el-tab-pane>
 
           <el-tab-pane
-            :label="`${TERMS.PARTY.points}明细`"
+            :label="`${getTerms('PARTY').points}明细`"
             name="party-points"
           >
             <el-table
@@ -222,7 +222,7 @@
           </el-tab-pane>
 
           <el-tab-pane
-            :label="`${TERMS.STAR.type}记录`"
+            :label="`${getTerms('STAR').type}记录`"
             name="star-events"
           >
             <el-table
@@ -285,7 +285,7 @@
           </el-tab-pane>
 
           <el-tab-pane
-            :label="`${TERMS.PARTY.type}记录`"
+            :label="`${getTerms('PARTY').type}记录`"
             name="party-events"
           >
             <el-table
@@ -357,7 +357,7 @@ import { ref, watch } from 'vue'
 import { getUserDetail, getUserPoints, getUserEvents } from '@/api/users'
 import type { User, PointRecord, EventRecord } from '@/api/users'
 import { formatDate, getTierColor } from '@/utils'
-import { TERMS, formatTierName } from '@/constants/terms'
+import { getTerms, formatTierName } from '@/constants/terms'
 
 const props = defineProps<{
   modelValue: boolean

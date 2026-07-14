@@ -16,11 +16,11 @@
       @change="emitFilter"
     >
       <el-option
-        :label="TERMS.STAR.type"
+        :label="getTerms('STAR').type"
         value="STAR"
       />
       <el-option
-        :label="TERMS.PARTY.type"
+        :label="getTerms('PARTY').type"
         value="PARTY"
       />
     </el-select>
@@ -105,7 +105,7 @@
 </template>
 <script setup lang="ts">
 import { reactive } from 'vue'
-import { TERMS } from '@/constants/terms'
+import { getTerms } from '@/constants/terms'
 
 interface FilterPayload {
   keyword: string

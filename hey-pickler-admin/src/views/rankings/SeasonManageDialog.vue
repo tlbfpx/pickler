@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     :model-value="modelValue"
-    :title="`赛季管理（${TERMS[type].points}）`"
+    :title="`赛季管理（${getTerms(type).points}）`"
     width="760px"
     @update:model-value="$emit('update:modelValue', $event)"
   >
@@ -98,11 +98,11 @@
             style="width: 100%"
           >
             <el-option
-              :label="TERMS.STAR.points"
+              :label="getTerms('STAR').points"
               value="STAR"
             />
             <el-option
-              :label="TERMS.PARTY.points"
+              :label="getTerms('PARTY').points"
               value="PARTY"
             />
           </el-select>
@@ -156,7 +156,7 @@
 import { ref, reactive, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listSeasons, createSeason, activateSeason } from '@/api/seasons'
-import { TERMS } from '@/constants/terms'
+import { getTerms } from '@/constants/terms'
 import type { Season } from '@/types'
 
 const props = defineProps<{
