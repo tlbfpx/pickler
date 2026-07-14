@@ -132,12 +132,11 @@
           width="80"
         >
           <template #default="{ row }">
-            <el-tag
+            <DictTag
+              dict-code="event_format"
+              :item-key="row.matchType"
               size="small"
-              :type="matchTypeTagType(row.matchType)"
-            >
-              {{ formatMatchType(row.matchType) }}
-            </el-tag>
+            />
           </template>
         </el-table-column>
         <el-table-column
@@ -154,12 +153,11 @@
           width="80"
         >
           <template #default="{ row }">
-            <el-tag
+            <DictTag
+              dict-code="registration_status"
+              :item-key="row.status"
               size="small"
-              :type="regStatusTagType(row.status)"
-            >
-              {{ formatRegStatus(row.status) }}
-            </el-tag>
+            />
           </template>
         </el-table-column>
         <el-table-column
@@ -383,26 +381,6 @@ async function handleWithdraw(row: Registration) {
       ElMessage.error(res.message)
     }
   } catch { /* cancelled */ }
-}
-
-function matchTypeTagType(type: string) {
-  const map: Record<string, string> = { SINGLES: '', DOUBLES: 'warning', MIXED: 'danger' }
-  return map[type] || 'info'
-}
-
-function formatMatchType(type: string) {
-  const map: Record<string, string> = { SINGLES: '单打', DOUBLES: '双打', MIXED: '混双' }
-  return map[type] || type
-}
-
-function regStatusTagType(status: string) {
-  const map: Record<string, string> = { REGISTERED: 'primary', CHECKED_IN: 'success', WITHDRAWN: 'info' }
-  return map[status] || 'info'
-}
-
-function formatRegStatus(status: string) {
-  const map: Record<string, string> = { REGISTERED: '已报名', CHECKED_IN: '已签到', WITHDRAWN: '已退赛' }
-  return map[status] || status
 }
 </script>
 
