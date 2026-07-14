@@ -83,6 +83,7 @@ export const useDictStore = defineStore('dict', () => {
 
   const label = (code: string, key: string): string => item(code, key)?.itemLabel || key
   const color = (code: string, key: string): string => item(code, key)?.itemColor || '#6B7280'
+  const has = (code: string, key: string): boolean => !!item(code, key)
 
   function meta(code: string, key: string): Record<string, unknown> | null {
     const raw = item(code, key)?.extraJson
@@ -102,5 +103,5 @@ export const useDictStore = defineStore('dict', () => {
       sort: i.sort
     }))
 
-  return { bundle, version, loaded, load, refresh, items, item, label, color, meta, options }
+  return { bundle, version, loaded, load, refresh, items, item, label, color, has, meta, options }
 })

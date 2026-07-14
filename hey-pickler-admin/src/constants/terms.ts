@@ -7,7 +7,7 @@
  *
  * 段位 6 档（与后端 TierName 对齐）：
  *   BRONZE 青铜 / SILVER 白银 / GOLD 黄金
- *   PLATINUM 钻石 / DIAMOND 钻石 / MASTER 王者
+ *   PLATINUM 铂金 / DIAMOND 钻石 / MASTER 王者
  */
 
 import { useDictStore } from '@/stores/dict'

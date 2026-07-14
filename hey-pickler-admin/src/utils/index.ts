@@ -78,16 +78,13 @@ export const formatEventType = (type: string): string => {
 }
 
 export const getEventStatusColor = (status: string): string => {
-  const c = useDictStore().color('event_status', status)
-  // store 兜底返回 '#6B7280'；若 status 未命中字典则用本地 fallback map
-  if (c && c !== '#6B7280') return c
-  return FALLBACK_STATUS_COLOR[status] || '#6B7280'
+  const store = useDictStore()
+  return store.has('event_status', status) ? store.color('event_status', status) : (FALLBACK_STATUS_COLOR[status] || '#6B7280')
 }
 
 export const getEventTypeColor = (type: string): string => {
-  const c = useDictStore().color('event_type', type)
-  if (c && c !== '#6B7280') return c
-  return FALLBACK_TYPE_COLOR[type] || '#6B7280'
+  const store = useDictStore()
+  return store.has('event_type', type) ? store.color('event_type', type) : (FALLBACK_TYPE_COLOR[type] || '#6B7280')
 }
 
 export const formatEventFormat = (format: string | null | undefined): string => {
@@ -98,9 +95,8 @@ export const formatEventFormat = (format: string | null | undefined): string => 
 
 export const getEventFormatColor = (format: string | null | undefined): string => {
   const key = format || 'SINGLES'
-  const c = useDictStore().color('event_format', key)
-  if (c && c !== '#6B7280') return c
-  return FALLBACK_FORMAT_COLOR[key] || '#6B7280'
+  const store = useDictStore()
+  return store.has('event_format', key) ? store.color('event_format', key) : (FALLBACK_FORMAT_COLOR[key] || '#6B7280')
 }
 
 // ============ 段位 / 角色（非本期字典联动范围，保持原样） ============
