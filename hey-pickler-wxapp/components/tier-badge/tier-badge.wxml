@@ -1,7 +1,9 @@
-<!-- Tier badge component -->
+<!-- Tier badge component（配色/icon 由后端 VO inline 驱动）-->
 <view
-  class="tier-badge {{tierClass}} {{sizeClass}}"
+  class="tier-badge {{sizeClass}}"
+  style="{{badgeStyle}}{{textStyle}}"
   bindtap="handleTap"
 >
+  <text wx:if="{{tierIconText}}" class="tier-icon">{{tierIconText}}</text>
   <text class="tier-text">{{tierNameText}}</text>
 </view>
