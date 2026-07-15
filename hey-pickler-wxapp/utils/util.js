@@ -1,4 +1,5 @@
 import { TERMS, TIER_NAME } from './terms'
+import dict from './dict.js'
 
 /**
  * Format date to string
@@ -88,32 +89,34 @@ function getTierClass(tier) {
  * Format event status to display name
  * @param {string} status - Status code
  */
+const FALLBACK_EVENT_STATUS = {
+  DRAFT: '草稿',
+  OPEN: '报名中',
+  FULL: '已满员',
+  IN_PROGRESS: '进行中',
+  COMPLETED: '已结束',
+  CANCELLED: '已取消'
+}
 function formatEventStatus(status) {
-  const statusMap = {
-    DRAFT: '草稿',
-    OPEN: '报名中',
-    FULL: '已满员',
-    IN_PROGRESS: '进行中',
-    COMPLETED: '已结束',
-    CANCELLED: '已取消'
-  }
-  return statusMap[status] || status
+  const l = dict.label('event_status', status)
+  return l && l !== status ? l : (FALLBACK_EVENT_STATUS[status] || status)
 }
 
 /**
  * Get event status color
  * @param {string} status - Status code
  */
+const FALLBACK_EVENT_STATUS_COLOR = {
+  DRAFT: '#999',
+  OPEN: '#4CAF50',
+  FULL: '#FF9800',
+  IN_PROGRESS: '#2196F3',
+  COMPLETED: '#666',
+  CANCELLED: '#f44336'
+}
 function getEventStatusColor(status) {
-  const colorMap = {
-    DRAFT: '#999',
-    OPEN: '#4CAF50',
-    FULL: '#FF9800',
-    IN_PROGRESS: '#2196F3',
-    COMPLETED: '#666',
-    CANCELLED: '#f44336'
-  }
-  return colorMap[status] || '#999'
+  const c = dict.color('event_status', status)
+  return c && c !== '#6B7280' ? c : (FALLBACK_EVENT_STATUS_COLOR[status] || '#999')
 }
 
 /**
