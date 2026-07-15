@@ -17,6 +17,13 @@ public class RedisKey {
         return PREFIX + "ranking:" + type + ":top5";
     }
 
+    /** 某轨排名缓存通配（清缓存用：ranking:{type}:* 覆盖 type/tier/season + top5）。
+     *  段位配置改了（tierName/tierColor/threshold）须清该轨排名缓存——RankingVO 含装配好的
+     *  tierName/tierColor，5min TTL 不清会让积分排名页读旧 VO（段位名/色不更新）。 */
+    public static String rankingCachePattern(String type) {
+        return PREFIX + "ranking:" + type + ":*";
+    }
+
     public static String adminSession(String tokenId) {
         return PREFIX + "session:admin:" + tokenId;
     }
