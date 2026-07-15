@@ -131,6 +131,7 @@ public class SeasonServiceImpl implements SeasonService {
                     vo.setTier(r.getTier());
                     vo.setTierName(tierResolver.nameFor(r.getType(), r.getTier()));
                     vo.setTierColor(tierResolver.colorFor(r.getType(), r.getTier()));
+                    vo.setTierIcon(tierResolver.iconFor(r.getType(), r.getTier()));
                     User u = userMap.get(r.getUserId());
                     vo.setNickname(u.getNickname());
                     vo.setAvatarUrl(u.getAvatarUrl());

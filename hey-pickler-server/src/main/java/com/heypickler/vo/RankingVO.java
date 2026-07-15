@@ -16,4 +16,6 @@ public class RankingVO {
     private String tierName;
     /** 段位色，由 TierResolver.colorFor(ranking.getType(), tier) 装配 */
     private String tierColor;
+    /** 段位图标，由 TierResolver.iconFor(ranking.getType(), tier) 装配 */
+    private String tierIcon;
 }
