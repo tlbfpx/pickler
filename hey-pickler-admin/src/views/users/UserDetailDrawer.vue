@@ -66,6 +66,7 @@
             <div class="points-tier">
               <TierBadge
                 :tier-color="user?.starTierColor"
+                :tier-icon="user?.starTierIcon"
                 :tier-name="user?.starTierName || formatTierName(user?.starTier)"
               />
             </div>
@@ -80,6 +81,7 @@
             <div class="points-tier">
               <TierBadge
                 :tier-color="user?.partyTierColor"
+                :tier-icon="user?.partyTierIcon"
                 :tier-name="user?.partyTierName || formatTierName(user?.partyTier)"
               />
             </div>
