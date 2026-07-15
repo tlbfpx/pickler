@@ -101,15 +101,27 @@ Page({
       const res = await request.get('/rankings', params)
 
       if (res.code === 0) {
-        const newRankings = res.data.list || []
+        const data = res.data || {}
+        const newRankings = data.list || []
         const rankings = refresh ? newRankings : [...this.data.rankings, ...newRankings]
 
-        this.setData({
+        const next = {
           rankings,
           page: page + 1,
           hasMore: newRankings.length >= this.data.size,
           loading: false
-        })
+        }
+
+        // 段位筛选 tab：后端 tierNameMap（per-track 双轨）刷新标签，顺序 BRONZE..MASTER
+        // 与 switchTierTab 的 index↔tier_code 映射一致；缺失（旧后端/离线）回退初始 STAR 标签
+        const tierNameMap = data.tierNameMap
+        if (tierNameMap && tierNameMap.BRONZE && tierNameMap.MASTER) {
+          next.tierTabs = ['全部',
+            tierNameMap.BRONZE, tierNameMap.SILVER, tierNameMap.GOLD,
+            tierNameMap.PLATINUM, tierNameMap.DIAMOND, tierNameMap.MASTER]
+        }
+
+        this.setData(next)
       } else {
         this.setData({
           loading: false

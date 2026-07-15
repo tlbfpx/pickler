@@ -215,6 +215,11 @@ public class RankingServiceImpl implements RankingService {
         return map;
     }
 
+    @Override
+    public Map<String, String> tierNameMap(String type) {
+        return buildTierNameMap(type);
+    }
+
     /** 当前 track 全 6 档 tier_code→name（per-track，避免前端 TIER_NAME 单套 fallback 让 PARTY 轨显示青铜..王者）。 */
     private Map<String, String> buildTierNameMap(String type) {
         Map<String, String> map = new LinkedHashMap<>();

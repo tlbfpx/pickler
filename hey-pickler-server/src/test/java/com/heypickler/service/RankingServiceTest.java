@@ -23,9 +23,11 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.data.redis.core.RedisTemplate;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -110,6 +112,36 @@ class RankingServiceTest {
         when(tierResolver.nameFor(eq("STAR"), eq("PLATINUM"))).thenReturn("铂金");
         when(tierResolver.nameFor(eq("STAR"), eq("DIAMOND"))).thenReturn("钻石");
         when(tierResolver.nameFor(eq("STAR"), eq("MASTER"))).thenReturn("王者");
+    }
+
+    @Test
+    void testTierNameMap_PerTrack() {
+        // PARTY 档名 stub（STAR 6 档已在 setUp stub）
+        when(tierResolver.nameFor(eq("PARTY"), eq("BRONZE"))).thenReturn("见习球友");
+        when(tierResolver.nameFor(eq("PARTY"), eq("SILVER"))).thenReturn("活力球友");
+        when(tierResolver.nameFor(eq("PARTY"), eq("GOLD"))).thenReturn("热血球友");
+        when(tierResolver.nameFor(eq("PARTY"), eq("PLATINUM"))).thenReturn("资深球友");
+        when(tierResolver.nameFor(eq("PARTY"), eq("DIAMOND"))).thenReturn("明星球友");
+        when(tierResolver.nameFor(eq("PARTY"), eq("MASTER"))).thenReturn("传奇球友");
+
+        Map<String, String> star = rankingService.tierNameMap("STAR");
+        Map<String, String> party = rankingService.tierNameMap("PARTY");
+
+        // 全 6 档
+        assertEquals(6, star.size());
+        assertEquals(6, party.size());
+        // per-track 名称不同（双轨核心：同 tier_code 不同称号）
+        assertEquals("青铜", star.get("BRONZE"));
+        assertEquals("见习球友", party.get("BRONZE"));
+        assertEquals("王者", star.get("MASTER"));
+        assertEquals("传奇球友", party.get("MASTER"));
+        // key 顺序固定 BRONZE..MASTER（LinkedHashMap 插入序，与 wxapp tab index↔code 映射一致）
+        assertIterableEquals(
+                Arrays.asList("BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "MASTER"),
+                new ArrayList<>(star.keySet()));
+        assertIterableEquals(
+                Arrays.asList("BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "MASTER"),
+                new ArrayList<>(party.keySet()));
     }
 
     @Test
