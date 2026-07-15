@@ -1,6 +1,7 @@
 package com.heypickler.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.heypickler.common.constant.RedisKey;
 import com.heypickler.common.exception.BizException;
 import com.heypickler.common.exception.ErrorCode;
 import com.heypickler.dto.admin.TierItemUpdateRequest;
@@ -10,6 +11,7 @@ import com.heypickler.service.DictCacheService;
 import com.heypickler.service.TierConfigService;
 import com.heypickler.vo.TierConfigVO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +19,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -41,6 +44,7 @@ public class TierConfigServiceImpl implements TierConfigService {
 
     private final TierConfigMapper tierConfigMapper;
     private final DictCacheService dictCacheService;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @Override
     public List<TierConfigVO> getByTrack(String track) {
@@ -128,6 +132,13 @@ public class TierConfigServiceImpl implements TierConfigService {
 
         // 6. 失效前端 bundle 版本号（同 DictServiceImpl.updateItems 模式）
         dictCacheService.incrementVersion();
+
+        // 7. 清该轨 ranking 缓存：RankingVO 含装配好的 tierName/tierColor（5min TTL），
+        //    改了段位展示名/色/阈值不清会让积分排名页读旧 VO。
+        Set<String> rankingKeys = redisTemplate.keys(RedisKey.rankingCachePattern(track));
+        if (rankingKeys != null && !rankingKeys.isEmpty()) {
+            redisTemplate.delete(rankingKeys);
+        }
     }
 
     private TierConfigVO toVO(TierConfig t) {

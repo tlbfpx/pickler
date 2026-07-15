@@ -15,9 +15,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.RedisTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -48,6 +50,8 @@ class TierConfigServiceImplTest {
     TierConfigMapper tierConfigMapper;
     @Mock
     DictCacheService dictCacheService;
+    @Mock
+    RedisTemplate<String, Object> redisTemplate;
 
     private static final String[] CODES = {"BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "MASTER"};
     private static final int[] DEFAULT_THRESHOLDS = {0, 500, 1200, 2500, 5000, 10000};
@@ -204,5 +208,29 @@ class TierConfigServiceImplTest {
         items.get(2).setThreshold(null);
         assertThrows(BizException.class, () -> service.updateTrack("STAR", items));
         verifyNoInteractions(dictCacheService);
+    }
+
+    @Test
+    void updateTrack_invalidatesRankingCache() {
+        // 改段位后必须清该轨 ranking 缓存（RankingVO 含 tierName/tierColor，5min TTL 不清会读旧）
+        stubExistingRows();
+        Set<String> staleKeys = Set.of("heypickler:ranking:STAR:BRONZE:s1",
+                "heypickler:ranking:STAR:top5");
+        when(redisTemplate.keys("heypickler:ranking:STAR:*")).thenReturn(staleKeys);
+
+        service.updateTrack("STAR", validItems(DEFAULT_THRESHOLDS));
+
+        verify(redisTemplate).delete(staleKeys);
+    }
+
+    @Test
+    void updateTrack_noRankingCacheKeys_noDelete() {
+        // keys 返回空（无缓存）→ 不调 delete（不抛 NPE）
+        stubExistingRows();
+        when(redisTemplate.keys("heypickler:ranking:STAR:*")).thenReturn(java.util.Collections.emptySet());
+
+        service.updateTrack("STAR", validItems(DEFAULT_THRESHOLDS));
+
+        verify(redisTemplate, never()).delete(any(java.util.Collection.class));
     }
 }
