@@ -4,6 +4,7 @@ import com.heypickler.common.result.PageResult;
 import com.heypickler.common.result.Result;
 import com.heypickler.dto.app.RankingQuery;
 import com.heypickler.service.RankingService;
+import com.heypickler.vo.AppRankingPageVO;
 import com.heypickler.vo.RankingVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,8 +23,10 @@ public class AppRankingController {
 
     @Operation(summary = "获取排行榜")
     @GetMapping
-    public Result<PageResult<RankingVO>> getRankings(RankingQuery query) {
-        return Result.ok(rankingService.getRankings(query));
+    public Result<AppRankingPageVO> getRankings(RankingQuery query) {
+        // 榜单分页（list 平铺顶层，不破坏 wxapp res.data.list）+ 当前 track 段位名映射（供段位筛选 tab 双轨）
+        PageResult<RankingVO> page = rankingService.getRankings(query);
+        return Result.ok(AppRankingPageVO.of(page, rankingService.tierNameMap(query.getType())));
     }
 
     @Operation(summary = "获取前5名")
