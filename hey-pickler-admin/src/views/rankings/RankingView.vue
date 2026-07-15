@@ -66,7 +66,7 @@
           :key="key"
           :value="key"
         >
-          {{ TIER_NAME[key] }}
+          {{ tierNameMap[key] || TIER_NAME[key] }}
         </el-radio-button>
       </el-radio-group>
 
@@ -90,7 +90,7 @@
           class="dist-dot"
           :style="{ background: tierColorMap?.[key] || '#6B7280' }"
         />
-        {{ TIER_NAME[key] }}
+        {{ tierNameMap[key] || TIER_NAME[key] }}
         <b>{{ tierDistribution[key] || 0 }}</b>
       </span>
       <span
@@ -262,6 +262,7 @@ const selectedSeasonId = ref<number | null>(null)
 const tierDistribution = ref<Record<string, number>>({})
 /** 当前 track 全 6 档 tier_code→color（后端 RankingPageVO.tierColorMap 装配，离线回退灰色） */
 const tierColorMap = ref<Record<string, string>>({})
+const tierNameMap = ref<Record<string, string>>({})
 const seasonCode = ref('')
 const seasonName = ref<string | null>(null)
 const seasonStatus = ref<'CURRENT' | 'ARCHIVED'>('CURRENT')
@@ -319,6 +320,7 @@ const fetchOne = async () => {
       total.value = d.page.total || 0
       tierDistribution.value = d.tierDistribution || {}
       tierColorMap.value = d.tierColorMap || {}
+      tierNameMap.value = d.tierNameMap || {}
       seasonCode.value = d.seasonCode
       seasonName.value = d.seasonName
       seasonStatus.value = d.seasonStatus

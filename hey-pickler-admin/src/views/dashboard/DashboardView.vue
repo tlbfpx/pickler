@@ -753,11 +753,11 @@ function renderCharts() {
 
   // 段位色来自后端 starTierColorMap/partyTierColorMap（TierResolver.colorFor per-track）；
   // 段位名仍用 TIER_NAME 兜底（后端 dashboard VO 不带 name）。
-  const mapTier = (td: Record<string, number>, colorMap: Record<string, string> | undefined) =>
-    Object.entries(td).map(([k, v]) => ({ value: v, name: tn[k] || k, itemStyle: { color: (colorMap && colorMap[k]) || '#6B7280' } }))
+  const mapTier = (td: Record<string, number>, colorMap: Record<string, string> | undefined, nameMap: Record<string, string> | undefined) =>
+    Object.entries(td).map(([k, v]) => ({ value: v, name: (nameMap && nameMap[k]) || tn[k] || k, itemStyle: { color: (colorMap && colorMap[k]) || '#6B7280' } }))
 
-  if (starTierRef.value) mk(starTierRef.value, { tooltip: pieTip, legend: pieLeg, series: [mkPie(mapTier(stats.starTierDistribution || {}, stats.starTierColorMap))] })
-  if (partyTierRef.value) mk(partyTierRef.value, { tooltip: pieTip, legend: pieLeg, series: [mkPie(mapTier(stats.partyTierDistribution || {}, stats.partyTierColorMap))] })
+  if (starTierRef.value) mk(starTierRef.value, { tooltip: pieTip, legend: pieLeg, series: [mkPie(mapTier(stats.starTierDistribution || {}, stats.starTierColorMap, stats.starTierNameMap))] })
+  if (partyTierRef.value) mk(partyTierRef.value, { tooltip: pieTip, legend: pieLeg, series: [mkPie(mapTier(stats.partyTierDistribution || {}, stats.partyTierColorMap, stats.partyTierNameMap))] })
 
   // 30 天趋势小图（sparkline 风格，无坐标轴）
   const mkSpark = (el: HTMLElement, data: { date: string; count: number }[], color: string) => mk(el, {

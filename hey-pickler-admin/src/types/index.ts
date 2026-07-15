@@ -246,6 +246,10 @@ export interface DashboardStats {
   starTierColorMap?: Record<string, string>
   /** 段位色映射（PARTY 轨 BRONZE..MASTER），供前端 pie 染色 */
   partyTierColorMap?: Record<string, string>
+  /** 段位名映射（STAR 轨 per-track，供 pie/标签，避免单套 TIER_NAME fallback） */
+  starTierNameMap?: Record<string, string>
+  /** 段位名映射（PARTY 轨 per-track，见习..传奇球友） */
+  partyTierNameMap?: Record<string, string>
   eventTypes: Record<string, number>
   dailyNewUsers: Array<{ date: string; count: number }>
   dailyRegistrations: Array<{ date: string; count: number }>
