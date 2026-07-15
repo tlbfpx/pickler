@@ -18,6 +18,10 @@ export interface User {
   starTierColor?: string
   /** 后端返回的段位色（TierResolver.colorFor，优先展示） */
   partyTierColor?: string
+  /** 后端返回的段位图标（TierResolver.iconFor） */
+  starTierIcon?: string
+  /** 后端返回的段位图标（TierResolver.iconFor） */
+  partyTierIcon?: string
   status: 'NORMAL' | 'BANNED'
   createdAt: string
 }
@@ -114,6 +118,8 @@ export interface RankingEntry {
   tierName?: string
   /** 后端返回的段位色（TierResolver.colorFor，优先展示） */
   tierColor?: string
+  /** 后端返回的段位图标（TierResolver.iconFor） */
+  tierIcon?: string
 }
 
 export interface PointEntryRecord {
@@ -156,6 +162,8 @@ export interface SeasonRankingEntry {
   tierName?: string
   /** 后端返回的段位色（TierResolver.colorFor，优先展示） */
   tierColor?: string
+  /** 后端返回的段位图标（TierResolver.iconFor） */
+  tierIcon?: string
 }
 
 /**
@@ -168,6 +176,10 @@ export interface RankingPageVO {
   tierDistribution: Record<string, number>
   /** 段位色映射 {BRONZE: #A56C2C, ...}，当前 track 全 6 档，供前端染色图例/徽章 */
   tierColorMap?: Record<string, string>
+  /** 段位名映射（per-track，见习..传奇球友） */
+  tierNameMap?: Record<string, string>
+  /** 段位图标映射（per-track） */
+  tierIconMap?: Record<string, string>
   seasonCode: string
   seasonName: string | null
   seasonStatus: 'CURRENT' | 'ARCHIVED'

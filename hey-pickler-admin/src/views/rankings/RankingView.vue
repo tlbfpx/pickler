@@ -159,6 +159,7 @@
           <template #default="{ row }">
             <TierBadge
               :tier-color="row.tierColor"
+              :tier-icon="row.tierIcon"
               :tier-name="row.tierName || formatTierName(row.tier)"
               size="small"
             />
