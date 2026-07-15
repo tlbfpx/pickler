@@ -47,7 +47,7 @@
         </view>
       </view>
       <view class="tier-card-right">
-        <tier-badge tier="{{userInfo.starTier || 'BRONZE'}}" tier-name="{{userInfo.starTierName}}" type="STAR" size="medium"></tier-badge>
+        <tier-badge tier="{{userInfo.starTier || 'BRONZE'}}" tier-name="{{userInfo.starTierName}}" tier-color="{{userInfo.starTierColor}}" tier-icon="{{userInfo.starTierIcon}}" type="STAR" size="medium"></tier-badge>
         <text class="tier-arrow">›</text>
       </view>
     </view>
@@ -63,7 +63,7 @@
         </view>
       </view>
       <view class="tier-card-right">
-        <tier-badge tier="{{userInfo.partyTier || 'BRONZE'}}" tier-name="{{userInfo.partyTierName}}" type="PARTY" size="medium"></tier-badge>
+        <tier-badge tier="{{userInfo.partyTier || 'BRONZE'}}" tier-name="{{userInfo.partyTierName}}" tier-color="{{userInfo.partyTierColor}}" tier-icon="{{userInfo.partyTierIcon}}" type="PARTY" size="medium"></tier-badge>
         <text class="tier-arrow">›</text>
       </view>
     </view>
