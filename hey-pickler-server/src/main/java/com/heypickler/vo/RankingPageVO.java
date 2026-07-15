@@ -18,6 +18,8 @@ public class RankingPageVO {
     private Map<String, String> tierColorMap;
     /** 段位名映射 {BRONZE: 青铜/见习球友, ...}，当前 track 全 6 档（per-track，供筛选/分布条标签，避免单套 TIER_NAME fallback） */
     private Map<String, String> tierNameMap;
+    /** 段位图标映射 {BRONZE: 🥉/🌟, ...}，当前 track 全 6 档（per-track，供前端图例/徽章渲染） */
+    private Map<String, String> tierIconMap;
     private String seasonCode;
     private String seasonName;
     /** CURRENT | ARCHIVED */

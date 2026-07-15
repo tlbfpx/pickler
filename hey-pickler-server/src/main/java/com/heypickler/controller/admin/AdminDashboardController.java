@@ -110,6 +110,8 @@ public class AdminDashboardController {
         data.put("partyTierColorMap", buildTierColorMap("PARTY"));
         data.put("starTierNameMap", buildTierNameMap("STAR"));
         data.put("partyTierNameMap", buildTierNameMap("PARTY"));
+        data.put("starTierIconMap", buildTierIconMap("STAR"));
+        data.put("partyTierIconMap", buildTierIconMap("PARTY"));
 
         // === Event type distribution ===
         long starEvents = eventMapper.selectCount(
@@ -259,6 +261,15 @@ public class AdminDashboardController {
         Map<String, String> map = new LinkedHashMap<>();
         for (String code : TIER_CODE_ORDER) {
             map.put(code, tierResolver.nameFor(track, code));
+        }
+        return map;
+    }
+
+    /** 当前 track 全 6 档 tier_code→icon（per-track，对齐 RankingServiceImpl.buildTierIconMap）。 */
+    private Map<String, String> buildTierIconMap(String track) {
+        Map<String, String> map = new LinkedHashMap<>();
+        for (String code : TIER_CODE_ORDER) {
+            map.put(code, tierResolver.iconFor(track, code));
         }
         return map;
     }

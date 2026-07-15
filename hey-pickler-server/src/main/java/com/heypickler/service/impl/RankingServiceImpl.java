@@ -159,6 +159,7 @@ public class RankingServiceImpl implements RankingService {
                     vo.setTier(ranking.getTier());
                     vo.setTierName(tierResolver.nameFor(ranking.getType(), ranking.getTier()));
                     vo.setTierColor(tierResolver.colorFor(ranking.getType(), ranking.getTier()));
+                    vo.setTierIcon(tierResolver.iconFor(ranking.getType(), ranking.getTier()));
 
                     User user = userMap.get(ranking.getUserId());
                     vo.setNickname(user.getNickname());
@@ -184,6 +185,7 @@ public class RankingServiceImpl implements RankingService {
         vo.setTierDistribution(countTierDistribution(query.getType(), current.getCode()));
         vo.setTierColorMap(buildTierColorMap(query.getType()));
         vo.setTierNameMap(buildTierNameMap(query.getType()));
+        vo.setTierIconMap(buildTierIconMap(query.getType()));
         vo.setSeasonCode(current.getCode());
         vo.setSeasonName(current.getName());
         vo.setSeasonStatus(current.getStatus());
@@ -222,6 +224,15 @@ public class RankingServiceImpl implements RankingService {
         return map;
     }
 
+    /** 当前 track 全 6 档 tier_code→icon（per-track，供前端图例/徽章渲染图标）。 */
+    private Map<String, String> buildTierIconMap(String type) {
+        Map<String, String> map = new LinkedHashMap<>();
+        for (String code : TIER_CODE_ORDER) {
+            map.put(code, tierResolver.iconFor(type, code));
+        }
+        return map;
+    }
+
     @Override
     public List<RankingVO> getTop5(String type) {
         Season current = resolveCurrentSeason(type);
@@ -256,6 +267,7 @@ public class RankingServiceImpl implements RankingService {
                     vo.setTier(ranking.getTier());
                     vo.setTierName(tierResolver.nameFor(ranking.getType(), ranking.getTier()));
                     vo.setTierColor(tierResolver.colorFor(ranking.getType(), ranking.getTier()));
+                    vo.setTierIcon(tierResolver.iconFor(ranking.getType(), ranking.getTier()));
 
                     User user = userMap.get(ranking.getUserId());
                     vo.setNickname(user.getNickname());
