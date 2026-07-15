@@ -108,6 +108,8 @@ public class AdminDashboardController {
         // 段位色映射（双轨 per-track，BRONZE..MASTER 全 6 档），供前端 pie/图例染色，与 RankingPageVO.tierColorMap 同源 TierResolver.colorFor
         data.put("starTierColorMap", buildTierColorMap("STAR"));
         data.put("partyTierColorMap", buildTierColorMap("PARTY"));
+        data.put("starTierNameMap", buildTierNameMap("STAR"));
+        data.put("partyTierNameMap", buildTierNameMap("PARTY"));
 
         // === Event type distribution ===
         long starEvents = eventMapper.selectCount(
@@ -248,6 +250,15 @@ public class AdminDashboardController {
         Map<String, String> map = new LinkedHashMap<>();
         for (String code : TIER_CODE_ORDER) {
             map.put(code, tierResolver.colorFor(track, code));
+        }
+        return map;
+    }
+
+    /** 当前 track 全 6 档 tier_code→name（per-track，对齐 RankingServiceImpl.buildTierNameMap）。 */
+    private Map<String, String> buildTierNameMap(String track) {
+        Map<String, String> map = new LinkedHashMap<>();
+        for (String code : TIER_CODE_ORDER) {
+            map.put(code, tierResolver.nameFor(track, code));
         }
         return map;
     }

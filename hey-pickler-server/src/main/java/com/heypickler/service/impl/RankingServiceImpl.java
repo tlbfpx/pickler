@@ -183,6 +183,7 @@ public class RankingServiceImpl implements RankingService {
         vo.setPage(page);
         vo.setTierDistribution(countTierDistribution(query.getType(), current.getCode()));
         vo.setTierColorMap(buildTierColorMap(query.getType()));
+        vo.setTierNameMap(buildTierNameMap(query.getType()));
         vo.setSeasonCode(current.getCode());
         vo.setSeasonName(current.getName());
         vo.setSeasonStatus(current.getStatus());
@@ -208,6 +209,15 @@ public class RankingServiceImpl implements RankingService {
         Map<String, String> map = new LinkedHashMap<>();
         for (String code : TIER_CODE_ORDER) {
             map.put(code, tierResolver.colorFor(type, code));
+        }
+        return map;
+    }
+
+    /** 当前 track 全 6 档 tier_code→name（per-track，避免前端 TIER_NAME 单套 fallback 让 PARTY 轨显示青铜..王者）。 */
+    private Map<String, String> buildTierNameMap(String type) {
+        Map<String, String> map = new LinkedHashMap<>();
+        for (String code : TIER_CODE_ORDER) {
+            map.put(code, tierResolver.nameFor(type, code));
         }
         return map;
     }
