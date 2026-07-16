@@ -25,7 +25,11 @@ public class RoleCheckAspect {
     public void checkRole(JoinPoint joinPoint) {
         ServletRequestAttributes attrs =
                 (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        if (attrs == null) return;
+        if (attrs == null) {
+            // 非请求上下文（@Async / 定时 / 进程内调用）触达 @RequireRole 方法 → fail-closed，
+            // 拒绝执行（否则等于跳过角色校验的提权地雷）
+            throw new BizException(ErrorCode.UNAUTHORIZED, "无法校验角色（非 HTTP 请求上下文）");
+        }
 
         HttpServletRequest request = attrs.getRequest();
         String role = (String) request.getAttribute("adminRole");
