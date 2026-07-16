@@ -69,6 +69,16 @@ public class ProfileGuard implements ApplicationListener<ApplicationReadyEvent> 
             return;
         }
 
+        // WX_DEV_MODE：dev 模式下 /api/app/auth/login 用任意 code 即可伪造任意 userId（无微信校验），
+        // 绝不可在 prod 开启。env 层（compose/镜像/configmap）可能继承 dev 兜底 true，此处兜底拦截。
+        String devMode = env.getProperty("hey-pickler.wechat.dev-mode");
+        if ("true".equalsIgnoreCase(devMode)) {
+            failFast("Active profile is 'prod' but hey-pickler.wechat.dev-mode=true. Dev mode bypasses " +
+                     "WeChat auth and lets anyone forge any userId via /api/app/auth/login with an arbitrary code. " +
+                     "Set WX_DEV_MODE=false in production.");
+            return;
+        }
+
         String jwt = env.getProperty("hey-pickler.jwt.secret");
         if (KNOWN_DEV_JWT_SECRETS.contains(jwt)) {
             failFast("Active profile is 'prod' but JWT_SECRET matches the known dev fallback. " +

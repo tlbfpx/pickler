@@ -35,6 +35,7 @@ class ProfileGuardTest {
     @Test
     void passesWhenProdProfileAndUniqueSecrets() {
         when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
+        when(environment.getProperty("hey-pickler.wechat.dev-mode")).thenReturn("false");
         when(environment.getProperty("hey-pickler.jwt.secret")).thenReturn(UNIQUE_JWT);
         when(environment.getProperty("hey-pickler.aes.key")).thenReturn(UNIQUE_AES);
         when(environment.getProperty("PROD_GUARD")).thenReturn(null);
@@ -45,8 +46,21 @@ class ProfileGuardTest {
     }
 
     @Test
+    void failsFastWhenProdProfileAndDevModeTrue() {
+        // WX_DEV_MODE 在 prod 绝不可开（dev 登录可伪造任意 userId）
+        when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
+        when(environment.getProperty("hey-pickler.wechat.dev-mode")).thenReturn("true");
+        when(environment.getProperty("PROD_GUARD")).thenReturn(null);
+
+        guard.onApplicationEvent(event);
+
+        verify(exitAction).exit(2);
+    }
+
+    @Test
     void failsFastWhenProdProfileAndDevJwtSecret() {
         when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
+        when(environment.getProperty("hey-pickler.wechat.dev-mode")).thenReturn("false");
         when(environment.getProperty("hey-pickler.jwt.secret")).thenReturn(DEV_JWT);
         when(environment.getProperty("PROD_GUARD")).thenReturn(null);
 
@@ -58,6 +72,7 @@ class ProfileGuardTest {
     @Test
     void failsFastWhenProdProfileAndDevAesKey() {
         when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
+        when(environment.getProperty("hey-pickler.wechat.dev-mode")).thenReturn("false");
         when(environment.getProperty("hey-pickler.jwt.secret")).thenReturn(UNIQUE_JWT);
         when(environment.getProperty("hey-pickler.aes.key")).thenReturn(DEV_AES);
         when(environment.getProperty("PROD_GUARD")).thenReturn(null);
@@ -101,6 +116,7 @@ class ProfileGuardTest {
     void passesWhenProdGuardTrueAndProdProfileWithUniqueSecrets() {
         // Both triggers active, secrets valid → pass (defense in depth still allows start)
         when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
+        when(environment.getProperty("hey-pickler.wechat.dev-mode")).thenReturn("false");
         when(environment.getProperty("hey-pickler.jwt.secret")).thenReturn(UNIQUE_JWT);
         when(environment.getProperty("hey-pickler.aes.key")).thenReturn(UNIQUE_AES);
         when(environment.getProperty("PROD_GUARD")).thenReturn("true");
