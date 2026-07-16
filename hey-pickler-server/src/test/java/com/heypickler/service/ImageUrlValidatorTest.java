@@ -32,7 +32,7 @@ class ImageUrlValidatorTest {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         executor = Executors.newSingleThreadExecutor();
         server.setExecutor(executor);
-        validator = new HeadBasedImageUrlValidator();
+        validator = new HeadBasedImageUrlValidator(true);
         hitCount.set(0);
     }
 
@@ -100,5 +100,39 @@ class ImageUrlValidatorTest {
             () -> validator.validate("https://192.0.2.1/no-such-image.jpg"));
         assertEquals(ErrorCode.PARAM_ERROR.getCode(), ex.getCode());
         assertTrue(ex.getMessage().contains("校验失败"), "Should mention validation failed");
+    }
+
+    // ---------- SSRF 防护（严格模式 allowPrivateHosts=false，不发网络请求）----------
+
+    @Test
+    void validate_rejectsLoopbackHost_whenSsrfGuardOn() {
+        HeadBasedImageUrlValidator strict = new HeadBasedImageUrlValidator();
+        BizException ex = assertThrows(BizException.class,
+            () -> strict.validate("http://127.0.0.1:8080/x.jpg"));
+        assertTrue(ex.getMessage().contains("内网"), "loopback 应被拒");
+    }
+
+    @Test
+    void validate_rejectsPrivateRange_whenSsrfGuardOn() {
+        HeadBasedImageUrlValidator strict = new HeadBasedImageUrlValidator();
+        BizException ex = assertThrows(BizException.class,
+            () -> strict.validate("http://10.0.0.5/x.jpg"));
+        assertTrue(ex.getMessage().contains("内网"), "10/8 私网应被拒");
+    }
+
+    @Test
+    void validate_rejectsLinkLocal_whenSsrfGuardOn() {
+        // AWS IMDS 169.254.169.254 必须拒（防元数据服务探测）
+        HeadBasedImageUrlValidator strict = new HeadBasedImageUrlValidator();
+        assertThrows(BizException.class,
+            () -> strict.validate("http://169.254.169.254/latest/meta-data/x.jpg"));
+    }
+
+    @Test
+    void validate_rejectsNonHttpScheme() {
+        HeadBasedImageUrlValidator strict = new HeadBasedImageUrlValidator();
+        BizException ex = assertThrows(BizException.class,
+            () -> strict.validate("file:///etc/passwd"));
+        assertTrue(ex.getMessage().contains("http/https"), "伪协议应被拒");
     }
 }
