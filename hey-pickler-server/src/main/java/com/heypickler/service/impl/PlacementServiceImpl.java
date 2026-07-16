@@ -87,15 +87,13 @@ public class PlacementServiceImpl implements PlacementService {
                 && teamMapper.selectById(byGroup.get(0).get(0).getParticipantKey()) != null
                 && teamMapper.selectById(byGroup.get(0).get(0).getParticipantKey()).getMember1UserId() != null;
 
-        List<StandingVO> flat = new ArrayList<>();
-        for (List<StandingVO> group : byGroup) {
-            flat.addAll(group);
-        }
-        flat.sort(Comparator.comparingInt(s -> s.getRank() == null ? Integer.MAX_VALUE : s.getRank()));
+        // 全局排名：跨组按真实 tie-break（wins desc → 净胜局 desc）统一排序 + 竞技式平分共享，
+        // 修多组赛事点数取决于 HashMap 迭代序的随机 bug（原按组内 rank 拼接，两组冠军 rank=1 先后序随机）。
+        List<StandingVO> ranked = assignGlobalRanks(byGroup);
 
         String title = event.getTitle() == null ? "" : event.getTitle();
-        int globalRank = 1;
-        for (StandingVO s : flat) {
+        for (StandingVO s : ranked) {
+            int globalRank = s.getRank() == null ? Integer.MAX_VALUE : s.getRank();
             int points = table.getOrDefault(globalRank, 0);
             String reason = "PLACEMENT: 赛事《" + title + "》第" + globalRank + "名";
             if (doubles && s.getParticipantKey() != null) {
@@ -104,16 +102,48 @@ public class PlacementServiceImpl implements PlacementService {
                 if (team != null) {
                     int half = points / 2;
                     int otherHalf = points - half;
-                    pointService.issuePlacement(eventId, team.getMember1UserId(), half,
-                            "PLACEMENT: 赛事《" + title + "》第" + globalRank + "名");
-                    pointService.issuePlacement(eventId, team.getMember2UserId(), otherHalf,
-                            "PLACEMENT: 赛事《" + title + "》第" + globalRank + "名");
+                    pointService.issuePlacement(eventId, team.getMember1UserId(), half, reason);
+                    pointService.issuePlacement(eventId, team.getMember2UserId(), otherHalf, reason);
                 }
             } else if (s.getParticipantKey() != null) {
                 pointService.issuePlacement(eventId, s.getParticipantKey(), points, reason);
             }
-            globalRank++;
         }
+    }
+
+    /**
+     * 跨组全局排名：合并所有组 standings，按 wins desc → (gamesFor - gamesAgainst) desc 排序，
+     * 竞技式平分（同记录同名次，跳过后续名次）。返回的 {@link StandingVO#getRank()} 为全局名次，
+     * 供 placement 点数表查询。纯函数（无 DB）→ 可单测。
+     */
+    static List<StandingVO> assignGlobalRanks(List<List<StandingVO>> byGroup) {
+        List<StandingVO> flat = new ArrayList<>();
+        for (List<StandingVO> group : byGroup) {
+            flat.addAll(group);
+        }
+        flat.sort(Comparator.<StandingVO>comparingInt(PlacementServiceImpl::wins).reversed()
+                .thenComparingInt(s -> -gamesDiff(s)));
+        int rank = 0;
+        for (int i = 0; i < flat.size(); i++) {
+            boolean tiedPrev = i > 0
+                    && wins(flat.get(i - 1)) == wins(flat.get(i))
+                    && gamesDiff(flat.get(i - 1)) == gamesDiff(flat.get(i));
+            if (!tiedPrev) {
+                rank = i + 1;
+            }
+            flat.get(i).setRank(rank);
+        }
+        return flat;
+    }
+
+    private static int wins(StandingVO s) {
+        return s.getWins() == null ? 0 : s.getWins();
+    }
+
+    private static int gamesDiff(StandingVO s) {
+        int gf = s.getGamesFor() == null ? 0 : s.getGamesFor();
+        int ga = s.getGamesAgainst() == null ? 0 : s.getGamesAgainst();
+        return gf - ga;
     }
 
     @Override
