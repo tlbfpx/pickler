@@ -29,10 +29,24 @@ public class AdminAuthFilter extends OncePerRequestFilter {
             "/api/admin/auth/login"
     );
 
+    /** GET-only 匿名读：login 前页要展示品牌（app 名/logo/主色），故读不鉴权；PUT 仍鉴权。 */
+    private static final Set<String> PUBLIC_ADMIN_GET_PATHS = Set.of(
+            "/api/admin/brand"
+    );
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return !path.startsWith("/api/admin/") || EXCLUDE_PATHS.contains(path);
+        if (!path.startsWith("/api/admin/")) {
+            return true;
+        }
+        if (EXCLUDE_PATHS.contains(path)) {
+            return true;
+        }
+        if ("GET".equals(request.getMethod()) && PUBLIC_ADMIN_GET_PATHS.contains(path)) {
+            return true;
+        }
+        return false;
     }
 
     @Override
