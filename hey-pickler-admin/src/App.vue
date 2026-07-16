@@ -6,9 +6,11 @@
 import { onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useDictStore } from '@/stores/dict'
+import { useBrandStore } from '@/stores/brand'
 
 const authStore = useAuthStore()
 const dictStore = useDictStore()
+const brandStore = useBrandStore()
 
 onMounted(() => {
   // Restore admin info from localStorage if available
@@ -21,7 +23,9 @@ onMounted(() => {
     }
   }
 
-  // 异步加载字典 bundle，不阻塞渲染；失败时静默保留 localStorage 缓存
+  // 品牌（title / favicon / 主题色）+ 字典 bundle 异步加载，不阻塞渲染；
+  // 失败时静默保留 localStorage 缓存（store 初始化已用缓存预填主题，首屏不闪）
+  brandStore.load()
   dictStore.load()
 })
 </script>

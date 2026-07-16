@@ -1,7 +1,13 @@
 <template>
   <div class="header">
     <div class="header-left">
-      <h2>Hey Pickler 管理后台</h2>
+      <img
+        v-if="brandStore.logoUrl"
+        :src="brandStore.logoUrl"
+        class="header-logo"
+        alt="logo"
+      >
+      <h2>{{ brandStore.appName }} 管理后台</h2>
     </div>
     <div class="header-right">
       <!-- Notification bell with unread badge + dropdown of latest items. -->
@@ -109,6 +115,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Bell } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
+import { useBrandStore } from '@/stores/brand'
 import {
   getNotifications,
   getUnreadCount,
@@ -120,6 +127,7 @@ import { formatDate } from '@/utils'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const brandStore = useBrandStore()
 
 const unreadCount = ref(0)
 const notifications = ref<NotificationItem[]>([])
@@ -222,6 +230,14 @@ onBeforeUnmount(() => {
 .header-left {
   display: flex;
   align-items: center;
+  gap: 10px;
+}
+
+.header-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  object-fit: cover;
 }
 
 .header-left h2 {

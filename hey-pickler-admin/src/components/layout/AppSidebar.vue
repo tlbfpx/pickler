@@ -1,14 +1,20 @@
 <template>
   <div class="sidebar">
     <div class="sidebar-logo">
-      Hey Pickler 管理后台
+      <img
+        v-if="brandStore.logoUrl"
+        :src="brandStore.logoUrl"
+        class="sidebar-logo-img"
+        alt="logo"
+      >
+      <span>{{ brandStore.appName }} 管理后台</span>
     </div>
     <el-menu
       :default-active="activeMenu"
       class="sidebar-menu"
       background-color="#001529"
       text-color="#fff"
-      active-text-color="#409EFF"
+      :active-text-color="brandStore.primaryColor"
       :router="true"
     >
       <el-sub-menu
@@ -37,8 +43,10 @@ import { computed, type Component } from 'vue'
 import { useRoute, type RouteRecordRaw } from 'vue-router'
 import * as ElIcons from '@element-plus/icons-vue'
 import router from '@/router'
+import { useBrandStore } from '@/stores/brand'
 
 const route = useRoute()
+const brandStore = useBrandStore()
 const activeMenu = computed(() => route.path)
 const iconMap: Record<string, Component> = ElIcons as Record<string, Component>
 
@@ -57,6 +65,14 @@ const groups = computed(() => GROUP_ORDER
 </script>
 
 <style scoped>
+.sidebar-logo-img {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  object-fit: cover;
+  margin-right: 8px;
+}
+
 .sidebar-menu {
   border-right: none;
   flex: 1;
