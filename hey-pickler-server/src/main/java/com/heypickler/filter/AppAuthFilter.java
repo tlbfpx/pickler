@@ -33,10 +33,11 @@ public class AppAuthFilter extends OncePerRequestFilter {
             "/api/app/brand"
     );
 
+    // 仅 login 真正匿名。refresh / phone 需要当前登录用户（控制器读 userId 属性），
+    // 必须走过本 filter 校验 JWT 并绑定 userId —— 放在这里会导致 getAttribute("userId") 恒为 null，
+    // 刷新 token 与绑定手机号端点失效。
     private static final Set<String> PUBLIC_PATHS = Set.of(
-            "/api/app/auth/login",
-            "/api/app/auth/phone",
-            "/api/app/auth/refresh"
+            "/api/app/auth/login"
     );
 
     @Override
