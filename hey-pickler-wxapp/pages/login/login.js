@@ -1,15 +1,39 @@
 // Login page
 import auth from '../../utils/auth'
 import util from '../../utils/util'
+import brand from '../../utils/brand'
 
 Page({
   data: {
     loading: false,
     canIGetUserProfile: false,
-    needPhone: false
+    needPhone: false,
+    brandName: '',
+    brandSlogan: '',
+    brandLogo: '/images/logo.png',
+    brandPrimary: '#4CAF50',
+    loginBg: ''
+  },
+
+  // 应用品牌配置（名/slogan/logo/主色渐变/导航栏）
+  applyBrand() {
+    const b = brand.get()
+    this.setData({
+      brandName: b.appName,
+      brandSlogan: b.slogan,
+      brandLogo: b.logoUrl,
+      brandPrimary: b.primaryColor,
+      loginBg: brand.gradient(b.primaryColor)
+    })
+    brand.applyChrome()
   },
 
   onLoad() {
+    // 立即用缓存/fallback 渲染品牌，再异步刷新保证最新（app onLaunch 已触发，这里兜底）
+    this.applyBrand()
+    const self = this
+    brand.refresh(getApp().globalData.baseUrl).then(() => self.applyBrand())
+
     // Check if user info API is available
     this.setData({
       canIGetUserProfile: wx.canIUse('getUserProfile')
