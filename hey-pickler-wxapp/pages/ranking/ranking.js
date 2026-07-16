@@ -2,6 +2,7 @@
 import request from '../../utils/request'
 import util from '../../utils/util'
 import { TERMS, TIER_NAME } from '../../utils/terms'
+import brand from '../../utils/brand'
 
 Page({
   data: {
@@ -25,6 +26,10 @@ Page({
       currentTab: type === 'STAR' ? 0 : 1
     })
     this.loadRankings(true)
+  },
+
+  onShow() {
+    brand.applyChrome()
   },
 
   onPullDownRefresh() {
