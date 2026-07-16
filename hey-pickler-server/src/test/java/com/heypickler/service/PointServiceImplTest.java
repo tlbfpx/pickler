@@ -44,6 +44,19 @@ class PointServiceImplTest {
     @Mock TierResolver tierResolver;
     @Mock ApplicationEventPublisher eventPublisher;
 
+    /**
+     * P3 起 writeRecord 用 LambdaUpdateWrapper&lt;User&gt;（原子 setSql），纯单测无 MyBatis 启动流程，
+     * User 的 lambda TableInfo 缓存为空 → "can not find lambda cache"。手动注册预热（同 RankingServiceTest）。
+     */
+    @org.junit.jupiter.api.BeforeAll
+    static void warmLambdaCache() {
+        org.apache.ibatis.session.Configuration cfg = new org.apache.ibatis.session.Configuration();
+        org.apache.ibatis.builder.MapperBuilderAssistant assistant =
+                new org.apache.ibatis.builder.MapperBuilderAssistant(cfg, "");
+        assistant.setCurrentNamespace("com.heypickler.mapper.UserMapper");
+        com.baomidou.mybatisplus.core.metadata.TableInfoHelper.initTableInfo(assistant, User.class);
+    }
+
     @Test
     void enterPoints_writesSourceAndSeasonCode_andAccumulates_andPublishesSeasonEvent() {
         Season s = new Season();

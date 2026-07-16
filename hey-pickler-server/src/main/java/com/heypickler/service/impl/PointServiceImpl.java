@@ -1,6 +1,7 @@
 package com.heypickler.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.heypickler.common.enums.PointSource;
 import com.heypickler.common.exception.BizException;
 import com.heypickler.common.exception.ErrorCode;
@@ -181,18 +182,30 @@ public class PointServiceImpl implements PointService, PointWallet {
             return; // 跳出，跳过 userPoints 累加避免双重加和
         }
 
-        if ("STAR".equals(target.type())) {
-            int current = user.getStarPoints() != null ? user.getStarPoints() : 0;
-            int newPoints = Math.max(0, current + points);
-            user.setStarPoints(newPoints);
-            user.setStarTier(tierResolver.keyFor(newPoints, target.type()));
+        // 原子累加：行锁串行化并发发分，修 read-modify-write lost-update（并发发分丢 delta）；
+        // GREATEST(0, …) 兜底不负债（负向 ADJUST 也 clamp）。余额是 correctness-critical 列 → 走原子 SQL。
+        boolean star = "STAR".equals(target.type());
+        String pointsCol = star ? "star_points" : "party_points";
+        userMapper.update(null, new LambdaUpdateWrapper<User>()
+                .eq(User::getId, user.getId())
+                .setSql(pointsCol + " = GREATEST(0, " + pointsCol + " + (" + points + "))"));
+
+        // tier 是 denormalized 展示缓存（读取时由 TierResolver 按 balance 重算），按内存期望值 best-effort
+        // 更新；并发下最多滞后一次且自愈，不影响 correctness-critical 的余额列。
+        int current = star ? (user.getStarPoints() == null ? 0 : user.getStarPoints())
+                           : (user.getPartyPoints() == null ? 0 : user.getPartyPoints());
+        int expected = Math.max(0, current + points);
+        String newTier = tierResolver.keyFor(expected, target.type());
+        userMapper.update(null, new LambdaUpdateWrapper<User>()
+                .eq(User::getId, user.getId())
+                .set(star ? User::getStarTier : User::getPartyTier, newTier));
+        if (star) {
+            user.setStarPoints(expected);
+            user.setStarTier(newTier);
         } else {
-            int current = user.getPartyPoints() != null ? user.getPartyPoints() : 0;
-            int newPoints = Math.max(0, current + points);
-            user.setPartyPoints(newPoints);
-            user.setPartyTier(tierResolver.keyFor(newPoints, target.type()));
+            user.setPartyPoints(expected);
+            user.setPartyTier(newTier);
         }
-        userMapper.updateById(user);
     }
 
     @Override
