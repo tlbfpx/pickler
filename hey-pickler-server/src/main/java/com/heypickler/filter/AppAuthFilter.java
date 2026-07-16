@@ -29,7 +29,8 @@ public class AppAuthFilter extends OncePerRequestFilter {
             "/api/app/banners",
             "/api/app/events",
             "/api/app/rankings",
-            "/api/app/dict"
+            "/api/app/dict",
+            "/api/app/brand"
     );
 
     private static final Set<String> PUBLIC_PATHS = Set.of(
