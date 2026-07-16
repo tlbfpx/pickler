@@ -1,4 +1,3 @@
-import { TERMS, TIER_NAME } from './terms'
 import dict from './dict.js'
 
 /**
@@ -56,33 +55,6 @@ function formatRelativeTime(date) {
   } else {
     return '刚刚'
   }
-}
-
-/**
- * Format tier to display name
- * @param {string} tier - Tier code (BRONZE/SILVER/GOLD/PLATINUM/DIAMOND/MASTER)
- * @param {string} type - Type (STAR/PARTY)
- */
-function formatTier(tier, type = 'STAR') {
-  const tierName = TIER_NAME[tier] || '青铜'
-  const typeSuffix = TERMS[type] ? TERMS[type].tier : TERMS.STAR.tier
-  return `${tierName}${typeSuffix}`
-}
-
-/**
- * Get tier color class
- * @param {string} tier - Tier code (BRONZE/SILVER/GOLD/PLATINUM/DIAMOND/MASTER)
- */
-function getTierClass(tier) {
-  const classMap = {
-    BRONZE: 'tier-bronze',
-    SILVER: 'tier-silver',
-    GOLD: 'tier-gold',
-    PLATINUM: 'tier-platinum',
-    DIAMOND: 'tier-diamond',
-    MASTER: 'tier-master'
-  }
-  return classMap[tier] || 'tier-bronze'
 }
 
 /**
@@ -231,8 +203,6 @@ function showConfirm(options = {}) {
 export default {
   formatDate,
   formatRelativeTime,
-  formatTier,
-  getTierClass,
   formatEventStatus,
   getEventStatusColor,
   formatPoints,
