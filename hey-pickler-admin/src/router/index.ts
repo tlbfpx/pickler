@@ -104,6 +104,12 @@ const router = createRouter({
           meta: { title: '段位管理', icon: 'Medal', group: '系统' }
         },
         {
+          path: 'brand',
+          name: 'Brand',
+          component: () => import('@/views/brand/BrandView.vue'),
+          meta: { title: '品牌管理', icon: 'Brush', group: '系统' }
+        },
+        {
           path: 'notifications',
           name: 'Notifications',
           component: () => import('@/views/notifications/NotificationsView.vue'),
