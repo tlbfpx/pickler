@@ -2,6 +2,7 @@
 import request from '../../utils/request'
 import auth from '../../utils/auth'
 import util from '../../utils/util'
+import brand from '../../utils/brand'
 
 Page({
   data: {
@@ -20,6 +21,7 @@ Page({
   },
 
   onShow() {
+    brand.applyChrome()
     this.loadUserInfo()
   },
 

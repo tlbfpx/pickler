@@ -3,6 +3,7 @@ import request from '../../utils/request'
 import auth from '../../utils/auth'
 import util from '../../utils/util'
 import { TERMS } from '../../utils/terms'
+import brand from '../../utils/brand'
 
 Page({
   data: {
@@ -22,6 +23,7 @@ Page({
   },
 
   onShow() {
+    brand.applyChrome()
     // Refresh data when page shows
     if (this.data.events.length > 0) {
       this.loadEvents(true)

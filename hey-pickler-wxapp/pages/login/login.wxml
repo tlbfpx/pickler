@@ -1,11 +1,11 @@
 <!-- Login page -->
-<view class="login-page">
+<view class="login-page" style="{{loginBg}}">
   <view class="login-container">
     <!-- Logo -->
     <view class="logo-section">
-      <image class="logo" src="/images/logo.png" mode="aspectFit"></image>
-      <text class="app-name">Hey Pickler</text>
-      <text class="app-slogan">匹克球赛事活动管理平台</text>
+      <image class="logo" src="{{brandLogo}}" mode="aspectFit"></image>
+      <text class="app-name">{{brandName}}</text>
+      <text class="app-slogan" wx:if="{{brandSlogan}}">{{brandSlogan}}</text>
     </view>
 
     <!-- Login button -->
@@ -14,6 +14,7 @@
       <button
         wx:if="{{canIGetUserProfile}}"
         class="login-btn"
+        style="color:{{brandPrimary}}"
         bindtap="getUserProfile"
         disabled="{{loading}}">
         <text class="btn-icon">👋</text>
@@ -24,6 +25,7 @@
       <button
         wx:else
         class="login-btn"
+        style="color:{{brandPrimary}}"
         open-type="getUserInfo"
         bindgetuserinfo="getUserInfo"
         disabled="{{loading}}">
@@ -35,6 +37,7 @@
       <button
         wx:if="{{needPhone}}"
         class="phone-btn"
+        style="color:{{brandPrimary}}"
         open-type="getPhoneNumber"
         bindgetphonenumber="bindPhoneNumber"
         disabled="{{loading}}">

@@ -17,6 +17,7 @@ function resolveBaseUrl() {
 }
 
 const dict = require('./utils/dict.js')
+const brand = require('./utils/brand.js')
 
 App({
   globalData: {
@@ -45,6 +46,10 @@ App({
 
     // 启动拉字典 bundle（匿名，不依赖 token；失败保留 storage 兜底，不阻塞启动）
     dict.refresh(this.globalData.baseUrl)
+
+    // 启动拉品牌配置（匿名）：立即用缓存色设 tabbar，刷新后重设（brand.js 已 storage/fallback 预填）
+    brand.applyTabBar()
+    brand.refresh(this.globalData.baseUrl).then(() => brand.applyTabBar())
 
     // 检查更新
     this.checkUpdate()
