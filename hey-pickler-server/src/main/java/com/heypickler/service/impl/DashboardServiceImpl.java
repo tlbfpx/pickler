@@ -1,6 +1,7 @@
 package com.heypickler.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.heypickler.common.constant.RedisKey;
 import com.heypickler.entity.Event;
 import com.heypickler.entity.Registration;
 import com.heypickler.entity.User;
@@ -39,6 +40,7 @@ public class DashboardServiceImpl implements DashboardService {
     private final EventMapper eventMapper;
     private final RegistrationMapper registrationMapper;
     private final TierResolver tierResolver;
+    private final DashboardCache dashboardCache;
 
     // ============ Window / range helpers ============
 
@@ -89,7 +91,11 @@ public class DashboardServiceImpl implements DashboardService {
     // ============ R1 — snapshot ============
 
     @Override
-    public Map<String, Object> getSnapshot() {
+    public Map<String, Object> getSnapshot(boolean bypassCache) {
+        return cachedCompute(RedisKey.dashboardSnapshot(), Map.class, bypassCache, this::buildSnapshot);
+    }
+
+    private Map<String, Object> buildSnapshot() {
         Map<String, Object> data = new LinkedHashMap<>();
 
         // === Core KPIs ===
@@ -269,8 +275,14 @@ public class DashboardServiceImpl implements DashboardService {
     // ============ R2 — trends ============
 
     @Override
-    public DashboardTrendVO getTrends(String range, String from, String to) {
+    public DashboardTrendVO getTrends(String range, String from, String to, boolean bypassCache) {
+        // 缓存 key 含 range/from/to —— 同一 query 命中，不同 query 互不串
         Window w = resolveWindow(range, from, to);
+        return cachedCompute(RedisKey.dashboardTrends(w.label()), DashboardTrendVO.class, bypassCache,
+                () -> doGetTrends(w));
+    }
+
+    private DashboardTrendVO doGetTrends(Window w) {
 
         Map<LocalDate, Long> usersByDate = toDailyMap(userMapper.dailyNewUsers(w.from(), w.toExclusive()));
         Map<LocalDate, Long> regByDate = toDailyMap(registrationMapper.dailyRegistrations(w.from(), w.toExclusive()));
@@ -316,11 +328,19 @@ public class DashboardServiceImpl implements DashboardService {
     // ============ R3 — top events ============
 
     @Override
-    public List<TopEventVO> getTopEvents(String metric, String range, String from, String to, int limit) {
+    public List<TopEventVO> getTopEvents(String metric, String range, String from, String to, int limit, boolean bypassCache) {
+        Window w = resolveWindow(range, from, to);
+        // key 含 metric + range + limit（不同 metric / limit 不互串）
+        return cachedCompute(RedisKey.dashboardTop(metric == null ? "registrations" : metric, w.label(), limit),
+                (Class) List.class, bypassCache,
+                () -> doGetTopEvents(metric, w, limit));
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private List<TopEventVO> doGetTopEvents(String metric, Window w, int limit) {
         if (limit < 1 || limit > 50) {
             throw new IllegalArgumentException("limit 必须 1..50");
         }
-        Window w = resolveWindow(range, from, to);
         switch (metric == null ? "registrations" : metric) {
             case "registrations" -> {
                 return mapTop(registrationMapper.topEventsByRegistrations(w.from(), w.toExclusive(), limit),
@@ -379,8 +399,13 @@ public class DashboardServiceImpl implements DashboardService {
     // ============ R4 — attendance funnel ============
 
     @Override
-    public AttendanceFunnelVO getAttendance(String range, String from, String to) {
+    public AttendanceFunnelVO getAttendance(String range, String from, String to, boolean bypassCache) {
         Window w = resolveWindow(range, from, to);
+        return cachedCompute(RedisKey.dashboardAttendance(w.label()), AttendanceFunnelVO.class, bypassCache,
+                () -> doGetAttendance(w));
+    }
+
+    private AttendanceFunnelVO doGetAttendance(Window w) {
         long registered = registrationMapper.countActiveInRange(w.from(), w.toExclusive());
         long checkedIn = registrationMapper.countCheckedInInRange(w.from(), w.toExclusive());
 
@@ -399,7 +424,15 @@ public class DashboardServiceImpl implements DashboardService {
     // ============ R5 — compare (同比/环比) ============
 
     @Override
-    public CompareResultVO getCompare(String metric, String currentRange, String previousRange) {
+    public CompareResultVO getCompare(String metric, String currentRange, String previousRange, boolean bypassCache) {
+        return cachedCompute(RedisKey.dashboardCompare(metric == null ? "" : metric,
+                currentRange == null ? "thisMonth" : currentRange,
+                previousRange == null ? "lastMonth" : previousRange),
+                CompareResultVO.class, bypassCache,
+                () -> doGetCompare(metric, currentRange, previousRange));
+    }
+
+    private CompareResultVO doGetCompare(String metric, String currentRange, String previousRange) {
         if (metric == null || metric.isBlank()) {
             throw new IllegalArgumentException("metric 必填");
         }
@@ -551,5 +584,32 @@ public class DashboardServiceImpl implements DashboardService {
         if (o == null) return 0L;
         if (o instanceof Number n) return n.longValue();
         return Long.parseLong(o.toString());
+    }
+
+    // ============ Commit C — cache-aside ============
+
+    /**
+     * 通用 cache-aside：bypassCache=true 时跳过查/写 cache；否则先查 cache，无则查 DB。
+     * Redis 异常由 {@link DashboardCache} 内部吞并降级；这里再包一层防御，确保 cache 写入
+     * 异常也不影响主返回（cache 是 best-effort 加速器，不是 correctness 组件）。 */
+    @SuppressWarnings("unchecked")
+    private <T> T cachedCompute(String key, Class<T> type, boolean bypassCache, java.util.function.Supplier<T> loader) {
+        if (!bypassCache) {
+            try {
+                T hit = dashboardCache.get(key, type);
+                if (hit != null) return hit;
+            } catch (RuntimeException e) {
+                /* cache miss 退化为查 DB，不影响主流程 */
+            }
+        }
+        T fresh = loader.get();
+        if (fresh != null && !bypassCache) {
+            try {
+                dashboardCache.put(key, fresh);
+            } catch (RuntimeException e) {
+                /* cache 写入失败不影响返回 */
+            }
+        }
+        return fresh;
     }
 }

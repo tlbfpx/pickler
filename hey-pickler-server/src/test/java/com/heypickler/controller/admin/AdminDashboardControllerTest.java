@@ -18,6 +18,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.*;
 
 /**
@@ -37,7 +38,7 @@ class AdminDashboardControllerTest {
     @BeforeEach
     void setUp() {
         // 默认 stub：空快照
-        when(dashboardService.getSnapshot()).thenReturn(new LinkedHashMap<>());
+        when(dashboardService.getSnapshot(anyBoolean())).thenReturn(new LinkedHashMap<>());
     }
 
     @Test
@@ -48,11 +49,11 @@ class AdminDashboardControllerTest {
                 Map.of("id", 1L, "nickname", "李明辉", "eventTitle", "周末赛"));
         snapshot.put("recentRegistrations", recent);
         snapshot.put("totalUsers", 123L);
-        when(dashboardService.getSnapshot()).thenReturn(snapshot);
+        when(dashboardService.getSnapshot(anyBoolean())).thenReturn(snapshot);
 
-        Map<String, Object> result = controller.getStats().getData();
+        Map<String, Object> result = controller.getStats(null).getData();
 
-        verify(dashboardService, times(1)).getSnapshot();
+        verify(dashboardService, times(1)).getSnapshot(anyBoolean());
         assertEquals(123L, result.get("totalUsers"));
         assertEquals(1, ((List<?>) result.get("recentRegistrations")).size());
         assertEquals("李明辉",
@@ -61,7 +62,7 @@ class AdminDashboardControllerTest {
 
     @Test
     void getStats_returnsEmptySnapshot() {
-        Map<String, Object> result = controller.getStats().getData();
+        Map<String, Object> result = controller.getStats(null).getData();
         assertNotNull(result);
         assertTrue(result.isEmpty(), "应返回 service 给的空快照");
     }

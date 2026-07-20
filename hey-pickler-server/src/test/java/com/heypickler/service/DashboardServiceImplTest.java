@@ -5,6 +5,7 @@ import com.heypickler.entity.User;
 import com.heypickler.mapper.EventMapper;
 import com.heypickler.mapper.RegistrationMapper;
 import com.heypickler.mapper.UserMapper;
+import com.heypickler.service.impl.DashboardCache;
 import com.heypickler.service.impl.DashboardServiceImpl;
 import com.heypickler.vo.AttendanceFunnelVO;
 import com.heypickler.vo.CompareResultVO;
@@ -23,15 +24,19 @@ import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
  * Loop-v19 Dashboard Phase 1：4 个新端点（commit B）+ snapshot KPI delta 单测。
@@ -46,6 +51,7 @@ class DashboardServiceImplTest {
     @Mock UserMapper userMapper;
     @Mock RegistrationMapper registrationMapper;
     @Mock TierResolver tierResolver;
+    @Mock DashboardCache dashboardCache;
 
     @InjectMocks DashboardServiceImpl service;
 
@@ -78,7 +84,7 @@ class DashboardServiceImplTest {
         when(eventMapper.dailyNewEvents(any(), any())).thenReturn(List.of());
         when(registrationMapper.revenueInRange(any(), any())).thenReturn(new BigDecimal("0"));
 
-        DashboardTrendVO vo = service.getTrends("7d", null, null);
+        DashboardTrendVO vo = service.getTrends("7d", null, null, false);
         assertEquals(7, vo.getBuckets().size(), "7d 必须返回 7 个桶（含零填值）");
         // 总量校验（不依赖具体日期，填零 OK）
         long sumUsers = vo.getBuckets().stream().mapToLong(DashboardTrendVO.DayBucket::getUsers).sum();
@@ -94,7 +100,7 @@ class DashboardServiceImplTest {
         when(eventMapper.dailyNewEvents(any(), any())).thenReturn(List.of());
         when(registrationMapper.revenueInRange(any(), any())).thenReturn(new BigDecimal("0"));
 
-        DashboardTrendVO vo = service.getTrends("custom", "2026-07-01", "2026-07-10");
+        DashboardTrendVO vo = service.getTrends("custom", "2026-07-01", "2026-07-10", false);
         // 半开区间 7/01..7/10 → 10 桶（half-open: 7/01..7/11 exclusive）
         assertEquals(10, vo.getBuckets().size());
     }
@@ -102,7 +108,7 @@ class DashboardServiceImplTest {
     @Test
     void getTrends_rejectsCustomRangeWithoutFromTo() {
         assertThrows(IllegalArgumentException.class,
-                () -> service.getTrends("custom", null, null));
+                () -> service.getTrends("custom", null, null, false));
     }
 
     // ---------- R3 top-events ----------
@@ -112,7 +118,7 @@ class DashboardServiceImplTest {
         Map<String, Object> r2 = topRow(2L, "B", 5, 5, 30L);
         when(registrationMapper.topEventsByRegistrations(any(), any(), eq(10))).thenReturn(List.of(r1, r2));
 
-        List<TopEventVO> list = service.getTopEvents("registrations", "30d", null, null, 10);
+        List<TopEventVO> list = service.getTopEvents("registrations", "30d", null, null, 10, false);
         assertEquals(2, list.size());
         assertEquals(50d, list.get(0).getValue());
         assertEquals(30d, list.get(1).getValue());
@@ -125,7 +131,7 @@ class DashboardServiceImplTest {
         Map<String, Object> capped = topRow(2L, "Max10", 10, 5, 30L);
         when(registrationMapper.topEventsByRegistrations(any(), any(), anyInt())).thenReturn(List.of(unlimited, capped));
 
-        List<TopEventVO> list = service.getTopEvents("fillRate", "30d", null, null, 10);
+        List<TopEventVO> list = service.getTopEvents("fillRate", "30d", null, null, 10, false);
         assertEquals(1, list.size(), "maxParticipants=0 必须被排除");
         assertEquals("Max10", list.get(0).getTitle());
         assertEquals(0.5d, list.get(0).getValue(), 0.01);
@@ -134,9 +140,9 @@ class DashboardServiceImplTest {
     @Test
     void getTopEvents_rejectsInvalidLimit() {
         assertThrows(IllegalArgumentException.class,
-                () -> service.getTopEvents("registrations", "30d", null, null, 51));
+                () -> service.getTopEvents("registrations", "30d", null, null, 51, false));
         assertThrows(IllegalArgumentException.class,
-                () -> service.getTopEvents("registrations", "30d", null, null, 0));
+                () -> service.getTopEvents("registrations", "30d", null, null, 0, false));
     }
 
     private Map<String, Object> topRow(long id, String title, int max, int current, long value) {
@@ -155,7 +161,7 @@ class DashboardServiceImplTest {
         when(registrationMapper.countActiveInRange(any(), any())).thenReturn(100L);
         when(registrationMapper.countCheckedInInRange(any(), any())).thenReturn(80L);
 
-        AttendanceFunnelVO vo = service.getAttendance("30d", null, null);
+        AttendanceFunnelVO vo = service.getAttendance("30d", null, null, false);
         assertEquals(100, vo.getRegistered());
         assertEquals(80, vo.getCheckedIn());
         assertEquals(0.2, vo.getNoShowRate(), 0.001);
@@ -166,7 +172,7 @@ class DashboardServiceImplTest {
         when(registrationMapper.countActiveInRange(any(), any())).thenReturn(0L);
         when(registrationMapper.countCheckedInInRange(any(), any())).thenReturn(0L);
 
-        AttendanceFunnelVO vo = service.getAttendance("30d", null, null);
+        AttendanceFunnelVO vo = service.getAttendance("30d", null, null, false);
         assertEquals(0, vo.getRegistered());
         assertNull(vo.getNoShowRate(), "registered=0 时 noShowRate 必须为 null（spec R4 边界）");
     }
@@ -178,7 +184,7 @@ class DashboardServiceImplTest {
                 .thenReturn(120L)   // thisMonth (resolveWindow 内顺序：currentRange 先)
                 .thenReturn(100L); // lastMonth
 
-        CompareResultVO vo = service.getCompare("registrations", "thisMonth", "lastMonth");
+        CompareResultVO vo = service.getCompare("registrations", "thisMonth", "lastMonth", false);
         assertEquals(120, vo.getCurrent(), 0.001);
         assertEquals(100, vo.getPrevious(), 0.001);
         assertEquals(20, vo.getDeltaAbs(), 0.001);
@@ -191,7 +197,7 @@ class DashboardServiceImplTest {
                 .thenReturn(50L)   // current
                 .thenReturn(0L);   // previous
 
-        CompareResultVO vo = service.getCompare("registrations", "thisMonth", "lastMonth");
+        CompareResultVO vo = service.getCompare("registrations", "thisMonth", "lastMonth", false);
         assertNull(vo.getDeltaPct(), "previous=0 必须 deltaPct=null 避免除零");
         assertEquals(50, vo.getDeltaAbs(), 0.001);
     }
@@ -201,7 +207,7 @@ class DashboardServiceImplTest {
         when(registrationMapper.countActiveInRange(any(), any()))
                 .thenReturn(0L).thenReturn(0L);
 
-        CompareResultVO vo = service.getCompare("registrations", "thisMonth", "lastMonth");
+        CompareResultVO vo = service.getCompare("registrations", "thisMonth", "lastMonth", false);
         assertEquals(0, vo.getCurrent(), 0.001);
         assertEquals(0, vo.getPrevious(), 0.001);
         assertEquals(0, vo.getDeltaAbs(), 0.001);
@@ -211,7 +217,7 @@ class DashboardServiceImplTest {
     @Test
     void getCompare_invalidMetricThrows() {
         assertThrows(IllegalArgumentException.class,
-                () -> service.getCompare("nonsense", "thisMonth", "lastMonth"));
+                () -> service.getCompare("nonsense", "thisMonth", "lastMonth", false));
     }
 
     // ---------- R1 snapshot sibling delta ----------
@@ -245,7 +251,7 @@ class DashboardServiceImplTest {
         when(tierResolver.nameFor(any(), any())).thenReturn("name");
         when(tierResolver.iconFor(any(), any())).thenReturn("/icon");
 
-        var data = service.getSnapshot();
+        var data = service.getSnapshot(false);
         // 向后兼容：原 key 仍是数字
         assertEquals(200L, data.get("totalUsers"));
         assertEquals(60L, data.get("newUsersWeek"));
@@ -256,5 +262,109 @@ class DashboardServiceImplTest {
         assertNull(data.get("totalEventsDeltaPct"));
         // dailyNewUsers 等趋势仍是 List
         assertTrue(data.get("dailyNewUsers") instanceof List);
+    }
+
+    // ---------- Commit C — cache-aside + bypass ----------
+
+    @Test
+    void getSnapshot_bypassFalse_checksCacheAndStoresFreshResult() {
+        // cache miss → loader 跑；结果写回 cache
+        when(dashboardCache.get(anyString(), eq(Map.class))).thenReturn(null);
+        when(eventMapper.selectCount(any())).thenReturn(0L);
+        when(userMapper.selectCount(any())).thenReturn(0L);
+        when(registrationMapper.selectCount(any())).thenReturn(0L);
+        when(eventMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
+        when(userMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
+        when(registrationMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
+        when(userMapper.countNewInRange(any(), any())).thenReturn(0L);
+        when(eventMapper.countNewInRange(any(), any())).thenReturn(0L);
+        when(registrationMapper.countActiveInRange(any(), any())).thenReturn(0L);
+        when(registrationMapper.revenueInRange(any(), any())).thenReturn(java.math.BigDecimal.ZERO);
+        when(userMapper.dailyNewUsers(any(), any())).thenReturn(List.of());
+        when(registrationMapper.dailyRegistrations(any(), any())).thenReturn(List.of());
+        when(eventMapper.dailyNewEvents(any(), any())).thenReturn(List.of());
+        when(tierResolver.defaultKey(any())).thenReturn("BRONZE");
+        when(userMapper.selectList(any())).thenReturn(List.of());
+        when(tierResolver.colorFor(any(), any())).thenReturn("#000");
+        when(tierResolver.nameFor(any(), any())).thenReturn("name");
+        when(tierResolver.iconFor(any(), any())).thenReturn("/icon");
+
+        service.getSnapshot(false);
+
+        verify(dashboardCache, times(1)).get(
+                argThat(k -> k != null && k.contains("dashboard:snapshot")),
+                eq(Map.class));
+        verify(dashboardCache, times(1)).put(
+                argThat(k -> k != null && k.contains("dashboard:snapshot")),
+                any());
+    }
+
+    @Test
+    void getSnapshot_cacheHit_skipsLoader() {
+        // cache hit → 直接返回，loader 不应被调（即不调任何 mapper）
+        Map<String, Object> cached = new LinkedHashMap<>();
+        cached.put("cached", true);
+        cached.put("totalUsers", 999L);
+        when(dashboardCache.get(anyString(), eq(Map.class))).thenReturn(cached);
+
+        Map<String, Object> result = service.getSnapshot(false);
+
+        assertSame(cached, result, "cache hit 应返回缓存原对象");
+        // mapper 不应被调
+        verifyNoInteractions(eventMapper, userMapper, registrationMapper);
+        verify(dashboardCache, never()).put(anyString(), any());
+    }
+
+    @Test
+    void getSnapshot_bypassTrue_skipsCacheAndAlwaysLoadsFromDb() {
+        // bypass=true → 完全跳过 cache.get 与 cache.put；直走 loader
+        when(eventMapper.selectCount(any())).thenReturn(50L);
+        when(userMapper.selectCount(any())).thenReturn(0L);
+        when(registrationMapper.selectCount(any())).thenReturn(0L);
+        when(eventMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
+        when(userMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
+        when(registrationMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
+        when(userMapper.countNewInRange(any(), any())).thenReturn(0L);
+        when(eventMapper.countNewInRange(any(), any())).thenReturn(0L);
+        when(registrationMapper.countActiveInRange(any(), any())).thenReturn(0L);
+        when(registrationMapper.revenueInRange(any(), any())).thenReturn(java.math.BigDecimal.ZERO);
+        when(userMapper.dailyNewUsers(any(), any())).thenReturn(List.of());
+        when(registrationMapper.dailyRegistrations(any(), any())).thenReturn(List.of());
+        when(eventMapper.dailyNewEvents(any(), any())).thenReturn(List.of());
+        when(tierResolver.defaultKey(any())).thenReturn("BRONZE");
+        when(userMapper.selectList(any())).thenReturn(List.of());
+        when(tierResolver.colorFor(any(), any())).thenReturn("#000");
+        when(tierResolver.nameFor(any(), any())).thenReturn("name");
+        when(tierResolver.iconFor(any(), any())).thenReturn("/icon");
+
+        service.getSnapshot(true);
+
+        verifyNoInteractions(dashboardCache); // bypass：完全不读不写 cache
+    }
+
+    @Test
+    void getSnapshot_cachePutFailure_doesNotPropagate() {
+        // cache.put 抛异常 → loader 已拿到结果，不应影响返回
+        when(eventMapper.selectCount(any())).thenReturn(0L);
+        when(userMapper.selectCount(any())).thenReturn(0L);
+        when(registrationMapper.selectCount(any())).thenReturn(0L);
+        when(eventMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
+        when(userMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
+        when(registrationMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
+        when(userMapper.countNewInRange(any(), any())).thenReturn(0L);
+        when(eventMapper.countNewInRange(any(), any())).thenReturn(0L);
+        when(registrationMapper.countActiveInRange(any(), any())).thenReturn(0L);
+        when(registrationMapper.revenueInRange(any(), any())).thenReturn(java.math.BigDecimal.ZERO);
+        when(userMapper.dailyNewUsers(any(), any())).thenReturn(List.of());
+        when(registrationMapper.dailyRegistrations(any(), any())).thenReturn(List.of());
+        when(eventMapper.dailyNewEvents(any(), any())).thenReturn(List.of());
+        when(tierResolver.defaultKey(any())).thenReturn("BRONZE");
+        when(userMapper.selectList(any())).thenReturn(List.of());
+        when(tierResolver.colorFor(any(), any())).thenReturn("#000");
+        when(tierResolver.nameFor(any(), any())).thenReturn("name");
+        when(tierResolver.iconFor(any(), any())).thenReturn("/icon");
+        doThrow(new RuntimeException("redis down")).when(dashboardCache).put(anyString(), any());
+
+        assertDoesNotThrow(() -> service.getSnapshot(false), "cache 写入失败应降级，不应抛给上层");
     }
 }

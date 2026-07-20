@@ -1,4 +1,4 @@
-> **Status: DEFERRED** — 这是项目 Phase 2 工作，需等客户对 Phase 1 交付物（源码 + 文档）签字验收后再启动。本 proposal 暂存，scope/decisions 不变。
+> **Status: ACTIVE** — Phase 1 交付已签字验收，2026-07-20 起推进本 change。Open questions 已答（见下文），spec delta 起草中。
 
 # Proposal: 运营仪表盘 Phase 1 — 扩展现有 Dashboard
 
