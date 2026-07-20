@@ -145,6 +145,50 @@ class DashboardServiceImplTest {
                 () -> service.getTopEvents("registrations", "30d", null, null, 0, false));
     }
 
+    @Test
+    void getTopEvents_revenue_usesRevenueMapper() {
+        // metric=revenue 走 registrationMapper.topEventsByRevenue 分支（DashboardServiceImpl line 349-352）
+        Map<String, Object> r1 = topRow(1L, "RevA", 10, 5, 800L);
+        Map<String, Object> r2 = topRow(2L, "RevB", 20, 10, 500L);
+        when(registrationMapper.topEventsByRevenue(any(), any(), eq(10))).thenReturn(List.of(r1, r2));
+
+        List<TopEventVO> list = service.getTopEvents("revenue", "30d", null, null, 10, false);
+        assertEquals(2, list.size());
+        assertEquals("RevA", list.get(0).getTitle());
+        assertEquals(800d, list.get(0).getValue());
+        assertEquals("revenue", list.get(0).getMetric());
+    }
+
+    @Test
+    void getTopEvents_invalidMetricThrows() {
+        assertThrows(IllegalArgumentException.class,
+                () -> service.getTopEvents("garbage", "30d", null, null, 10, false));
+    }
+
+    @Test
+    void getTopEvents_fillRate_includesNullMaxAsExcluded() {
+        // mapTop 把 maxParticipants=null 当作 0 过滤（line 357-360）
+        Map<String, Object> nullMax = topRow(1L, "NullMax", 0, 5, 100L); // helper 强制 int → 0
+        Map<String, Object> capped = topRow(2L, "OK", 10, 5, 50L);
+        when(registrationMapper.topEventsByRegistrations(any(), any(), anyInt())).thenReturn(List.of(nullMax, capped));
+
+        List<TopEventVO> list = service.getTopEvents("fillRate", "30d", null, null, 10, false);
+        assertEquals(1, list.size());
+        assertEquals("OK", list.get(0).getTitle());
+    }
+
+    @Test
+    void getTrends_invalidRangeThrows() {
+        assertThrows(IllegalArgumentException.class,
+                () -> service.getTrends("never", null, null, true));
+    }
+
+    @Test
+    void getCompare_invalidRangeThrows() {
+        assertThrows(IllegalArgumentException.class,
+                () -> service.getCompare("users", "bogus", "thisMonth", true));
+    }
+
     private Map<String, Object> topRow(long id, String title, int max, int current, long value) {
         Map<String, Object> m = new HashMap<>();
         m.put("eventId", id);
