@@ -13,6 +13,7 @@ import com.sun.net.httpserver.HttpExchange;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -134,5 +135,28 @@ class ImageUrlValidatorTest {
         BizException ex = assertThrows(BizException.class,
             () -> strict.validate("file:///etc/passwd"));
         assertTrue(ex.getMessage().contains("http/https"), "伪协议应被拒");
+    }
+
+    // ---------- DNS rebinding 防护（连接须钉死解析阶段返回的 IP）----------
+
+    @Test
+    void validate_pinsResolvedIp_avoidsDnsRebinding() throws Exception {
+        // 复现 DNS rebinding 修复：连接必须复用校验阶段解析出的 IP，而非让 HttpURLConnection
+        // 对域名做第二次 DNS 查询。注入 resolver 让 "rebinding.test" → 127.0.0.1（本地 server）。
+        // 若实现未钉死 IP，openConnection 会真实解析 rebinding.test → DNS 失败 → 本测试红。
+        mount("/ok.jpg", exchange -> {
+            hitCount.incrementAndGet();
+            byte[] body = "img".getBytes();
+            exchange.getResponseHeaders().set("Content-Type", "image/jpeg");
+            exchange.sendResponseHeaders(200, body.length);
+            try (OutputStream os = exchange.getResponseBody()) { os.write(body); }
+        });
+        int port = server.getAddress().getPort();
+        InetAddress loopback = InetAddress.getByName("127.0.0.1");
+        HeadBasedImageUrlValidator v = new HeadBasedImageUrlValidator(true,
+            host -> new InetAddress[]{loopback});
+
+        assertDoesNotThrow(() -> v.validate("http://rebinding.test:" + port + "/ok.jpg"));
+        assertEquals(1, hitCount.get(), "应连到 pinned IP 的 server 恰好一次");
     }
 }
