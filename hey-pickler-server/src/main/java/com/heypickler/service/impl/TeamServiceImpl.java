@@ -159,6 +159,7 @@ public class TeamServiceImpl implements TeamService {
     @Transactional(rollbackFor = Exception.class)
     public void dissolve(Long teamId) {
         Team team = requireTeam(teamId);
+        requireNotGroupingLocked(team.getEventId()); // review #4 P1
 
         // Withdraw every registration tied to this team.
         List<Registration> regs = registrationMapper.selectList(
@@ -178,6 +179,7 @@ public class TeamServiceImpl implements TeamService {
     @Transactional(rollbackFor = Exception.class)
     public void decline(Long teamId, Long userId) {
         Team team = requireTeam(teamId);
+        requireNotGroupingLocked(team.getEventId()); // review #4 P1
 
         if (!userId.equals(team.getMember2UserId())) {
             throw new BizException(ErrorCode.FORBIDDEN, "仅受邀队友可拒绝邀请；请让收到邀请的搭档在「报名」Tab 点「拒绝」");
@@ -262,6 +264,20 @@ public class TeamServiceImpl implements TeamService {
             throw new BizException(ErrorCode.NOT_FOUND, "队伍不存在");
         }
         return team;
+    }
+
+    /**
+     * 分组锁定后冻结队伍操作（review #4 P1）：dissolve/decline 会物理删除 team，但分组已生
+     * 成时删除会留下 match.slot_*_team_id / group_assignment.team_id 悬空引用，standings 与
+     * placement 发分被损坏（team 已删→selectBatchIds 漏成员→发分丢分）。create/confirm 让
+     * roster 越过冻结点。与 CLAUDE.md "groupingLocked=true rejects re-group/withdraw" 一致。
+     */
+    private void requireNotGroupingLocked(Long eventId) {
+        Event event = eventMapper.selectById(eventId);
+        if (event != null && Boolean.TRUE.equals(event.getGroupingLocked())) {
+            throw new BizException(ErrorCode.INVALID_STATUS_TRANSITION,
+                    "分组已锁定，队伍操作被禁止；如需调整请联系管理员在「分组」Tab 解锁后再操作");
+        }
     }
 
     @Override

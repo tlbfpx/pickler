@@ -255,6 +255,25 @@ class TeamServiceImplTest {
         assertEquals(ErrorCode.NOT_FOUND.getCode(), ex.getCode());
     }
 
+    // ---------- review #4 P1: groupingLocked 守卫（dissolve/decline 物理删除防悬空）----------
+
+    @Test
+    void dissolve_eventGroupingLocked_throwsAndDoesNotDeleteTeam() {
+        // P1：分组锁定后再 dissolve 会物理删除 team，但 match.slot_*_team_id /
+        // group_assignment.team_id 仍指向已删的 team，悬空引用导致 standings/issue 数据损坏。
+        Team confirmed = newTeam(99L, 10L, 1L, 2L, "CONFIRMED");
+        when(teamMapper.selectById(99L)).thenReturn(confirmed);
+        Event event = new Event();
+        event.setId(10L);
+        event.setGroupingLocked(true);
+        when(eventMapper.selectById(10L)).thenReturn(event);
+
+        BizException ex = assertThrows(BizException.class,
+                () -> teamService.dissolve(99L));
+        assertEquals(ErrorCode.INVALID_STATUS_TRANSITION.getCode(), ex.getCode());
+        verify(teamMapper, never()).deleteById(anyLong());
+    }
+
     // ---------- decline ----------
 
     @Test
@@ -286,6 +305,22 @@ class TeamServiceImplTest {
         BizException ex = assertThrows(BizException.class,
                 () -> teamService.decline(99L, 999L));
         assertEquals(ErrorCode.FORBIDDEN.getCode(), ex.getCode());
+        verify(teamMapper, never()).deleteById(anyLong());
+    }
+
+    @Test
+    void decline_eventGroupingLocked_throwsAndDoesNotDeleteTeam() {
+        // P1：同上，decline 同样物理删除 team，分组锁定后必须拒绝。
+        Team pending = newTeam(99L, 10L, 1L, 2L, "PENDING");
+        when(teamMapper.selectById(99L)).thenReturn(pending);
+        Event event = new Event();
+        event.setId(10L);
+        event.setGroupingLocked(true);
+        when(eventMapper.selectById(10L)).thenReturn(event);
+
+        BizException ex = assertThrows(BizException.class,
+                () -> teamService.decline(99L, 2L));
+        assertEquals(ErrorCode.INVALID_STATUS_TRANSITION.getCode(), ex.getCode());
         verify(teamMapper, never()).deleteById(anyLong());
     }
 
