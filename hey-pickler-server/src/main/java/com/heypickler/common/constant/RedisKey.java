@@ -24,8 +24,8 @@ public class RedisKey {
         return PREFIX + "ranking:" + type + ":*";
     }
 
-    public static String adminSession(String tokenId) {
-        return PREFIX + "session:admin:" + tokenId;
+    public static String adminSession(String adminId) {
+        return PREFIX + "session:admin:" + adminId;
     }
 
     public static String rateLimit(String ip) {
