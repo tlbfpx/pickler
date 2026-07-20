@@ -64,10 +64,17 @@ public class AdminAuthFilter extends OncePerRequestFilter {
             return;
         }
 
-        // Check Redis session
+        // Check Redis session — fail-closed：仅显式 true 放行；null/Redis 异常一律拒
+        // （防 Redis 抖动时 hasKey 返回 null 被当作“会话有效”绕过撤销）
         String tokenId = String.valueOf(jwtUtil.getUserId(token));
         String sessionKey = RedisKey.adminSession(tokenId);
-        if (Boolean.FALSE.equals(redisTemplate.hasKey(sessionKey))) {
+        boolean sessionValid;
+        try {
+            sessionValid = Boolean.TRUE.equals(redisTemplate.hasKey(sessionKey));
+        } catch (Exception e) {
+            sessionValid = false;
+        }
+        if (!sessionValid) {
             writeError(response, ErrorCode.UNAUTHORIZED.getCode(), "会话已失效");
             return;
         }

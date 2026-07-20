@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
@@ -14,6 +16,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT) // 多 prod 检查项逐个 stub 易触发 strict 误报
 class ProfileGuardTest {
 
     private static final String DEV_JWT = "HeyPickler2026DevSecretK3y!MustChangeInProd!!";
@@ -51,6 +54,16 @@ class ProfileGuardTest {
         when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
         when(environment.getProperty("hey-pickler.wechat.dev-mode")).thenReturn("true");
         when(environment.getProperty("PROD_GUARD")).thenReturn(null);
+
+        guard.onApplicationEvent(event);
+
+        verify(exitAction).exit(2);
+    }
+
+    @Test
+    void failsFastWhenProdProfileAndCorsAdminOriginsHasLocalhost() {
+        when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
+        when(environment.getProperty("hey-pickler.cors.admin-origins")).thenReturn("http://localhost:5173");
 
         guard.onApplicationEvent(event);
 

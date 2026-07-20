@@ -79,6 +79,14 @@ public class ProfileGuard implements ApplicationListener<ApplicationReadyEvent> 
             return;
         }
 
+        // CORS admin origins：prod 不允许通配 * 或 localhost（防误配导致跨站读取已认证 admin API）
+        String adminOrigins = env.getProperty("hey-pickler.cors.admin-origins");
+        if (adminOrigins != null && (adminOrigins.contains("*") || adminOrigins.contains("localhost"))) {
+            failFast("Active profile is 'prod' but hey-pickler.cors.admin-origins contains '*' or 'localhost' "
+                     + "('..." + adminOrigins + "'). Set CORS_ADMIN_ORIGINS to the real admin panel origin(s) in production.");
+            return;
+        }
+
         String jwt = env.getProperty("hey-pickler.jwt.secret");
         if (KNOWN_DEV_JWT_SECRETS.contains(jwt)) {
             failFast("Active profile is 'prod' but JWT_SECRET matches the known dev fallback. " +
