@@ -1,276 +1,100 @@
 package com.heypickler.controller.admin;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.heypickler.common.annotation.RequireRole;
 import com.heypickler.common.enums.UserRole;
 import com.heypickler.common.result.Result;
-import com.heypickler.service.TierResolver;
-import com.heypickler.entity.Event;
-import com.heypickler.entity.Registration;
-import com.heypickler.entity.User;
-import com.heypickler.mapper.EventMapper;
-import com.heypickler.mapper.RegistrationMapper;
-import com.heypickler.mapper.UserMapper;
+import com.heypickler.service.DashboardService;
+import com.heypickler.vo.AttendanceFunnelVO;
+import com.heypickler.vo.CompareResultVO;
+import com.heypickler.vo.DashboardTrendVO;
+import com.heypickler.vo.TopEventVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.List;
+import java.util.Map;
 
+/**
+ * 管理端首页（Loop-v19 Dashboard Phase 1）。
+ *
+ * <p>原内联聚合逻辑已下沉到 {@link DashboardService}。Controller 仅做路由 + RBAC + 透传
+ * {@code no_cache=1} 与当前 role 给 service 决定 cache-aside / bypass。
+ */
 @RestController
 @RequestMapping("/api/admin/dashboard")
 @RequiredArgsConstructor
 @Tag(name = "管理端-首页")
 public class AdminDashboardController {
 
-    /** tier_code 固定顺序，构建 tierColorMap 时按此遍历保证图例顺序稳定（对齐 RankingServiceImpl.TIER_CODE_ORDER） */
-    private static final List<String> TIER_CODE_ORDER = Arrays.asList(
-            "BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "MASTER");
-
-    private final UserMapper userMapper;
-    private final EventMapper eventMapper;
-    private final RegistrationMapper registrationMapper;
-    private final TierResolver tierResolver;
+    private final DashboardService dashboardService;
 
     @GetMapping
-    @Operation(summary = "首页统计数据")
+    @Operation(summary = "首页快照（向后兼容 + 数字 KPI 加 sibling DeltaPct/DeltaAbs）")
     @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
-    public Result<Map<String, Object>> getStats() {
-        Map<String, Object> data = new LinkedHashMap<>();
-
-        // === Core KPIs ===
-        long totalUsers = userMapper.selectCount(null);
-        long bannedUsers = userMapper.selectCount(
-                new LambdaQueryWrapper<User>().eq(User::getStatus, "BANNED"));
-        long newUsersWeek = userMapper.selectCount(
-                new LambdaQueryWrapper<User>().ge(User::getCreatedAt, LocalDateTime.now().minusDays(7)));
-
-        long totalEvents = eventMapper.selectCount(
-                new LambdaQueryWrapper<Event>().isNull(Event::getDeletedAt));
-        long openEvents = eventMapper.selectCount(
-                new LambdaQueryWrapper<Event>().isNull(Event::getDeletedAt).eq(Event::getStatus, "OPEN"));
-        long inProgressEvents = eventMapper.selectCount(
-                new LambdaQueryWrapper<Event>().isNull(Event::getDeletedAt).eq(Event::getStatus, "IN_PROGRESS"));
-
-        long totalRegistrations = registrationMapper.selectCount(
-                new LambdaQueryWrapper<Registration>().notIn(Registration::getStatus, "WITHDRAWN", "CANCELLED"));
-        long recentRegistrations = registrationMapper.selectCount(
-                new LambdaQueryWrapper<Registration>()
-                        .notIn(Registration::getStatus, "WITHDRAWN", "CANCELLED")
-                        .ge(Registration::getCreatedAt, LocalDateTime.now().minusDays(7)));
-
-        // === Revenue: sum(event.fee) for valid registrations ===
-        List<Registration> validRegs = registrationMapper.selectList(
-                new LambdaQueryWrapper<Registration>().notIn(Registration::getStatus, "WITHDRAWN", "CANCELLED"));
-        List<Long> validEventIds = validRegs.stream().map(Registration::getEventId).distinct().collect(Collectors.toList());
-        Map<Long, Event> feeEventMap = validEventIds.isEmpty() ? Collections.emptyMap()
-                : eventMapper.selectBatchIds(validEventIds).stream().collect(Collectors.toMap(Event::getId, e -> e));
-        double totalRevenue = validRegs.stream()
-                .mapToDouble(r -> { Event e = feeEventMap.get(r.getEventId()); return e != null && e.getFee() != null ? e.getFee().doubleValue() : 0; })
-                .sum();
-
-        LocalDateTime weekAgo = LocalDateTime.now().minusDays(7);
-        double weeklyRevenue = validRegs.stream()
-                .filter(r -> r.getCreatedAt() != null && r.getCreatedAt().isAfter(weekAgo))
-                .mapToDouble(r -> { Event e = feeEventMap.get(r.getEventId()); return e != null && e.getFee() != null ? e.getFee().doubleValue() : 0; })
-                .sum();
-
-        data.put("totalUsers", totalUsers);
-        data.put("bannedUsers", bannedUsers);
-        data.put("newUsersWeek", newUsersWeek);
-        data.put("totalEvents", totalEvents);
-        data.put("openEvents", openEvents);
-        data.put("inProgressEvents", inProgressEvents);
-        data.put("totalRegistrations", totalRegistrations);
-        data.put("recentRegistrationsCount", recentRegistrations);
-        data.put("totalRevenue", Math.round(totalRevenue * 100) / 100.0);
-        data.put("weeklyRevenue", Math.round(weeklyRevenue * 100) / 100.0);
-
-        // === Tier distribution ===
-        // tier_config 双轨 defaultKey 均为 BRONZE（V19 seed），STAR/PARTY 分布共用兜底档。
-        String defaultTier = tierResolver.defaultKey("STAR");
-        List<User> allUsers = userMapper.selectList(null);
-        Map<String, Long> starTierDist = allUsers.stream()
-                .filter(u -> u.getStarPoints() != null && u.getStarPoints() > 0)
-                .collect(Collectors.groupingBy(u -> u.getStarTier() != null ? u.getStarTier() : defaultTier, Collectors.counting()));
-        Map<String, Long> partyTierDist = allUsers.stream()
-                .filter(u -> u.getPartyPoints() != null && u.getPartyPoints() > 0)
-                .collect(Collectors.groupingBy(u -> u.getPartyTier() != null ? u.getPartyTier() : defaultTier, Collectors.counting()));
-        data.put("starTierDistribution", starTierDist);
-        data.put("partyTierDistribution", partyTierDist);
-        // 段位色映射（双轨 per-track，BRONZE..MASTER 全 6 档），供前端 pie/图例染色，与 RankingPageVO.tierColorMap 同源 TierResolver.colorFor
-        data.put("starTierColorMap", buildTierColorMap("STAR"));
-        data.put("partyTierColorMap", buildTierColorMap("PARTY"));
-        data.put("starTierNameMap", buildTierNameMap("STAR"));
-        data.put("partyTierNameMap", buildTierNameMap("PARTY"));
-        data.put("starTierIconMap", buildTierIconMap("STAR"));
-        data.put("partyTierIconMap", buildTierIconMap("PARTY"));
-
-        // === Event type distribution ===
-        long starEvents = eventMapper.selectCount(
-                new LambdaQueryWrapper<Event>().isNull(Event::getDeletedAt).eq(Event::getType, "STAR"));
-        long partyEvents = eventMapper.selectCount(
-                new LambdaQueryWrapper<Event>().isNull(Event::getDeletedAt).eq(Event::getType, "PARTY"));
-        Map<String, Long> eventTypeDist = new LinkedHashMap<>();
-        eventTypeDist.put("STAR", starEvents);
-        eventTypeDist.put("PARTY", partyEvents);
-        data.put("eventTypes", eventTypeDist);
-
-        // === Daily new users (last 30 days) ===
-        List<Map<String, Object>> dailyUsers = new ArrayList<>();
-        for (int i = 29; i >= 0; i--) {
-            LocalDate date = LocalDate.now().minusDays(i);
-            LocalDateTime start = date.atStartOfDay();
-            LocalDateTime end = date.atTime(LocalTime.MAX);
-            long count = userMapper.selectCount(
-                    new LambdaQueryWrapper<User>().ge(User::getCreatedAt, start).le(User::getCreatedAt, end));
-            Map<String, Object> point = new LinkedHashMap<>();
-            point.put("date", date.toString());
-            point.put("count", count);
-            dailyUsers.add(point);
-        }
-        data.put("dailyNewUsers", dailyUsers);
-
-        // === Daily registrations (last 30 days) ===
-        List<Map<String, Object>> dailyRegs = new ArrayList<>();
-        for (int i = 29; i >= 0; i--) {
-            LocalDate date = LocalDate.now().minusDays(i);
-            LocalDateTime start = date.atStartOfDay();
-            LocalDateTime end = date.atTime(LocalTime.MAX);
-            long count = registrationMapper.selectCount(
-                    new LambdaQueryWrapper<Registration>()
-                            .notIn(Registration::getStatus, "WITHDRAWN", "CANCELLED")
-                            .ge(Registration::getCreatedAt, start).le(Registration::getCreatedAt, end));
-            Map<String, Object> point = new LinkedHashMap<>();
-            point.put("date", date.toString());
-            point.put("count", count);
-            dailyRegs.add(point);
-        }
-        data.put("dailyRegistrations", dailyRegs);
-
-        // === Daily new events (last 30 days) ===
-        List<Map<String, Object>> dailyEvents = new ArrayList<>();
-        for (int i = 29; i >= 0; i--) {
-            LocalDate date = LocalDate.now().minusDays(i);
-            LocalDateTime start = date.atStartOfDay();
-            LocalDateTime end = date.atTime(LocalTime.MAX);
-            long count = eventMapper.selectCount(
-                    new LambdaQueryWrapper<Event>().isNull(Event::getDeletedAt)
-                            .ge(Event::getCreatedAt, start).le(Event::getCreatedAt, end));
-            Map<String, Object> point = new LinkedHashMap<>();
-            point.put("date", date.toString());
-            point.put("count", count);
-            dailyEvents.add(point);
-        }
-        data.put("dailyNewEvents", dailyEvents);
-
-        // === Daily cumulative completion rate (last 30 days) ===
-        // 截至该日 eventTime 的赛事中 COMPLETED 占比（滚动完赛率）。
-        List<Event> eventsForRate = eventMapper.selectList(
-                new LambdaQueryWrapper<Event>().isNull(Event::getDeletedAt)
-                        .le(Event::getEventTime, LocalDate.now().atTime(LocalTime.MAX)));
-        List<Map<String, Object>> dailyRate = new ArrayList<>();
-        for (int i = 29; i >= 0; i--) {
-            LocalDate date = LocalDate.now().minusDays(i);
-            LocalDateTime cutoff = date.atTime(LocalTime.MAX);
-            long total = eventsForRate.stream()
-                    .filter(e -> e.getEventTime() != null && !e.getEventTime().isAfter(cutoff)).count();
-            long completed = eventsForRate.stream()
-                    .filter(e -> e.getEventTime() != null && !e.getEventTime().isAfter(cutoff)
-                            && "COMPLETED".equals(e.getStatus())).count();
-            double rate = total == 0 ? 0d : Math.round((double) completed * 1000d / total) / 10d;
-            Map<String, Object> point = new LinkedHashMap<>();
-            point.put("date", date.toString());
-            point.put("rate", rate);
-            dailyRate.add(point);
-        }
-        data.put("dailyCompletionRate", dailyRate);
-
-        // === Recent registrations (latest 10) ===
-        List<Registration> recentRegs = registrationMapper.selectList(
-                new LambdaQueryWrapper<Registration>()
-                        .notIn(Registration::getStatus, "WITHDRAWN", "CANCELLED")
-                        .orderByDesc(Registration::getCreatedAt)
-                        .last("LIMIT 10"));
-        List<Long> regUserIds = recentRegs.stream().map(Registration::getUserId).distinct().collect(Collectors.toList());
-        List<Long> regEventIds = recentRegs.stream().map(Registration::getEventId).distinct().collect(Collectors.toList());
-
-        Map<Long, User> userMap = regUserIds.isEmpty() ? Collections.emptyMap()
-                : userMapper.selectBatchIds(regUserIds).stream().collect(Collectors.toMap(User::getId, u -> u));
-        Map<Long, Event> eventMap = regEventIds.isEmpty() ? Collections.emptyMap()
-                : eventMapper.selectBatchIds(regEventIds).stream().collect(Collectors.toMap(Event::getId, e -> e));
-
-        List<Map<String, Object>> recentRegList = recentRegs.stream()
-                .filter(reg -> userMap.containsKey(reg.getUserId()))
-                .map(reg -> {
-                    Map<String, Object> item = new LinkedHashMap<>();
-                    item.put("id", reg.getId());
-                    User user = userMap.get(reg.getUserId());
-                    item.put("nickname", user.getNickname());
-                    Event event = eventMap.get(reg.getEventId());
-                    item.put("eventTitle", event != null ? event.getTitle() : "未知赛事");
-                    item.put("matchType", reg.getMatchType());
-                    item.put("status", reg.getStatus());
-                    item.put("createdAt", reg.getCreatedAt() != null ? reg.getCreatedAt().toString() : null);
-                    return item;
-                }).collect(Collectors.toList());
-        data.put("recentRegistrations", recentRegList);
-
-        // === Upcoming events (next 5) ===
-        List<Event> upcomingEvents = eventMapper.selectList(
-                new LambdaQueryWrapper<Event>()
-                        .isNull(Event::getDeletedAt)
-                        .ge(Event::getEventTime, LocalDateTime.now())
-                        .orderByAsc(Event::getEventTime)
-                        .last("LIMIT 5"));
-        List<Map<String, Object>> upcomingList = upcomingEvents.stream().map(e -> {
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("id", e.getId());
-            item.put("title", e.getTitle());
-            item.put("type", e.getType());
-            item.put("eventTime", e.getEventTime() != null ? e.getEventTime().toString() : null);
-            item.put("location", e.getLocation());
-            item.put("currentParticipants", e.getCurrentParticipants());
-            item.put("maxParticipants", e.getMaxParticipants());
-            item.put("status", e.getStatus());
-            return item;
-        }).collect(Collectors.toList());
-        data.put("upcomingEvents", upcomingList);
-
-        return Result.ok(data);
+    public Result<Map<String, Object>> getStats(HttpServletRequest request) {
+        return Result.ok(dashboardService.getSnapshot(isSuperAdminBypass(request)));
     }
 
-    /** 当前 track 全 6 档 tier_code→color，供前端 pie/图例染色。对齐 RankingServiceImpl.buildTierColorMap。 */
-    private Map<String, String> buildTierColorMap(String track) {
-        Map<String, String> map = new LinkedHashMap<>();
-        for (String code : TIER_CODE_ORDER) {
-            map.put(code, tierResolver.colorFor(track, code));
-        }
-        return map;
+    @GetMapping("/trends")
+    @Operation(summary = "时序趋势（user/registration/revenue/events）")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
+    public Result<DashboardTrendVO> getTrends(
+            @RequestParam(required = false, defaultValue = "30d") String range,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to,
+            HttpServletRequest request) {
+        return Result.ok(dashboardService.getTrends(range, from, to, isSuperAdminBypass(request)));
     }
 
-    /** 当前 track 全 6 档 tier_code→name（per-track，对齐 RankingServiceImpl.buildTierNameMap）。 */
-    private Map<String, String> buildTierNameMap(String track) {
-        Map<String, String> map = new LinkedHashMap<>();
-        for (String code : TIER_CODE_ORDER) {
-            map.put(code, tierResolver.nameFor(track, code));
-        }
-        return map;
+    @GetMapping("/top-events")
+    @Operation(summary = "Top 10 活动排行（按 metric=registrations|revenue|fillRate）")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
+    public Result<List<TopEventVO>> getTopEvents(
+            @RequestParam(required = false, defaultValue = "registrations") String metric,
+            @RequestParam(required = false, defaultValue = "30d") String range,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to,
+            @RequestParam(required = false, defaultValue = "10") int limit,
+            HttpServletRequest request) {
+        return Result.ok(dashboardService.getTopEvents(metric, range, from, to, limit, isSuperAdminBypass(request)));
     }
 
-    /** 当前 track 全 6 档 tier_code→icon（per-track，对齐 RankingServiceImpl.buildTierIconMap）。 */
-    private Map<String, String> buildTierIconMap(String track) {
-        Map<String, String> map = new LinkedHashMap<>();
-        for (String code : TIER_CODE_ORDER) {
-            map.put(code, tierResolver.iconFor(track, code));
-        }
-        return map;
+    @GetMapping("/attendance")
+    @Operation(summary = "出席漏斗（已报名/已签到/no-show%）")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
+    public Result<AttendanceFunnelVO> getAttendance(
+            @RequestParam(required = false, defaultValue = "30d") String range,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to,
+            HttpServletRequest request) {
+        return Result.ok(dashboardService.getAttendance(range, from, to, isSuperAdminBypass(request)));
+    }
+
+    @GetMapping("/compare")
+    @Operation(summary = "同比/环比")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
+    public Result<CompareResultVO> getCompare(
+            @RequestParam String metric,
+            @RequestParam(required = false, defaultValue = "thisMonth") String currentRange,
+            @RequestParam(required = false, defaultValue = "lastMonth") String previousRange,
+            HttpServletRequest request) {
+        return Result.ok(dashboardService.getCompare(metric, currentRange, previousRange, isSuperAdminBypass(request)));
+    }
+
+    /**
+     * spec R6：bypassCache 仅 SUPER_ADMIN + ?no_cache=1 同时成立时返回 true；普通角色
+     * 传 no_cache=1 静默忽略（返回 false）。null request 容错（支持测试桩）。
+     */
+    private static boolean isSuperAdminBypass(HttpServletRequest request) {
+        if (request == null) return false;
+        if (!"1".equals(request.getParameter("no_cache"))) return false;
+        Object roleAttr = request.getAttribute("adminRole");
+        return UserRole.SUPER_ADMIN.name().equals(roleAttr);
     }
 }

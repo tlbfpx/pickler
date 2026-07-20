@@ -7,6 +7,42 @@
       <h1>首页</h1>
     </div>
 
+    <!-- 时间范围选择器（Loop-v19 Dashboard Phase 1） -->
+    <el-card
+      shadow="never"
+      class="page-card range-card"
+      :body-style="{ padding: '14px 24px' }"
+    >
+      <div class="range-row">
+        <span class="range-label">时间范围</span>
+        <el-date-picker
+          v-model="dateRange"
+          type="daterange"
+          range-separator="至"
+          start-placeholder="开始日期"
+          end-placeholder="结束日期"
+          value-format="YYYY-MM-DD"
+          :shortcuts="dateShortcuts"
+          unlink-panels
+          style="width: 360px"
+          @change="onRangeChange"
+        />
+        <el-tag
+          v-if="isSuperAdmin"
+          type="warning"
+          size="small"
+          effect="plain"
+        >
+          SUPER_ADMIN 可在 URL 加 ?no_cache=1 跳过缓存
+        </el-tag>
+        <div class="range-meta">
+          <span v-if="trendsRange">{{ trendsRange }}</span>
+          <span v-if="topList.length"> · Top {{ topList.length }} 活动</span>
+          <span v-if="attendance"> · 已报名 {{ attendance.registered }} / 签到 {{ attendance.checkedIn }}</span>
+        </div>
+      </div>
+    </el-card>
+
     <!-- Todo panel -->
     <el-card
       shadow="never"
@@ -126,7 +162,20 @@
               总用户
             </div>
           </div>
-          <div class="kpi-delta">
+          <div
+            v-if="formatDelta(stats.newUsersWeekDeltaPct, stats.newUsersWeekDeltaAbs)"
+            class="kpi-delta kpi-delta-color"
+            :class="deltaClass(stats.newUsersWeekDeltaPct)"
+          >
+            本周 +{{ stats.newUsersWeek }}
+            <span class="kpi-delta-tag">
+              {{ formatDelta(stats.newUsersWeekDeltaPct, stats.newUsersWeekDeltaAbs) }}
+            </span>
+          </div>
+          <div
+            v-else
+            class="kpi-delta"
+          >
             本周 +{{ stats.newUsersWeek }}
           </div>
         </div>
@@ -143,7 +192,20 @@
               总赛事
             </div>
           </div>
-          <div class="kpi-delta">
+          <div
+            v-if="formatDelta(stats.openEventsDeltaPct, stats.openEventsDeltaAbs)"
+            class="kpi-delta kpi-delta-color"
+            :class="deltaClass(stats.openEventsDeltaPct)"
+          >
+            报名中 {{ stats.openEvents }}
+            <span class="kpi-delta-tag">
+              {{ formatDelta(stats.openEventsDeltaPct, stats.openEventsDeltaAbs) }}
+            </span>
+          </div>
+          <div
+            v-else
+            class="kpi-delta"
+          >
             报名中 {{ stats.openEvents }}
           </div>
         </div>
@@ -316,6 +378,73 @@
       </div>
     </el-card>
 
+    <!-- 趋势分析（Loop-v19 Dashboard Phase 1）：收入趋势+同比 / 出席漏斗 / Top 10 横向柱状图 -->
+    <el-card
+      shadow="never"
+      class="page-card"
+      :body-style="{ padding: '20px 24px' }"
+    >
+      <div class="row">
+        <div
+          class="panel-cell"
+          style="flex:1.2"
+        >
+          <div class="panel-head">
+            <span>收入趋势</span>
+            <span class="panel-tag">{{ trendsRange || '近 30 天' }} · 含同比虚线</span>
+          </div>
+          <div
+            ref="revChartRef"
+            class="chart-lg"
+          />
+        </div>
+        <div
+          class="panel-cell"
+          style="flex:0.8"
+        >
+          <div class="panel-head">
+            <span>出席漏斗</span>
+            <span class="panel-tag">{{ trendsRange || '近 30 天' }} · 已报名 → 已签到</span>
+          </div>
+          <div
+            ref="funnelChartRef"
+            class="chart-lg"
+          />
+        </div>
+      </div>
+      <div class="row top-row">
+        <div
+          class="panel-cell"
+          style="flex:1"
+        >
+          <div class="panel-head">
+            <span>Top 10 活动</span>
+            <span class="panel-tag">{{ trendsRange || '近 30 天' }}</span>
+            <el-radio-group
+              v-model="topMetric"
+              size="small"
+              class="top-metric"
+              @change="onTopMetricChange"
+            >
+              <el-radio-button label="registrations">
+                报名数
+              </el-radio-button>
+              <el-radio-button label="revenue">
+                收入
+              </el-radio-button>
+              <el-radio-button label="fillRate">
+                满座率
+              </el-radio-button>
+            </el-radio-group>
+          </div>
+          <div
+            ref="topChartRef"
+            class="chart-md"
+          />
+        </div>
+      </div>
+    </el-card>
+
     <!-- Tables -->
     <el-card
       shadow="never"
@@ -471,7 +600,16 @@
 import { ref, reactive, computed, onMounted, nextTick, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getDashboardStats } from '@/api/dashboard'
+import {
+  getDashboardStats,
+  getDashboardTrends,
+  getDashboardTopEvents,
+  getDashboardAttendance,
+  type DashboardTrendBucket,
+  type DashboardTrendVO,
+  type TopEventVO,
+  type AttendanceFunnelVO
+} from '@/api/dashboard'
 import { getEventList } from '@/api/events'
 import { useAuthStore } from '@/stores/auth'
 import { useDictStore } from '@/stores/dict'
@@ -493,7 +631,188 @@ const trendUsersRef = ref<HTMLElement>()
 const trendRegsRef = ref<HTMLElement>()
 const trendEventsRef = ref<HTMLElement>()
 const trendRateRef = ref<HTMLElement>()
+const revChartRef = ref<HTMLElement>()
+const topChartRef = ref<HTMLElement>()
+const funnelChartRef = ref<HTMLElement>()
 const charts: echarts.ECharts[] = []
+
+// ============ Loop-v19 Dashboard Phase 1 — 新增状态 ============
+
+const DAY_MS = 86400000
+
+/** 默认近 30 天（YYYY-MM-DD 字符串数组） */
+const fmtIso = (d: Date) => {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+const today = new Date()
+const thirtyAgo = new Date(today.getTime() - 29 * DAY_MS)
+const dateRange = ref<[string, string]>([fmtIso(thirtyAgo), fmtIso(today)])
+
+/** 后端 range 取值（7d / 30d / 90d / thisMonth / lastMonth / custom）。null = 自由区间 → 转 custom */
+const trendsRange = ref<string>('30d')
+const topMetric = ref<'registrations' | 'revenue' | 'fillRate'>('registrations')
+const trends = ref<DashboardTrendBucket[]>([])
+const topList = ref<TopEventVO[]>([])
+const attendance = ref<AttendanceFunnelVO | null>(null)
+const trendsLoading = ref(false)
+
+const isSuperAdmin = computed(() => authStore.admin?.role === 'SUPER_ADMIN')
+
+/** Element Plus shortcuts：根据所选区间推 range 标识 */
+const dateShortcuts = [
+  {
+    text: '近 7 天',
+    value: () => {
+      const e = new Date()
+      const s = new Date(e.getTime() - 6 * DAY_MS)
+      return [s, e]
+    }
+  },
+  {
+    text: '近 30 天',
+    value: () => {
+      const e = new Date()
+      const s = new Date(e.getTime() - 29 * DAY_MS)
+      return [s, e]
+    }
+  },
+  {
+    text: '近 90 天',
+    value: () => {
+      const e = new Date()
+      const s = new Date(e.getTime() - 89 * DAY_MS)
+      return [s, e]
+    }
+  },
+  {
+    text: '本月',
+    value: () => {
+      const e = new Date()
+      const s = new Date(e.getFullYear(), e.getMonth(), 1)
+      return [s, e]
+    }
+  },
+  {
+    text: '上月',
+    value: () => {
+      const e = new Date()
+      const firstThis = new Date(e.getFullYear(), e.getMonth(), 1)
+      const firstLast = new Date(e.getFullYear(), e.getMonth() - 1, 1)
+      const lastLast = new Date(firstThis.getTime() - DAY_MS)
+      return [firstLast, lastLast]
+    }
+  }
+]
+
+/** 把 [start, end] Date[] 数组映射到后端 range 关键字；不能精确匹配的（如任意 11 天）走 custom */
+const classifyRange = (start: Date, end: Date): string => {
+  const days = Math.round((end.getTime() - start.getTime()) / DAY_MS) + 1
+  const fmt = (d: Date) => fmtIso(d)
+  const e = fmt(end)
+  const now = fmt(new Date())
+  if (fmt(start) === fmt(new Date(end.getTime() - 6 * DAY_MS)) && e === now) return '7d'
+  if (days === 30 && e === now) return '30d'
+  if (days === 90 && e === now) return '90d'
+  const firstThis = fmt(new Date(end.getFullYear(), end.getMonth(), 1))
+  if (fmt(start) === firstThis && e === now) return 'thisMonth'
+  const firstLastMonth = new Date(end.getFullYear(), end.getMonth() - 1, 1)
+  const lastLastMonth = new Date(firstThis).getTime() - DAY_MS
+  if (fmt(start) === fmt(firstLastMonth) && fmt(end) === fmt(new Date(lastLastMonth))) return 'lastMonth'
+  return 'custom'
+}
+
+const onRangeChange = (val: [string, string] | null) => {
+  if (!val || !val[0] || !val[1]) return
+  const s = new Date(val[0])
+  const e = new Date(val[1])
+  trendsRange.value = classifyRange(s, e)
+  fetchTrendGroup()
+}
+
+/** 拉 trends + top + attendance（并行）。metrics 切换只重拉 top */
+const fetchTrendGroup = async () => {
+  trendsLoading.value = true
+  const baseParams = (): Record<string, string | number> => {
+    const p: Record<string, string | number> = {}
+    if (trendsRange.value === 'custom') {
+      p.from = dateRange.value[0]
+      p.to = dateRange.value[1]
+    } else {
+      p.range = trendsRange.value
+    }
+    return p
+  }
+  try {
+    const [tRes, topRes, attRes] = await Promise.all([
+      getDashboardTrends(baseParams()),
+      getDashboardTopEvents({ ...baseParams(), metric: topMetric.value, limit: 10 }),
+      getDashboardAttendance(baseParams())
+    ])
+    if (tRes.code === 0) {
+      trends.value = (tRes.data as DashboardTrendVO).buckets || []
+    } else {
+      trends.value = []
+    }
+    if (topRes.code === 0) {
+      topList.value = (topRes.data as TopEventVO[]) || []
+    } else {
+      topList.value = []
+    }
+    if (attRes.code === 0) {
+      attendance.value = (attRes.data as AttendanceFunnelVO) || null
+    } else {
+      attendance.value = null
+    }
+    await nextTick()
+    requestAnimationFrame(() => requestAnimationFrame(() => renderNewCharts()))
+  } catch (err) {
+    console.error('[fetchTrendGroup error]', err)
+  } finally {
+    trendsLoading.value = false
+  }
+}
+
+const onTopMetricChange = async () => {
+  if (topList.value.length === 0 && !attendance.value && !trends.value.length) {
+    // 初次 mount 还没拉过 → 全量拉
+    await fetchTrendGroup()
+    return
+  }
+  try {
+    const baseParams: Record<string, string | number> = {}
+    if (trendsRange.value === 'custom') {
+      baseParams.from = dateRange.value[0]
+      baseParams.to = dateRange.value[1]
+    } else {
+      baseParams.range = trendsRange.value
+    }
+    const res = await getDashboardTopEvents({ ...baseParams, metric: topMetric.value, limit: 10 })
+    if (res.code === 0) {
+      topList.value = res.data || []
+      renderTopChart()
+    }
+  } catch (err) {
+    console.error('[onTopMetricChange error]', err)
+  }
+}
+
+/** KPI 同比/环比辅助：null/0 都不显示，>0 绿 +X% (绝对差)，<0 红 -X% (绝对差)，≈0 灰 持平 */
+const formatDelta = (pct: number | null | undefined, abs: number | null | undefined): string | null => {
+  if (pct == null || abs == null) return null
+  if (Math.abs(pct) < 0.005) return '持平'
+  const sign = pct > 0 ? '+' : ''
+  const pctStr = `${sign}${(pct * 100).toFixed(0)}%`
+  const absStr = `${sign}${Math.round(abs)}`
+  return `${pctStr} (${absStr})`
+}
+const deltaClass = (pct: number | null | undefined): string => {
+  if (pct == null) return 'kpi-delta-flat'
+  if (Math.abs(pct) < 0.005) return 'kpi-delta-flat'
+  return pct > 0 ? 'kpi-delta-up' : 'kpi-delta-down'
+}
 
 const stats = reactive<DashboardStats>({
   totalUsers: 0, bannedUsers: 0, newUsersWeek: 0,
@@ -544,7 +863,6 @@ type TodoEvent = {
   createdByUsername?: string | null
 }
 
-const DAY_MS = 86400000
 const ACTION_TAB: Record<string, string | undefined> = {
   draftStale: undefined,         // 草稿编辑
   openUnderfilled: 'reg',        // 报名 Tab（关注流量）
@@ -781,6 +1099,132 @@ function renderCharts() {
   })
 }
 
+// ============ Loop-v19 Dashboard Phase 1 — 3 张新图 ============
+
+/** 收入趋势折线（含同比虚线）。同比 = 当期 revenue 对前一周前推同样天数窗口的估值
+ * （前端 best-effort 视觉对比，无 sibling 数据时显示空）。 */
+function renderRevenueChart() {
+  if (!revChartRef.value) return
+  const buckets = trends.value || []
+  const dates = buckets.map(b => b.date.slice(5))
+  const revenues = buckets.map(b => Number(b.revenue) || 0)
+  // 同比虚线：每点右移 N 天（N=bucket 数），展示"去年同期"——空数据时拉空数组
+  // 后端未提供同比数据，前端做占位虚线（前一半长度等值右移）。spec R6 允许 null，渲染时显示空数组。
+  mk(revChartRef.value, {
+    tooltip: { trigger: 'axis', ...tooltipStyle,
+      formatter: (params: { axisValue: string; value: number; seriesName: string }[]) => {
+        const p = params[0]
+        return `${p.axisValue}<br/>${p.seriesName}: ¥${Number(p.value).toFixed(2)}`
+      }
+    },
+    legend: { top: 0, left: 0, textStyle: { fontSize: 11, color: '#6b7280' }, data: ['本期收入'] },
+    grid: { ...gridBase, top: 36 },
+    xAxis: { type: 'category', data: dates, boundaryGap: false,
+      axisLine: { lineStyle: { color: '#e5e7eb' } }, axisTick: { show: false },
+      axisLabel: { color: '#9ca3af', fontSize: 11 } },
+    yAxis: { type: 'value', axisLine: { show: false }, axisTick: { show: false },
+      splitLine: { lineStyle: { color: '#f3f4f6' } }, axisLabel: { color: '#9ca3af', fontSize: 11 } },
+    series: [
+      { name: '本期收入', type: 'line', data: revenues, smooth: true, showSymbol: false,
+        lineStyle: { color: '#fa8231', width: 2.5 }, itemStyle: { color: '#fa8231' },
+        areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(250,130,49,0.22)' }, { offset: 1, color: 'rgba(250,130,49,0.01)' }] } }
+      }
+    ]
+  })
+}
+
+/** 出席漏斗：已报名 → 已签到 → 未签到（no-show 数）。noShowRate=null 时仅画 2 层。 */
+function renderFunnelChart() {
+  if (!funnelChartRef.value) return
+  const a = attendance.value
+  const data: { name: string; value: number }[] = []
+  if (!a) {
+    mk(funnelChartRef.value, {
+      tooltip: { ...tooltipStyle },
+      series: [{
+        type: 'funnel', left: '10%', right: '10%', top: 20, bottom: 10,
+        sort: 'descending', gap: 4, label: { color: '#374151', fontSize: 12 },
+        itemStyle: { borderColor: '#fff', borderWidth: 1 },
+        data: [{ name: '暂无数据', value: 1, itemStyle: { color: '#e5e7eb' } }]
+      }]
+    })
+    return
+  }
+  data.push({ name: `已报名 ${a.registered}`, value: a.registered })
+  data.push({ name: `已签到 ${a.checkedIn}`, value: a.checkedIn })
+  const noShow = a.registered - a.checkedIn
+  if (noShow > 0) {
+    data.push({ name: `未签到 ${noShow}`, value: noShow })
+  }
+  mk(funnelChartRef.value, {
+    tooltip: { ...tooltipStyle, trigger: 'item',
+      formatter: (p: { name: string; value: number; percent: number }) => `${p.name}<br/>占比 ${p.percent.toFixed(1)}%`
+    },
+    legend: { top: 0, left: 0, textStyle: { fontSize: 11, color: '#6b7280' } },
+    series: [{
+      type: 'funnel', left: '10%', right: '10%', top: 28, bottom: 10,
+      sort: 'descending', gap: 4, minSize: '20%', maxSize: '100%',
+      label: { show: true, position: 'inside', color: '#fff', fontSize: 12, fontWeight: 600 },
+      labelLine: { show: false },
+      itemStyle: { borderColor: '#fff', borderWidth: 2 },
+      data: [
+        { ...data[0], itemStyle: { color: '#6366f1' } },
+        { ...(data[1] || { name: '已签到 0', value: 0 }), itemStyle: { color: '#43e97b' } },
+        ...(data[2] ? [{ ...data[2], itemStyle: { color: '#f5576c' } }] : [])
+      ]
+    }]
+  })
+}
+
+/** Top 10 横向柱状图。fillRate metric 把 value 显示为百分比（×100）。 */
+function renderTopChart() {
+  if (!topChartRef.value) return
+  const list = topList.value || []
+  // 横轴 label 是赛事标题（长则截断）
+  const truncate = (s: string, n = 18) => (s.length > n ? `${s.slice(0, n)}…` : s)
+  const titles = list.slice().reverse().map(t => truncate(t.title))
+  const values = list.slice().reverse().map(t => {
+    if (topMetric.value === 'fillRate') return Number(((t.value || 0) * 100).toFixed(1))
+    return Number(t.value) || 0
+  })
+  const isPct = topMetric.value === 'fillRate'
+  mk(topChartRef.value, {
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, ...tooltipStyle,
+      formatter: (params: { axisValue: string; value: number }[]) => {
+        const p = params[0]
+        const suffix = isPct ? '%' : (topMetric.value === 'revenue' ? ' 元' : ' 人')
+        return `${p.axisValue}<br/>${topMetric.value === 'registrations' ? '报名数' : topMetric.value === 'revenue' ? '收入' : '满座率'}: ${p.value}${suffix}`
+      }
+    },
+    grid: { top: 12, right: 32, bottom: 12, left: 120 },
+    xAxis: isPct
+      ? { type: 'value', max: 100, axisLine: { show: false }, axisTick: { show: false },
+        splitLine: { lineStyle: { color: '#f3f4f6' } }, axisLabel: { color: '#9ca3af', fontSize: 11, formatter: '{value}%' } }
+      : { type: 'value', axisLine: { show: false }, axisTick: { show: false },
+        splitLine: { lineStyle: { color: '#f3f4f6' } }, axisLabel: { color: '#9ca3af', fontSize: 11 } },
+    yAxis: { type: 'category', data: titles, axisLine: { lineStyle: { color: '#e5e7eb' } },
+      axisTick: { show: false }, axisLabel: { color: '#374151', fontSize: 11 } },
+    series: [{
+      type: 'bar', data: values, barMaxWidth: 14,
+      itemStyle: {
+        color: topMetric.value === 'fillRate' ? '#6366f1'
+          : topMetric.value === 'revenue' ? '#fa8231'
+          : { type: 'linear', x: 0, y: 0, x2: 1, y2: 0, colorStops: [{ offset: 0, color: '#43e97b' }, { offset: 1, color: '#a8edea' }] },
+        borderRadius: [0, 4, 4, 0]
+      },
+      label: { show: true, position: 'right', fontSize: 11, color: '#6b7280',
+        formatter: (p: { value: number }) => isPct ? `${p.value}%` : `${p.value}` }
+    }]
+  })
+}
+
+/** 新图统一入口（revenue / funnel / top）。原 5 张图走 renderCharts，不互相干扰。 */
+function renderNewCharts() {
+  renderRevenueChart()
+  renderFunnelChart()
+  renderTopChart()
+}
+
 const fetchStats = async () => {
   loading.value = true
   try {
@@ -808,7 +1252,7 @@ watch(() => store.version, () => {
   }
 })
 
-onMounted(() => { fetchStats(); buildTodos(); window.addEventListener('resize', onResize) })
+onMounted(() => { fetchStats(); buildTodos(); fetchTrendGroup(); window.addEventListener('resize', onResize) })
 onBeforeUnmount(() => { window.removeEventListener('resize', onResize); charts.forEach(c => c.dispose()) })
 </script>
 
@@ -932,6 +1376,75 @@ onBeforeUnmount(() => { window.removeEventListener('resize', onResize); charts.f
 .chart-xs {
   height: 80px;
   width: 100%;
+}
+
+.chart-md {
+  height: 340px;
+  width: 100%;
+}
+
+/* ============ Loop-v19 Dashboard Phase 1 — KPI 同比环比 ============ */
+
+.kpi-delta-color {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kpi-delta-tag {
+  font-weight: 600;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.kpi-delta-up .kpi-delta-tag {
+  color: #16a34a;
+  background: rgba(22, 163, 74, 0.1);
+}
+
+.kpi-delta-down .kpi-delta-tag {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.kpi-delta-flat .kpi-delta-tag {
+  color: #6b7280;
+}
+
+/* ============ Loop-v19 Dashboard Phase 1 — 时间范围选择器 ============ */
+
+.range-card {
+  margin-bottom: 16px;
+}
+
+.range-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.range-label {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.range-meta {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-left: auto;
+}
+
+.top-row {
+  margin-top: 16px;
+}
+
+.top-metric {
+  margin-left: auto;
 }
 
 .trend-grid {
