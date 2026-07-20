@@ -3,6 +3,7 @@ package com.heypickler.common.aspect;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.heypickler.common.util.OperationLogClassifier;
 import com.heypickler.common.util.SensitiveDataUtil;
+import com.heypickler.common.util.IpResolver;
 import com.heypickler.entity.OperationLog;
 import com.heypickler.common.exception.BizException;
 import com.heypickler.common.exception.ErrorCode;
@@ -84,7 +85,7 @@ public class OperationLogAspect {
         entry.setOperatorRole(role instanceof String ? (String) role : "ANONYMOUS");
         entry.setMethod(request.getMethod().toUpperCase());
         entry.setPath(request.getRequestURI());
-        entry.setIp(resolveIp(request));
+        entry.setIp(IpResolver.resolveIp(request));
         entry.setUserAgent(truncate(request.getHeader("User-Agent"), MAX_UA_LEN));
 
         OperationLogClassifier.Classification c =
@@ -122,12 +123,9 @@ public class OperationLogAspect {
     }
 
     private static String resolveIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isEmpty()) {
-            int comma = xff.indexOf(',');
-            return (comma > 0 ? xff.substring(0, comma) : xff).trim();
-        }
-        return request.getRemoteAddr();
+        // Loop-v19 Phase 2：已抽出到 IpResolver，保留此 private 方法以避免破坏
+        // 可能依赖的反射/单元测试；实际逻辑委托给 util。
+        return IpResolver.resolveIp(request);
     }
 
     private static String truncate(String s, int max) {
