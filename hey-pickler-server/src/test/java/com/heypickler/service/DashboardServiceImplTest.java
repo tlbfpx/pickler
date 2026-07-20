@@ -299,6 +299,112 @@ class DashboardServiceImplTest {
                 any());
     }
 
+    // ============ Loop-v19 — 提高 DashboardServiceImpl 行覆盖 ============
+
+    @Test
+    void getSnapshot_includesTotalRevenueSiblingsAndPrevRevenueHelper() {
+        // 全量基线 stub
+        when(eventMapper.selectCount(any())).thenReturn(5L);
+        when(userMapper.selectCount(any())).thenReturn(100L);
+        when(registrationMapper.selectCount(any())).thenReturn(50L);
+        when(eventMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(5L);
+        when(userMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(100L);
+        when(registrationMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(50L);
+        // 6 次 countNewInRange 调用：当前 30 / 上 30 / weekPrior(14..7) / 上 60 天 allEventsPrior / 上 60 天 allRegsPrior / totalRevenue_at_priorReference(60..30)
+        when(userMapper.countNewInRange(any(), any()))
+                .thenReturn(20L).thenReturn(15L).thenReturn(8L).thenReturn(2L).thenReturn(1L);
+        when(eventMapper.countNewInRange(any(), any()))
+                .thenReturn(5L).thenReturn(3L).thenReturn(0L);
+        when(registrationMapper.countActiveInRange(any(), any()))
+                .thenReturn(40L).thenReturn(30L).thenReturn(20L);
+        when(registrationMapper.revenueInRange(any(), any()))
+                .thenReturn(new BigDecimal("5000.00"))
+                .thenReturn(new BigDecimal("3000.00"))
+                .thenReturn(new BigDecimal("2000.00"));
+        when(userMapper.dailyNewUsers(any(), any())).thenReturn(List.of());
+        when(registrationMapper.dailyRegistrations(any(), any())).thenReturn(List.of());
+        when(eventMapper.dailyNewEvents(any(), any())).thenReturn(List.of());
+        when(tierResolver.defaultKey(any())).thenReturn("BRONZE");
+        when(userMapper.selectList(any())).thenReturn(List.of());
+        when(tierResolver.colorFor(any(), any())).thenReturn("#000");
+        when(tierResolver.nameFor(any(), any())).thenReturn("name");
+        when(tierResolver.iconFor(any(), any())).thenReturn("/icon");
+
+        var data = service.getSnapshot(false);
+        // totalRevenue 是全量；R1 累计型无 prior → deltaPct/deltaAbs 都 null
+        assertNull(data.get("totalRevenueDeltaPct"));
+        assertNull(data.get("totalRevenueDeltaAbs"));
+        // openEvents/inProgressEvents 也是累计型 null
+        assertNull(data.get("openEventsDeltaPct"));
+        assertNull(data.get("openEventsDeltaAbs"));
+        assertNull(data.get("inProgressEventsDeltaPct"));
+        assertNull(data.get("inProgressEventsDeltaAbs"));
+    }
+
+    @Test
+    void getSnapshot_buildKpi_priorZero_returnsNullDeltaPct() {
+        // 场景：上周新增用户 prior=0 → deltaPct 必须 null（避免 Infinity%），deltaAbs = current
+        when(eventMapper.selectCount(any())).thenReturn(0L);
+        when(userMapper.selectCount(any())).thenReturn(0L);
+        when(registrationMapper.selectCount(any())).thenReturn(0L);
+        when(eventMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
+        when(userMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
+        when(registrationMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
+        // 顺序：当前 30 / 上 30（=0）/ weekPrior
+        when(userMapper.countNewInRange(any(), any())).thenReturn(5L).thenReturn(0L).thenReturn(0L);
+        when(eventMapper.countNewInRange(any(), any())).thenReturn(0L);
+        when(registrationMapper.countActiveInRange(any(), any())).thenReturn(0L);
+        when(registrationMapper.revenueInRange(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(userMapper.dailyNewUsers(any(), any())).thenReturn(List.of());
+        when(registrationMapper.dailyRegistrations(any(), any())).thenReturn(List.of());
+        when(eventMapper.dailyNewEvents(any(), any())).thenReturn(List.of());
+        when(tierResolver.defaultKey(any())).thenReturn("BRONZE");
+        when(userMapper.selectList(any())).thenReturn(List.of());
+        when(tierResolver.colorFor(any(), any())).thenReturn("#000");
+        when(tierResolver.nameFor(any(), any())).thenReturn("name");
+        when(tierResolver.iconFor(any(), any())).thenReturn("/icon");
+
+        var data = service.getSnapshot(false);
+        // newUsersWeek = 5, prior week = 0 → deltaPct 必须 null（spec R1 + 后端 round2 prior==0? null 守卫）
+        assertNull(data.get("newUsersWeekDeltaPct"),
+                "prior=0 时 deltaPct 必须 null，避免 Infinity%");
+        // deltaAbs = 5 - 0 = 5
+        Object abs = data.get("newUsersWeekDeltaAbs");
+        assertNotNull(abs, "deltaAbs 在 prior=0 时仍应是 current（绝对差）");
+        assertEquals(5.0, ((Number) abs).doubleValue(), 0.01);
+    }
+
+    @Test
+    void getTrends_resolveWindow_lastMonthRange_works() {
+        // lastMonth 走 `firstThisMonth.minusMonths(1)` → 必须调用 mapper 拉数据
+        when(eventMapper.selectCount(any())).thenReturn(0L);
+        when(userMapper.selectCount(any())).thenReturn(0L);
+        when(registrationMapper.selectCount(any())).thenReturn(0L);
+        when(eventMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
+        when(userMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
+        when(registrationMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
+        when(userMapper.countNewInRange(any(), any())).thenReturn(0L);
+        when(eventMapper.countNewInRange(any(), any())).thenReturn(0L);
+        when(registrationMapper.countActiveInRange(any(), any())).thenReturn(0L);
+        when(registrationMapper.revenueInRange(any(), any())).thenReturn(BigDecimal.ZERO);
+        when(userMapper.dailyNewUsers(any(), any())).thenReturn(List.of());
+        when(registrationMapper.dailyRegistrations(any(), any())).thenReturn(List.of());
+        when(eventMapper.dailyNewEvents(any(), any())).thenReturn(List.of());
+        when(tierResolver.defaultKey(any())).thenReturn("BRONZE");
+        when(userMapper.selectList(any())).thenReturn(List.of());
+        when(tierResolver.colorFor(any(), any())).thenReturn("#000");
+        when(tierResolver.nameFor(any(), any())).thenReturn("name");
+        when(tierResolver.iconFor(any(), any())).thenReturn("/icon");
+
+        // 触发 lastMonth 分支（commit A 改了 resolveWindow）
+        var vo = service.getTrends("lastMonth", null, null, true);
+        assertNotNull(vo);
+        assertEquals("lastMonth", vo.getRange());
+        // buckets 数 = 上月天数（28/29/30/31 都行，关键是 ≥ 28 且 ≤ 31）
+        assertTrue(vo.getBuckets().size() >= 28 && vo.getBuckets().size() <= 31,
+                "lastMonth buckets 应为上月天数（28-31），实际 " + vo.getBuckets().size());
+    }
+
     @Test
     void getSnapshot_cacheHit_skipsLoader() {
         // cache hit → 直接返回，loader 不应被调（即不调任何 mapper）
