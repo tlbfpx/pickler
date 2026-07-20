@@ -1,6 +1,5 @@
 package com.heypickler.service;
 
-import com.baomidou.mybatisplus.extension.service.IService;
 import com.heypickler.entity.LoginLog;
 
 import java.time.LocalDateTime;
@@ -11,7 +10,7 @@ import java.time.LocalDateTime;
  * <p>所有写操作走 {@code @Async("loginLogExecutor")}，不阻塞调用方线程。
  * append-only 性质：service 不暴露 update / delete 接口（合规要求）。
  */
-public interface LoginLogService extends IService<LoginLog> {
+public interface LoginLogService {
 
     /**
      * 异步写一条登录日志。失败仅 warn（access log 同模式：合规数据不能丢，

@@ -1,6 +1,5 @@
 package com.heypickler.service;
 
-import com.baomidou.mybatisplus.extension.service.IService;
 import com.heypickler.entity.AccessLog;
 
 /**
@@ -9,7 +8,7 @@ import com.heypickler.entity.AccessLog;
  * <p>由 {@code AccessLogFilter} + {@code AppTrackController} 异步写入。
  * append-only：admin 端查询 UI 留 Phase 5。
  */
-public interface AccessLogService extends IService<AccessLog> {
+public interface AccessLogService {
 
     /**
      * 异步写一条访问日志。失败仅 warn，不影响原请求响应（filter 必须 catch
