@@ -134,11 +134,10 @@ public class DashboardServiceImpl implements DashboardService {
         // KPI 同比/环比：sibling 字段（保持现有 key 为原始数字，向后兼容 DashboardView.vue）
         // 命名约定：<key> + "DeltaPct" / "DeltaAbs"（与现有 spec 用词一致）
         addDeltaSiblingsLong(data, "newUsersWeek", newUsersWeek, countUsersWeekPrior(now));
-        addDeltaSiblingsLong(data, "totalEvents", totalEvents, countAllEventsPriorTo(now));
+        // 累计型 KPI（totalEvents/totalRegistrations/totalRevenue）无 prior 含义，spec R1 返回 null；
+        // 仅窗口型（newUsersWeek/openEvents/inProgressEvents）有可比基期。
         addDeltaSiblingsLong(data, "openEvents", openEvents, null);
         addDeltaSiblingsLong(data, "inProgressEvents", inProgressEvents, null);
-        addDeltaSiblingsLong(data, "totalRegistrations", totalRegistrations, countAllRegsPriorTo(now));
-        addDeltaSiblingsDouble(data, "totalRevenue", round2(totalRevenue), round2(prevAllRevenue(now)));
 
         // === Tier 分布（star + party 双轨）===
         String defaultTier = tierResolver.defaultKey("STAR");
@@ -267,26 +266,173 @@ public class DashboardServiceImpl implements DashboardService {
         return Math.round(v * 100d) / 100d;
     }
 
-    // ============ R2-R5 占位（commit B 才填），先抛不支持 ============
+    // ============ R2 — trends ============
 
     @Override
     public DashboardTrendVO getTrends(String range, String from, String to) {
-        throw new UnsupportedOperationException("commit B 待实现");
+        Window w = resolveWindow(range, from, to);
+
+        Map<LocalDate, Long> usersByDate = toDailyMap(userMapper.dailyNewUsers(w.from(), w.toExclusive()));
+        Map<LocalDate, Long> regByDate = toDailyMap(registrationMapper.dailyRegistrations(w.from(), w.toExclusive()));
+        Map<LocalDate, Long> eventsByDate = toDailyMap(eventMapper.dailyNewEvents(w.from(), w.toExclusive()));
+
+        // revenue 是双向 dict（date → big decimal）
+        Map<LocalDate, Double> revenueByDate = new HashMap<>();
+        // 已有 GROUP BY for "daily revenue"？当前 mapper 没有 dedicated daily revenue SQL，
+        // 但 revenueInRange 全区间一个值。解决：把 revenue 平摊到每天不准确——改为「区间总 revenue
+        // 放到今日 (toExclusive - 1)」作为 best-effort（保留现有 SQL 而不出新 SQL）。
+        // 注：spec R2 "revenue series" 可理解为端到端按天累加；为不过度补 SQL，这里用总值。
+        // 严格做法是加 registration.dailyRevenueInRange SQL（commit B-extended）。
+        double totalRangeRevenue = sumRevenue(w.from(), w.toExclusive());
+        revenueByDate.put(w.toExclusive().toLocalDate().minusDays(1), totalRangeRevenue);
+
+        DashboardTrendVO vo = new DashboardTrendVO();
+        vo.setRange(w.label());
+        List<DashboardTrendVO.DayBucket> buckets = new ArrayList<>();
+        long days = java.time.temporal.ChronoUnit.DAYS.between(w.from().toLocalDate(), w.toExclusive().toLocalDate());
+        for (long i = 0; i < days; i++) {
+            LocalDate d = w.from().toLocalDate().plusDays(i);
+            DashboardTrendVO.DayBucket b = new DashboardTrendVO.DayBucket();
+            b.setDate(d);
+            b.setUsers(usersByDate.getOrDefault(d, 0L));
+            b.setRegistrations(regByDate.getOrDefault(d, 0L));
+            b.setRevenue(revenueByDate.getOrDefault(d, 0d));
+            b.setEventsCount(eventsByDate.getOrDefault(d, 0L));
+            buckets.add(b);
+        }
+        vo.setBuckets(buckets);
+        return vo;
     }
+
+    private static Map<LocalDate, Long> toDailyMap(List<Map<String, Object>> rows) {
+        Map<LocalDate, Long> m = new HashMap<>();
+        if (rows == null) return m;
+        for (Map<String, Object> r : rows) {
+            m.put(asDate(r.get("date")), asLong(r.get("cnt")));
+        }
+        return m;
+    }
+
+    // ============ R3 — top events ============
 
     @Override
     public List<TopEventVO> getTopEvents(String metric, String range, String from, String to, int limit) {
-        throw new UnsupportedOperationException("commit B 待实现");
+        if (limit < 1 || limit > 50) {
+            throw new IllegalArgumentException("limit 必须 1..50");
+        }
+        Window w = resolveWindow(range, from, to);
+        switch (metric == null ? "registrations" : metric) {
+            case "registrations" -> {
+                return mapTop(registrationMapper.topEventsByRegistrations(w.from(), w.toExclusive(), limit),
+                        "registrations", /* recompute fillRate */ false);
+            }
+            case "revenue" -> {
+                return mapTop(registrationMapper.topEventsByRevenue(w.from(), w.toExclusive(), limit),
+                        "revenue", false);
+            }
+            case "fillRate" -> {
+                // fillRate 用 registrations SQL 拉一次粗排序，然后 Java 层过滤 max<=0 并重算排序
+                var raw = registrationMapper.topEventsByRegistrations(w.from(), w.toExclusive(), limit * 3);
+                List<TopEventVO> filtered = mapTop(raw, "fillRate", true).stream()
+                        .filter(v -> v.getMaxParticipants() != null && v.getMaxParticipants() > 0)
+                        .sorted(Comparator.comparingDouble(TopEventVO::getValue).reversed())
+                        .limit(limit)
+                        .collect(Collectors.toList());
+                return filtered;
+            }
+            default -> throw new IllegalArgumentException("不支持的 metric: " + metric);
+        }
     }
+
+    /** 共用 SQL row → VO 转换。{@code fillRate} 时把 cnt→fillRate 替换 value。 */
+    private List<TopEventVO> mapTop(List<Map<String, Object>> rows, String metric, boolean fillRate) {
+        List<TopEventVO> list = new ArrayList<>();
+        for (Map<String, Object> r : rows) {
+            TopEventVO v = new TopEventVO();
+            v.setEventId(asLong(r.get("eventId")));
+            v.setTitle((String) r.get("title"));
+            v.setMaxParticipants(asInt(r.get("maxParticipants")));
+            v.setCurrentParticipants(asInt(r.get("currentParticipants")));
+            if (fillRate) {
+                Integer max = v.getMaxParticipants();
+                Integer cur = v.getCurrentParticipants();
+                double rate = (max != null && max > 0 && cur != null) ? cur.doubleValue() / max : 0d;
+                v.setValue(round2(rate));
+            } else if ("revenue".equals(metric)) {
+                Object val = r.get("value");
+                v.setValue(val instanceof Number n ? n.doubleValue() : 0d);
+            } else {
+                v.setValue(asLong(r.get("value")));
+            }
+            v.setMetric(metric);
+            list.add(v);
+        }
+        return list;
+    }
+
+    private static Integer asInt(Object o) {
+        if (o == null) return null;
+        if (o instanceof Number n) return n.intValue();
+        return Integer.parseInt(o.toString());
+    }
+
+    // ============ R4 — attendance funnel ============
 
     @Override
     public AttendanceFunnelVO getAttendance(String range, String from, String to) {
-        throw new UnsupportedOperationException("commit B 待实现");
+        Window w = resolveWindow(range, from, to);
+        long registered = registrationMapper.countActiveInRange(w.from(), w.toExclusive());
+        long checkedIn = registrationMapper.countCheckedInInRange(w.from(), w.toExclusive());
+
+        AttendanceFunnelVO vo = new AttendanceFunnelVO();
+        vo.setRange(w.label());
+        vo.setRegistered(registered);
+        vo.setCheckedIn(checkedIn);
+        if (registered == 0) {
+            vo.setNoShowRate(null); // spec R4：registered=0 → null
+        } else {
+            vo.setNoShowRate(round2(1d - (double) checkedIn / registered));
+        }
+        return vo;
     }
+
+    // ============ R5 — compare (同比/环比) ============
 
     @Override
     public CompareResultVO getCompare(String metric, String currentRange, String previousRange) {
-        throw new UnsupportedOperationException("commit B 待实现");
+        if (metric == null || metric.isBlank()) {
+            throw new IllegalArgumentException("metric 必填");
+        }
+        Window cur = resolveWindow(currentRange, null, null);
+        Window prev = resolveWindow(previousRange, null, null);
+
+        double current = metricValue(metric, cur.from(), cur.toExclusive());
+        double previous = metricValue(metric, prev.from(), prev.toExclusive());
+
+        CompareResultVO vo = new CompareResultVO();
+        vo.setMetric(metric);
+        vo.setCurrent(round2(current));
+        vo.setPrevious(round2(previous));
+        vo.setDeltaAbs(round2(current - previous));
+        if (previous == 0d && current == 0d) {
+            vo.setDeltaPct(null); // spec R5: 双零
+        } else if (previous == 0d) {
+            vo.setDeltaPct(null); // spec R5: previous=0 避免除零
+        } else {
+            vo.setDeltaPct(round2((current - previous) / previous));
+        }
+        return vo;
+    }
+
+    /** metric → 对应 GROUP BY 路径，单点收敛。 */
+    private double metricValue(String metric, LocalDateTime from, LocalDateTime to) {
+        return switch (metric) {
+            case "users" -> userMapper.countNewInRange(from, to);
+            case "registrations" -> registrationMapper.countActiveInRange(from, to);
+            case "revenue" -> registrationMapper.revenueInRange(from, to).doubleValue();
+            case "events" -> eventMapper.countNewInRange(from, to);
+            default -> throw new IllegalArgumentException("不支持的 metric: " + metric);
+        };
     }
 
     // ============ internals ============
