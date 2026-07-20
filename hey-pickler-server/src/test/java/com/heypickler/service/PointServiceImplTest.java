@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -239,5 +240,38 @@ class PointServiceImplTest {
         assertEquals("ADJUST", cap.getValue().getSource());
         assertEquals(100, cap.getValue().getPoints(), "撤销负分行须写正分 -(-100)=100");
         assertEquals(500, u.getStarPoints());
+    }
+
+    @Test
+    void revertPointRecord_alreadyReverted_throwsToPreventDoubleDeduction() {
+        // review #4 P5：撤销同一记录两次会写两条 ADJUST 补偿行 → 用户被扣 2 倍
+        // （余额钳制 GREATEST(0,…) 只防负债，不防多扣）。修复后检测到已存在的撤销
+        // 补偿行（reason 前缀 "撤销 #42:"）→ 拒绝重复撤销。
+        PointRecord original = new PointRecord();
+        original.setId(42L);
+        original.setUserId(1L);
+        original.setType("STAR");
+        original.setSource("MANUAL");
+        original.setSeasonCode("2026-Q2");
+        original.setPoints(100);
+        original.setReason("手动奖励");
+        when(pointRecordMapper.selectById(42L)).thenReturn(original);
+        // lenient：修复前流程会用到赛季+user（走到 writeRecord），修复后幂等检查先 throw 不用到
+        Season s = new Season();
+        s.setType("STAR");
+        s.setCode("2026-Q2");
+        s.setStatus("CURRENT");
+        lenient().when(seasonMapper.selectOne(any())).thenReturn(s);
+        User u = new User();
+        u.setId(1L);
+        u.setStarPoints(500);
+        u.setStarTier("GOLD");
+        lenient().when(userMapper.selectById(1L)).thenReturn(u);
+        // 已存在撤销补偿行（reason 前缀 "撤销 #42:"）→ 修复后拒绝重复撤销
+        lenient().when(pointRecordMapper.selectCount(any())).thenReturn(1L);
+
+        assertThrows(BizException.class, () -> service.revertPointRecord(42L, 9L));
+        verify(pointRecordMapper, never()).insert(any(PointRecord.class));
+        verify(eventPublisher, never()).publishEvent(any());
     }
 }
