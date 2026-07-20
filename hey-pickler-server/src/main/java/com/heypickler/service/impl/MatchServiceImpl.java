@@ -289,7 +289,9 @@ public class MatchServiceImpl implements MatchService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void complete(Long eventId) {
-        Event event = requireEvent(eventId);
+        // 锁 event 行串行化并发 complete：双击/重试时第二个事务阻塞至第一个 commit
+        // （status=COMPLETED），随后读到 COMPLETED 直接 return，杜绝 issue() 双发分（review #4 P2）。
+        Event event = requireEventForUpdate(eventId);
         // Idempotent re-completion: no-op.
         if ("COMPLETED".equals(event.getStatus())) {
             return;
@@ -451,6 +453,15 @@ public class MatchServiceImpl implements MatchService {
     private Event requireEvent(Long eventId) {
         Event e = eventMapper.selectById(eventId);
         if (e == null || e.getDeletedAt() != null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "赛事不存在");
+        }
+        return e;
+    }
+
+    /** complete() 专用：SELECT FOR UPDATE 锁 event 行串行化并发（review #4 P2）。 */
+    private Event requireEventForUpdate(Long eventId) {
+        Event e = eventMapper.selectForUpdate(eventId);
+        if (e == null) {
             throw new BizException(ErrorCode.NOT_FOUND, "赛事不存在");
         }
         return e;

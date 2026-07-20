@@ -432,7 +432,7 @@ class MatchServiceImplTest {
     @Test
     void complete_allMatchesFinished_setsEventCompleted() {
         Event event = event(1L, "SINGLES", true, "IN_PROGRESS");
-        when(eventMapper.selectById(1L)).thenReturn(event);
+        when(eventMapper.selectForUpdate(1L)).thenReturn(event);
         Match m = new Match();
         m.setId(1L);
         m.setStatus(MatchStatus.COMPLETED);
@@ -447,7 +447,7 @@ class MatchServiceImplTest {
     @Test
     void complete_withUnfinishedMatch_throwsParam() {
         Event event = event(1L, "SINGLES", true, "IN_PROGRESS");
-        when(eventMapper.selectById(1L)).thenReturn(event);
+        when(eventMapper.selectForUpdate(1L)).thenReturn(event);
         Match m = new Match();
         m.setId(1L);
         m.setStatus(MatchStatus.SCHEDULED);
@@ -559,7 +559,7 @@ class MatchServiceImplTest {
     @Test
     void complete_alreadyCompleted_isNoOp() {
         Event e = event(1L, "SINGLES", true, "COMPLETED");
-        when(eventMapper.selectById(1L)).thenReturn(e);
+        when(eventMapper.selectForUpdate(1L)).thenReturn(e);
         matchService.complete(1L);
         verify(matchMapper, never()).selectList(any());
     }
@@ -567,7 +567,7 @@ class MatchServiceImplTest {
     @Test
     void complete_unfinishedMatches_throwsParam() {
         Event e = event(1L, "SINGLES", true, "IN_PROGRESS");
-        when(eventMapper.selectById(1L)).thenReturn(e);
+        when(eventMapper.selectForUpdate(1L)).thenReturn(e);
         Match m = new Match();
         m.setStatus(MatchStatus.SCHEDULED);
         when(matchMapper.selectList(any())).thenReturn(List.of(m));
@@ -584,7 +584,7 @@ class MatchServiceImplTest {
         Event e = event(1L, "SINGLES", true, "IN_PROGRESS");
         e.setCreatedBy(99L);
         e.setTitle("Cup");
-        when(eventMapper.selectById(1L)).thenReturn(e);
+        when(eventMapper.selectForUpdate(1L)).thenReturn(e);
         Match m = new Match();
         m.setStatus(MatchStatus.COMPLETED);
         when(matchMapper.selectList(any())).thenReturn(List.of(m));
@@ -601,7 +601,7 @@ class MatchServiceImplTest {
     void complete_allFinished_noCreator_skipsNotify() {
         Event e = event(1L, "SINGLES", true, "IN_PROGRESS");
         e.setCreatedBy(null);
-        when(eventMapper.selectById(1L)).thenReturn(e);
+        when(eventMapper.selectForUpdate(1L)).thenReturn(e);
         Match m = new Match();
         m.setStatus(MatchStatus.COMPLETED);
         when(matchMapper.selectList(any())).thenReturn(List.of(m));

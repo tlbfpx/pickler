@@ -384,6 +384,36 @@ class PlacementServiceImplTest {
     }
 
     @Test
+    void issue_singles_userIdCollidesWithTeamId_doesNotMisjudgeAsDoubles() {
+        // review #4 P1：singles 赛事第一名 userId=11 恰好存在 team.id=11（User/Team 都是
+        // IdType.AUTO 自增，id 空间重叠必然碰撞）。修复前 issue 的 doubles 判定拿
+        // participantKey=11 查 team 表命中 → 误判 doubles=true → 把分发给 team.member1(77)/
+        // member2(88)，userId=11 自己丢分。修复后 doubles 基于 match.slotATeamId（singles 为
+        // null）→ 正常发给 userId=11，绝不碰 team 的 77/88。
+        defaultProps.setDefaultPoints(Map.of(1, 100, 2, 60));
+        when(eventMapper.selectById(1L)).thenReturn(event(1L, "Cup"));
+        when(matchGroupMapper.selectList(any())).thenReturn(List.of(matchGroup(10L, 1L)));
+        when(matchMapper.selectList(any())).thenReturn(List.of(
+                match(1L, 10L, MatchStatus.COMPLETED, 11L, 22L, null, null, 2, 0),
+                match(2L, 10L, MatchStatus.COMPLETED, 11L, 33L, null, null, 2, 0),
+                match(3L, 10L, MatchStatus.COMPLETED, 22L, 33L, null, null, 2, 0)));
+        when(pointRecordMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
+        when(pointsMapper.selectById(1L)).thenReturn(null);
+        // id 碰撞：team.id=11 == 第一名 userId 11
+        Team team = new Team();
+        team.setId(11L);
+        team.setMember1UserId(77L);
+        team.setMember2UserId(88L);
+        when(teamMapper.selectById(11L)).thenReturn(team);
+
+        placementService.issue(1L);
+
+        verify(pointService).issuePlacement(1L, 11L, 100, "PLACEMENT: 赛事《Cup》第1名");
+        verify(pointService, never()).issuePlacement(eq(1L), eq(77L), anyInt(), anyString());
+        verify(pointService, never()).issuePlacement(eq(1L), eq(88L), anyInt(), anyString());
+    }
+
+    @Test
     void issue_alreadyIssued_throws() {
         when(eventMapper.selectById(1L)).thenReturn(event(1L, "Cup"));
         when(pointRecordMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(3L);
