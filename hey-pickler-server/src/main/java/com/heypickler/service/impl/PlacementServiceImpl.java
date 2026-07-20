@@ -80,12 +80,13 @@ public class PlacementServiceImpl implements PlacementService {
         Map<Integer, Integer> table = resolveTable(eventId);
 
         List<List<StandingVO>> byGroup = computeStandings(eventId);
-        // Determine if this event is doubles by looking at any match's slot
-        // (a value present in slot_*_team_id means a team participant).
-        boolean doubles = !byGroup.isEmpty() && !byGroup.get(0).isEmpty()
-                && byGroup.get(0).get(0).getParticipantKey() != null
-                && teamMapper.selectById(byGroup.get(0).get(0).getParticipantKey()) != null
-                && teamMapper.selectById(byGroup.get(0).get(0).getParticipantKey()).getMember1UserId() != null;
+        // doubles 判定基于 match 的 team 槽位（与 computeStandings 一致），不能用 standings
+        // 的 participantKey 查 team：singles 的 participantKey 是 userId，而 User/Team 都是
+        // IdType.AUTO 自增、id 空间重叠，userId 撞上 team.id 会误判 doubles，把分发给错误的
+        // team 成员、选手自己丢分（review #4 P1）。
+        List<Match> sampleMatches = matchMapper.selectList(
+                new LambdaQueryWrapper<Match>().eq(Match::getEventId, eventId));
+        boolean doubles = !sampleMatches.isEmpty() && sampleMatches.get(0).getSlotATeamId() != null;
 
         // 全局排名：跨组按真实 tie-break（wins desc → 净胜局 desc）统一排序 + 竞技式平分共享，
         // 修多组赛事点数取决于 HashMap 迭代序的随机 bug（原按组内 rank 拼接，两组冠军 rank=1 先后序随机）。
