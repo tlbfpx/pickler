@@ -38,6 +38,7 @@
 - [ ] **staging 先行**：`deploy.yml` workflow_dispatch → environment=staging，跑通后再 production
 - [ ] 或手动部署：`mvn clean package -DskipTests` → `java -jar hey-pickler-server-1.0.0.jar --spring.profiles.active=prod`
 - [ ] 生产部署前触发 `DB_BACKUP_HOOK`（`deploy.yml` 已含 pre-deploy backup 步骤）
+- [ ] Redis 启用 dashboard 缓存命名空间（v3.3.0 起；命名空间 `heypickler:dashboard:*` TTL 5min，由 `DashboardCache` 在应用首次访问 dashboard endpoint 时 lazy-create，无需手工预热；详见 `RUNBOOK.md` §5.3）
 
 ## 五、部署后验证（Smoke Test）
 

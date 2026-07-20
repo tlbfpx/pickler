@@ -245,9 +245,19 @@ export interface DashboardStats {
   totalUsers: number
   bannedUsers: number
   newUsersWeek: number
+  /** 本周新增用户 vs 上周：相对差 0..1；null = 上周基期 0 或无 prior */
+  newUsersWeekDeltaPct?: number | null
+  /** 本周新增用户 vs 上周：绝对差（人） */
+  newUsersWeekDeltaAbs?: number | null
   totalEvents: number
   openEvents: number
+  /** OPEN 赛事数量 vs 前 30 天同窗口；累计型无 prior 一律 null */
+  openEventsDeltaPct?: number | null
+  openEventsDeltaAbs?: number | null
   inProgressEvents: number
+  /** IN_PROGRESS 赛事 vs 前 30 天同窗口；null = 无 prior */
+  inProgressEventsDeltaPct?: number | null
+  inProgressEventsDeltaAbs?: number | null
   totalRegistrations: number
   recentRegistrationsCount: number
   totalRevenue: number

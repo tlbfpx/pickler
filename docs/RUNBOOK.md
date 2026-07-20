@@ -79,11 +79,38 @@ WHERE COMMAND != 'Sleep' AND TIME > 5;
 - `heypickler:ranking:STAR:tier`（榜单缓存，TTL 5min）
 - `heypickler:rankingTop5:STAR`（前 5 缓存）
 - `heypickler:wx:session:{openid}`（微信 session，TTL 30min）
+- `heypickler:dashboard:*`（管理端首页聚合缓存，TTL 5min；详见 §5.3）
 
 ### 5.2 内存爆
 - `INFO memory` 看 used_memory_peak
 - 生产基线 `maxmemory` 512MB~1GB、eviction 策略 `allkeys-lru`（见 `DEPLOYMENT-REQUIREMENTS.md` §3.3）
 - `used_memory` 逼近 `maxmemory` 时先排查大 key：`redis-cli --bigkeys`
+
+### 5.3 Dashboard 缓存（v3.3.0 起，Loop-v19 Dashboard Phase 1）
+
+**命名空间**：`heypickler:dashboard:*`（5 类子 key）
+- `heypickler:dashboard:snapshot` — 首页 KPI 快照
+- `heypickler:dashboard:trends:{range}` — 时序趋势（按 range/from/to 区分）
+- `heypickler:dashboard:top:{metric}:{range}:{limit}` — Top 活动排行
+- `heypickler:dashboard:attendance:{range}` — 出席漏斗
+- `heypickler:dashboard:compare:{metric}:{current}:{previous}` — 同比环比
+
+**TTL**：5 分钟（300s），**不**做主动 invalidate；写操作（创建活动、报名等）不刷缓存，等 TTL 自然过期。运营数据秒级实时无业务诉求，5 分钟延迟可接受。
+
+**SUPER_ADMIN bypass**：URL 加 `?no_cache=1` 跳过 Redis 直查 DB；OPERATOR / ADMIN 传 `no_cache=1` 静默忽略（spec R6 防止误用导致 DB 抖动）。前端 dashboard 顶部日期选择器旁对 SUPER_ADMIN 显示状态 chip 提示。
+
+**紧急清缓存**（数据疑似 stale 或运营反馈异常）：
+```bash
+redis-cli --scan --pattern 'heypickler:dashboard:*' | xargs redis-cli del
+```
+或仅清某一类：
+```bash
+redis-cli --scan --pattern 'heypickler:dashboard:top:*' | xargs redis-cli del
+```
+
+**故障定位**：
+- 5xx 集中在 `/api/admin/dashboard/*` → Redis 不可用 → `DashboardCache` 内部 catch 后降级直查 DB，业务应仍 200；若仍 5xx 看应用日志 `RedisConnectionFailureException`
+- 运营反馈「数据不准」→ 90% 是缓存滞后，先 `DEL heypickler:dashboard:snapshot` 让下一次刷新重读
 
 ## 6. 紧急回滚
 
