@@ -112,6 +112,49 @@ redis-cli --scan --pattern 'heypickler:dashboard:top:*' | xargs redis-cli del
 - 5xx 集中在 `/api/admin/dashboard/*` → Redis 不可用 → `DashboardCache` 内部 catch 后降级直查 DB，业务应仍 200；若仍 5xx 看应用日志 `RedisConnectionFailureException`
 - 运营反馈「数据不准」→ 90% 是缓存滞后，先 `DEL heypickler:dashboard:snapshot` 让下一次刷新重读
 
+### 5.4 登录与访问日志（v3.4.0 起，Loop-v19 Dashboard Phase 2）
+
+V21 migration 新增 2 张 append-only 表，由独立 `loginLogExecutor`（core=2/max=4/queue=500/`CallerRunsPolicy` + `LoginLogMonitor`）异步写入，**不**与 `auditLogExecutor` 互抢。
+
+| 表 | 记录内容 | 写入触发 | 建议保留期 |
+|---|---|---|---|
+| `login_log` | APP/ADMIN 登录成功/失败枚举 | `AppAuthController.login` / `AdminAuthController.login` try/catch | 180 天 |
+| `access_log` | 全量 `/api/**` 请求（method/status/latency/user） | `AccessLogFilter`（`@Order(LOWEST_PRECEDENCE - 10)`）+ `POST /api/app/track/event` | 90 天 |
+
+**监控 SQL（建议接入 Prometheus exporter 或 cron + health-check.sh）**：
+
+```sql
+-- 5 分钟内失败登录数 > 50 → 触发暴力破解告警
+SELECT COUNT(*) FROM login_log
+WHERE login_result != 'SUCCESS'
+  AND created_at > NOW() - INTERVAL 5 MINUTE;
+
+-- 5 分钟内 5xx 数 > 20 → 触发 API 错误率告警
+SELECT COUNT(*) FROM access_log
+WHERE status_code >= 500
+  AND created_at > NOW() - INTERVAL 5 MINUTE;
+
+-- 当日活跃用户基数（D1 同期群分母；Phase 3 用）
+SELECT COUNT(DISTINCT user_id) FROM login_log
+WHERE login_result = 'SUCCESS'
+  AND created_at >= CURDATE();
+```
+
+**紧急清日志**（磁盘报警时）：
+```sql
+-- 清理 90 天前的 access_log（先备份再删）
+DELETE FROM access_log WHERE created_at < NOW() - INTERVAL 90 DAY LIMIT 10000;
+-- 重复执行直到影响行数为 0
+
+-- 清理 180 天前的 login_log
+DELETE FROM login_log WHERE created_at < NOW() - INTERVAL 180 DAY LIMIT 10000;
+```
+
+**故障定位**：
+- access_log 写失败但 filter 透传 → 应用日志 `AccessLogFilter recordAccess failed` → 检查 MySQL `access_log` 表空间 + `loginLogExecutor` 监控
+- login_log 表暴增 → 99% 是脚本爆破；先 `SELECT ip, COUNT(*) FROM login_log WHERE login_result='FAIL_PWD' GROUP BY ip ORDER BY 2 DESC LIMIT 10` 定位 IP，加到 `RateLimitFilter` 黑名单
+- `track/event` 收到大量 `props_size>2KB` 400 → 小程序端有 bug 在传大对象；查 `access_log WHERE path='/api/app/track/event' AND status_code=400`
+
 ## 6. 紧急回滚
 
 ### 6.1 服务回滚（保留数据）

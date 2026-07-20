@@ -18,6 +18,7 @@ function resolveBaseUrl() {
 
 const dict = require('./utils/dict.js')
 const brand = require('./utils/brand.js')
+const tracker = require('./utils/tracker.js').default
 
 App({
   globalData: {
@@ -37,6 +38,12 @@ App({
       }
     }
 
+    // Loop-v19 Phase 2 R3 — 启动事件上报（含场景值便于漏斗分析）
+    try {
+      const scene = (wx.getLaunchOptionsSync && wx.getLaunchOptionsSync().scene) || 0
+      tracker.trackEvent('app_launch', { scene })
+    } catch (e) { /* tracker 上报失败不阻塞启动 */ }
+
     // 检查登录状态
     const token = wx.getStorageSync('token')
     if (token) {
@@ -55,14 +62,24 @@ App({
     this.checkUpdate()
   },
 
-  // 全局错误捕获
+  // 全局错误捕获 → Loop-v19 Phase 2 R3 上报 js_error
   onError(err) {
     console.error('[App.onError]', typeof err, JSON.stringify(err), err)
+    try { tracker.trackError(err) } catch (e) { /* 忽略 */ }
   },
 
-  // 未处理的 Promise rejection
+  // 未处理的 Promise rejection → js_error 上报
   onUnhandledRejection(res) {
     console.error('[App.onUnhandledRejection]', typeof res, JSON.stringify(res), res)
+    try {
+      const reason = (res && (res.reason || res)) || ''
+      tracker.trackError(reason, (res && res.stack) || '')
+    } catch (e) { /* 忽略 */ }
+  },
+
+  // Loop-v19 Phase 2 R3 — 前台时长埋点（Phase 3 算 avg session length）
+  onHide() {
+    try { tracker.trackEvent('app_hide') } catch (e) { /* 忽略 */ }
   },
 
   // 获取用户信息 — app.js 用 this 而非 getApp()

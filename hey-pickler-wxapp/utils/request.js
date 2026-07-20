@@ -17,12 +17,26 @@ function request(options) {
       header['Authorization'] = `Bearer ${app.globalData.token}`
     }
 
+    // Loop-v19 Phase 2 R3 — 记录请求起始时间用于 http_request 上报延迟
+    const startTime = Date.now()
+
     wx.request({
       url: `${app.globalData.baseUrl}${options.url}`,
       method: options.method || 'GET',
       data: options.data || {},
       header,
       success: (res) => {
+        // 上报 http_request 事件（best-effort，失败仅 warn）
+        try {
+          const tracker = require('./tracker.js').default
+          tracker.trackEvent('http_request', {
+            method: options.method || 'GET',
+            path: options.url,
+            code: res.statusCode,
+            latencyMs: Date.now() - startTime
+          })
+        } catch (e) { /* tracker 不存在或异常不影响主请求 */ }
+
         // Handle 401 Unauthorized
         if (res.statusCode === 401) {
           handleUnauthorized()
@@ -47,6 +61,16 @@ function request(options) {
         resolve(res.data)
       },
       fail: (err) => {
+        // 上报失败请求
+        try {
+          const tracker = require('./tracker.js').default
+          tracker.trackEvent('http_request', {
+            method: options.method || 'GET',
+            path: options.url,
+            code: -1,
+            latencyMs: Date.now() - startTime
+          })
+        } catch (e) { /* 忽略 */ }
         console.error('Request failed:', err)
         reject({ code: -1, message: '网络请求失败，请检查网络连接' })
       }

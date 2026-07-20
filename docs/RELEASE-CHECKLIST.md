@@ -32,6 +32,7 @@
 - [ ] `scripts/backup-db.sh` 接 cron（建议每日 02:30）+ OSS upload hook；保留 ≥30 天
 - [ ] mysqldump 全量 + binlog 增量；备份跨 region 存储并验证可恢复
 - [ ] `scripts/health-check.sh` 接 cron（每分钟）+ `ALERT_WEBHOOK`（钉钉/Slack）
+- [ ] **v3.4.0+**：部署后验证 V21 migration 成功 — `mysql -e "SHOW TABLES LIKE 'login_log'; SHOW TABLES LIKE 'access_log';"` 两表都在；`DESC login_log; DESC access_log;` 字段齐全（详见 RUNBOOK §5.4）
 
 ## 四、部署
 
