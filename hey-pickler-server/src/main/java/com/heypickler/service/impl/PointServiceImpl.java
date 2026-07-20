@@ -86,6 +86,15 @@ public class PointServiceImpl implements PointService, PointWallet {
         if (original == null) {
             throw new BizException(ErrorCode.NOT_FOUND, "积分记录不存在: " + recordId);
         }
+        // 幂等：同一记录不可重复撤销——撤销补偿行 reason 固定为 "撤销 #{recordId}: …"，按前缀查
+        // 是否已存在；存在则拒绝。否则 admin 双击会写两条 ADJUST 补偿行，用户被扣 2 倍（余额
+        // 钳制 GREATEST(0,…) 只防负债，不防多扣）（review #4 P5）。
+        Long alreadyReverted = pointRecordMapper.selectCount(new LambdaQueryWrapper<PointRecord>()
+                .eq(PointRecord::getSource, PointSource.ADJUST.name())
+                .likeRight(PointRecord::getReason, "撤销 #" + recordId + ":"));
+        if (alreadyReverted != null && alreadyReverted > 0) {
+            throw new BizException(ErrorCode.INVALID_STATUS_TRANSITION, "该积分记录已撤销，请勿重复操作");
+        }
         String src = original.getSource();
         if (!PointSource.MANUAL.name().equals(src) && !PointSource.ADJUST.name().equals(src)) {
             // PLACEMENT / REGISTRATION / CHECK_IN / REDEEM 不可撤销
