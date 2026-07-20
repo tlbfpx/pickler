@@ -17,7 +17,7 @@ public class BrandUpdateRequest {
     private String appName;
     private String slogan;
     @Pattern(
-        regexp = "^(https://[^/]+/.*)?$",
+        regexp = "^(https://[^/]+(/.*)?)?$",
         message = "logo 必须为 https 开头（留空则清除）"
     )
     private String logoUrl;
