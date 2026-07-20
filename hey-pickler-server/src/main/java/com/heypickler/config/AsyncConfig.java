@@ -1,6 +1,7 @@
 package com.heypickler.config;
 
 import com.heypickler.common.aspect.AuditExecutorMonitor;
+import com.heypickler.common.aspect.LoginLogMonitor;
 import com.heypickler.common.aspect.NotificationPushMonitor;
 import com.heypickler.common.aspect.RankingExecutorMonitor;
 import org.springframework.context.annotation.Bean;
@@ -94,5 +95,38 @@ public class AsyncConfig {
     @Bean
     public NotificationPushMonitor notificationPushMonitor() {
         return new NotificationPushMonitor();
+    }
+
+    /**
+     * Loop-v19 Dashboard Phase 2 — login/access log 写入线程池。
+     *
+     * <p>同 audit executor 形态（core=2 / max=4 / queue=500 / CallerRunsPolicy +
+     * 独立 Monitor），但**独立于 audit executor**：登录/访问上报高峰不能拖死
+     * 管理端审计。thread name prefix {@code login-log-} 便于线程 dump 区分。
+     *
+     * <p>复用 audit executor 的 CallerRunsPolicy 模式：队列饱和时调用线程
+     * 同步写库（slower 但 durable — login/access 日志不能丢）。
+     */
+    @Bean("loginLogExecutor")
+    public Executor loginLogExecutor(LoginLogMonitor monitor) {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(4);
+        executor.setQueueCapacity(500);
+        executor.setThreadNamePrefix("login-log-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy() {
+            @Override
+            public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {
+                monitor.recordRejection();
+                super.rejectedExecution(r, e);
+            }
+        });
+        executor.initialize();
+        return executor;
+    }
+
+    @Bean
+    public LoginLogMonitor loginLogMonitor() {
+        return new LoginLogMonitor();
     }
 }
