@@ -59,4 +59,31 @@ public class RedisKey {
     public static String tierConfig(String track) {
         return PREFIX + "dict:tier:" + track;
     }
+
+    // ============ Dashboard 缓存键（5min TTL，loop-v19 Dashboard Phase 1）============
+    // 形如 heypickler:dashboard:snapshot / trends:30d / top:registrations:30d:10 /
+    // attendance:30d / compare:users:thisMonth:lastMonth。
+
+    public static String dashboardSnapshot() {
+        return PREFIX + "dashboard:snapshot";
+    }
+
+    /** Trends key。range 为 7d/30d/90d/thisMonth/lastMonth/custom:from-to。 */
+    public static String dashboardTrends(String range) {
+        return PREFIX + "dashboard:trends:" + range;
+    }
+
+    /** Top events key。metric=registrations|revenue|fillRate。 */
+    public static String dashboardTop(String metric, String range, int limit) {
+        return PREFIX + "dashboard:top:" + metric + ":" + range + ":" + limit;
+    }
+
+    public static String dashboardAttendance(String range) {
+        return PREFIX + "dashboard:attendance:" + range;
+    }
+
+    /** Compare key。metric=users|registrations|revenue|events。 */
+    public static String dashboardCompare(String metric, String currentRange, String previousRange) {
+        return PREFIX + "dashboard:compare:" + metric + ":" + currentRange + ":" + previousRange;
+    }
 }
