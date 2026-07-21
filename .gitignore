@@ -33,3 +33,4 @@ hey-pickler-wxapp/miniprogram_npm/
 *.tmp
 .vite/
 .gstack/
+.crg-local/   # Local-only CRG scratch files (PR drafts, scratch notes)
