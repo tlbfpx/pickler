@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "crg-server": {
+      "command": "uvx",
+      "args": ["code-review-graph", "serve"],
+      "cwd": "/Users/muxi/workspace/pickler/hey-pickler-server",
+      "type": "stdio"
+    },
+    "crg-admin": {
+      "command": "uvx",
+      "args": ["code-review-graph", "serve"],
+      "cwd": "/Users/muxi/workspace/pickler/hey-pickler-admin",
+      "type": "stdio"
+    },
+    "crg-wxapp": {
+      "command": "uvx",
+      "args": ["code-review-graph", "serve"],
+      "cwd": "/Users/muxi/workspace/pickler/hey-pickler-wxapp",
+      "type": "stdio"
+    }
+  }
+}
