@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# Hey Pickler — 本机开发一键启动编排
+#
+# 起依赖（docker compose: MySQL + Redis）→ 等 MySQL 健康 → 打印 server / admin
+# 启动命令（带预填的 INITIAL_ADMIN_PASSWORD，避免首启 exit(1)）。
+#
+# Usage:
+#   bash scripts/dev-up.sh           # 起依赖 + 打印后续命令（server 本地跑）
+#   bash scripts/dev-up.sh --full    # 额外起容器化 server（docker compose --profile full）
+#
+# 前置：Docker Desktop / Docker Engine 已装并运行（`docker --version` 验证）。
+# 不想用 Docker？手动装 MySQL 8 + Redis 6，然后跳过本脚本，直接看 README 第七节。
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$REPO_ROOT"
+
+INITIAL_ADMIN_PASSWORD="${INITIAL_ADMIN_PASSWORD:-DevAdmin123!}"
+INITIAL_ADMIN_USERNAME="${INITIAL_ADMIN_USERNAME:-admin}"
+START_SERVER=0
+[[ "${1:-}" == "--full" ]] && START_SERVER=1
+
+# ---- helpers ----
+log()  { printf '\033[0;36m==>\033[0m %s\n' "$*"; }
+ok()   { printf '\033[0;32m  ✓\033[0m %s\n' "$*"; }
+warn() { printf '\033[0;33m  !\033[0m %s\n' "$*"; }
+
+# ---- 1. docker 可用性 ----
+if ! command -v docker >/dev/null 2>&1; then
+  warn "docker 未安装。本机开发需要 Docker 起依赖；或手动装 MySQL 8 + Redis 6。"
+  warn "安装 Docker Desktop: https://www.docker.com/products/docker-desktop"
+  exit 1
+fi
+if ! docker info >/dev/null 2>&1; then
+  warn "docker daemon 未运行，请先启动 Docker Desktop。"
+  exit 1
+fi
+ok "docker 可用"
+
+# ---- 2. 起依赖 ----
+log "启动依赖（MySQL + Redis）"
+if [[ "$START_SERVER" -eq 1 ]]; then
+  docker compose --profile full up -d --build
+else
+  docker compose up -d
+fi
+ok "依赖已启动"
+
+# ---- 3. 等 MySQL 健康 ----
+log "等待 MySQL 就绪（最多 60s）"
+for i in $(seq 1 30); do
+  status=$(docker inspect --format '{{.State.Health.Status}}' hey-pickler-mysql 2>/dev/null || echo "none")
+  if [[ "$status" == "healthy" ]]; then
+    ok "MySQL 健康"
+    break
+  fi
+  sleep 2
+  if [[ $i -eq 30 ]]; then
+    warn "MySQL 60s 内未健康，用 'docker logs hey-pickler-mysql' 排查"
+    exit 1
+  fi
+done
+
+echo
+log "依赖就绪"
+docker compose ps
+
+# ---- 4. 后续步骤 ----
+if [[ "$START_SERVER" -eq 1 ]]; then
+  echo
+  log "server 已随 --full 启动（容器 hey-pickler-server）"
+  echo "  日志:    docker logs -f hey-pickler-server"
+  echo "  Swagger: http://localhost:8080/doc.html"
+else
+  echo
+  log "下一步：在两个终端分别启动 server 与 admin"
+  echo
+  printf '\033[0;36m[终端 1 — 后端]\033[0m\n'
+  echo "  cd hey-pickler-server"
+  echo "  INITIAL_ADMIN_PASSWORD='$INITIAL_ADMIN_PASSWORD' mvn spring-boot:run"
+  echo "  # Swagger: http://localhost:8080/doc.html"
+  echo
+  printf '\033[0;36m[终端 2 — 管理后台]\033[0m\n'
+  echo "  cd hey-pickler-admin"
+  echo "  npm install   # 首次"
+  echo "  npm run dev   # http://localhost:5173"
+  echo
+  printf '\033[0;36m[微信小程序]\033[0m\n'
+  echo "  微信开发者工具导入 hey-pickler-wxapp/（AppID 填 touristappid）"
+  echo "  开发工具自动用 localhost:8080（app.js resolveBaseUrl 按 envVersion 切换）"
+fi
+
+echo
+log "admin 登录：$INITIAL_ADMIN_USERNAME / $INITIAL_ADMIN_PASSWORD"
+echo
+log "停止依赖：docker compose down    （清数据：docker compose down -v）"

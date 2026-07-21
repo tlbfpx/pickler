@@ -1,5 +1,10 @@
 # Hey Pickler 上线排期（v1.0 Launch）
 
+> ⚠️ **场景说明（2026-07-21 更新）**：项目当前**只做本机部署**，公网上线暂不推进。
+> milestone `v1.0-launch` 的 20 个 issue（#78–#97）已全部 **wontfix 关闭**（`closed=20 / open=0`）。
+> 本文档保留作**未来公网上线时的参考**（排期 / 泳道 / 依赖关系仍有效）。
+> 本机部署请改看 [README §七 本地开发快速启动](../README.md) + `scripts/dev-up.sh`。
+
 > 把 [`RELEASE-CHECKLIST.md`](./RELEASE-CHECKLIST.md) 的检查项按 **关键路径 + 并行泳道** 重新组织，配上工期 / 前置依赖 / 负责角色 / 验收勾选。
 >
 > 配合 [`RUNBOOK.md`](./RUNBOOK.md)（运维排障）、[`CREDENTIALS.md`](./CREDENTIALS.md)（密钥管理）、[`DEPLOYMENT-REQUIREMENTS.md`](./DEPLOYMENT-REQUIREMENTS.md)（硬件 / Nginx 清单）使用。
