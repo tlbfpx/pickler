@@ -1,0 +1,77 @@
+# =============================================================================
+# Hey Pickler — 本机开发 / 部署依赖一键化
+# =============================================================================
+# 默认只起依赖（MySQL + Redis），server 本地 mvn 跑便于热重载调试：
+#   docker compose up -d
+#
+# 全套容器化（含 server，适合本机一键部署运行）：
+#   docker compose --profile full up -d --build
+#
+# 停止：       docker compose down
+# 清数据：     docker compose down -v
+#
+# 或直接用编排脚本（推荐）：
+#   bash scripts/dev-up.sh           # 起依赖 + 打印 server/admin 启动命令
+#   bash scripts/dev-up.sh --full    # 起依赖 + 容器化 server
+# =============================================================================
+
+services:
+  mysql:
+    image: mysql:8.0              # ≥ 8.0.16（V12 CHECK 约束依赖）
+    container_name: hey-pickler-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root   # 对齐 application-dev.yml DB_PASSWORD 默认
+      MYSQL_DATABASE: hey_pickler # 容器启动自动建库（省去手动 CREATE DATABASE）
+    ports:
+      - "3306:3306"
+    volumes:
+      - hey-pickler-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: hey-pickler-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - hey-pickler-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # 可选：全套容器化部署时启用（--profile full）。
+  # 开发热重载场景不用这个，本地 `mvn spring-boot:run` 更方便。
+  server:
+    profiles: ["full"]
+    build:
+      context: ./hey-pickler-server
+    container_name: hey-pickler-server
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      # 容器内通过 compose 服务名访问同网络依赖（覆盖 dev profile 写死的 localhost）
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/hey_pickler?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATA_REDIS_HOST: redis
+      INITIAL_ADMIN_USERNAME: admin
+      INITIAL_ADMIN_PASSWORD: DevAdmin123!   # 本机部署用；生产改强密码
+    ports:
+      - "8080:8080"
+
+volumes:
+  hey-pickler-mysql-data:
+  hey-pickler-redis-data:
