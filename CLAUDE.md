@@ -170,3 +170,41 @@ Full template at `.env.example`; operational guidance (key rotation, emergency r
 - `CORS_ADMIN_ORIGINS` — allowed admin origins
 - `SPRING_PROFILES_ACTIVE` — must be `prod` in production
 - `PROD_GUARD=true` — defense-in-depth check refuses start if `dev` profile active or secrets match dev fallbacks
+
+## MCP Tools: code-review-graph (multi-repo)
+
+Three CRG MCP servers are registered at `.mcp.json` for each subsystem:
+
+- **`mcp__crg-server__*`** — `hey-pickler-server/` (Java/Spring Boot, ~2364 nodes / 31600 edges)
+- **`mcp__crg-admin__*`** — `hey-pickler-admin/` (Vue 3 / TS, ~633 nodes / 5498 edges)
+- **`mcp__crg-wxapp__*`** — `hey-pickler-wxapp/` (WeChat Mini Program, ~244 nodes / 2275 edges)
+
+Graphs auto-update via `crg-daemon` (running, PID managed by launchd-style supervisor) — file edits under any subsystem trigger incremental `update`. To force a full re-parse: `code-review-graph build --repo=<path>`.
+
+**When reviewing changes or exploring this codebase, prefer CRG tools over raw Grep/Glob/Read** — they are faster, cheaper, and give structural context (callers, dependents, test coverage, community structure) that file scanning cannot.
+
+### When to use graph tools FIRST
+
+- **Exploring code**: `mcp__crg-*__semantic_search_nodes_tool` or `mcp__crg-*__query_graph_tool` instead of Grep
+- **Understanding impact**: `mcp__crg-*__get_impact_radius_tool` instead of manually tracing imports
+- **Code review**: `mcp__crg-*__detect_changes_tool` + `mcp__crg-*__get_review_context_tool` instead of reading entire files
+- **Finding relationships**: `mcp__crg-*__query_graph_tool` with `pattern="callers_of|callees_of|imports_of|tests_for"`
+- **Architecture questions**: `mcp__crg-*__get_architecture_overview_tool` + `mcp__crg-*__list_communities_tool`
+- **Dead code / oversized functions**: `mcp__crg-*__find_dead_code_tool` + `mcp__crg-*__find_large_functions_tool`
+
+Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need. The CLI equivalents (`code-review-graph query|impact|dead-code|large-functions --repo=<server|admin|wxapp>`) work without MCP.
+
+### Multi-repo workflow
+
+For cross-subsystem questions (e.g., "does the wxapp call the same event API that the admin uses?"), query each subsystem's MCP server separately and reconcile. There is no cross-graph join — CRG treats each `--repo` as an isolated graph.
+
+### Daemon management
+
+```bash
+crg-daemon status       # Show watched repos + PIDs
+crg-daemon logs server  # Tail log for one repo
+crg-daemon stop         # Stop all watchers
+crg-daemon start        # Start (auto-loads ~/.code-review-graph/watch.toml)
+```
+
+If a graph appears stale after large rebases, run `code-review-graph update --repo=<path> --base=master` to force a re-parse.
