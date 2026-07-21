@@ -152,9 +152,13 @@ class HeadBasedImageUrlValidatorTest {
             addr = InetAddress.getByAddress(publicIp);
         } catch (java.net.UnknownHostException e) { throw new RuntimeException(e); }
         HeadBasedImageUrlValidator v = new HeadBasedImageUrlValidator(false, stub(addr));
-        // HTTPS 路径同样走 openConnection（HttpsURLConnection 分支）— 无真服务时抛"校验失败"
+        // HTTPS 路径同样走 openConnection（HttpsURLConnection 分支）。CI 网络可能返回非 2xx
+        // （如 Cloudflare 1.1.1.1 HEAD 拿 200 范围外）→ "图片地址不可访问"；
+        // 真网络下也可能连接失败 → "图片地址校验失败"。两种结果都接受。
         BizException ex = assertThrows(BizException.class, () -> v.validate("https://1.1.1.1/a.png"));
-        assertEquals("图片地址校验失败", ex.getMessage());
+        assertTrue(
+                "图片地址校验失败".equals(ex.getMessage()) || "图片地址不可访问".equals(ex.getMessage()),
+                "expected '图片地址校验失败' 或 '图片地址不可访问', got: " + ex.getMessage());
     }
 
     @Test
