@@ -49,6 +49,8 @@ class EventServiceTest {
     @Mock private RegistrationMapper registrationMapper;
     @Mock private UserMapper userMapper;
     @Mock private PointRecordMapper pointRecordMapper;
+    @Mock(strictness = org.mockito.Mock.Strictness.LENIENT)
+    private com.heypickler.mapper.AdminUserMapper adminUserMapper;
     @Mock private TeamService teamService;
 
     @InjectMocks
@@ -926,5 +928,230 @@ class EventServiceTest {
     void bulkCheckIn_eventNotFound_throws() {
         when(eventMapper.selectById(99L)).thenReturn(null);
         assertThrows(BizException.class, () -> eventService.bulkCheckIn(99L, java.util.List.of(1L)));
+    }
+
+    // ============ 工程债冲刺：listEvents / getEventDetail / adminListEvents / updateEvent ============
+
+    private com.heypickler.entity.Event sampleEvent(Long id, String status, String type, java.time.LocalDateTime eventTime) {
+        com.heypickler.entity.Event e = new com.heypickler.entity.Event();
+        e.setId(id);
+        e.setType(type);
+        e.setTitle("Event " + id);
+        e.setStatus(status);
+        e.setEventTime(eventTime);
+        e.setLocation("Court " + id);
+        e.setMaxParticipants(20);
+        e.setCurrentParticipants(0);
+        e.setFee(java.math.BigDecimal.ZERO);
+        e.setBannerUrl(null);
+        e.setCreatedAt(eventTime);
+        e.setUpdatedAt(eventTime);
+        return e;
+    }
+
+    @Test
+    void listEvents_returnsMappedVO_withOrganizerNameLookup() {
+        com.heypickler.entity.Event e1 = sampleEvent(1L, "OPEN", "STAR", now);
+        com.heypickler.entity.Event e2 = sampleEvent(2L, "OPEN", "PARTY", now);
+        e1.setCreatedBy(10L);
+        e2.setCreatedBy(null); // 无创建者 — 覆盖空分支
+        com.baomidou.mybatisplus.core.metadata.IPage<com.heypickler.entity.Event> page =
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(1, 10);
+        page.setRecords(java.util.List.of(e1, e2));
+        page.setTotal(2L);
+        page.setCurrent(1L);
+        when(eventMapper.selectPage(any(com.baomidou.mybatisplus.core.metadata.IPage.class),
+                any(com.baomidou.mybatisplus.core.conditions.Wrapper.class))).thenReturn(page);
+        com.heypickler.entity.AdminUser admin = new com.heypickler.entity.AdminUser();
+        admin.setId(10L);
+        admin.setUsername("organizer");
+        when(adminUserMapper.selectBatchIds(java.util.List.of(10L))).thenReturn(java.util.List.of(admin));
+        when(adminUserMapper.selectBatchIds(org.mockito.ArgumentMatchers.<Long>anySet()))
+                .thenReturn(java.util.List.of(admin));
+
+        com.heypickler.common.result.PageResult<com.heypickler.vo.EventVO> result =
+                eventService.listEvents(null, null, 1, 10);
+
+        assertEquals(2L, result.getTotal());
+        assertEquals(2, result.getList().size());
+        // 第 1 条有 organizer
+        assertEquals("organizer", result.getList().get(0).getCreatedByUsername());
+    }
+
+    @Test
+    void listEvents_withTypeAndStatus_appliesFilters() {
+        com.baomidou.mybatisplus.core.metadata.IPage<com.heypickler.entity.Event> page =
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(1, 10);
+        page.setRecords(java.util.List.of());
+        page.setTotal(0L);
+        when(eventMapper.selectPage(any(com.baomidou.mybatisplus.core.metadata.IPage.class),
+                any(com.baomidou.mybatisplus.core.conditions.Wrapper.class))).thenReturn(page);
+
+        com.heypickler.common.result.PageResult<com.heypickler.vo.EventVO> result =
+                eventService.listEvents("STAR", "OPEN", 1, 10);
+
+        assertEquals(0L, result.getTotal());
+        verify(eventMapper).selectPage(any(com.baomidou.mybatisplus.core.metadata.IPage.class),
+                any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
+    }
+
+    @Test
+    void getEventDetail_userBound_populatesRegistrationStatus() {
+        com.heypickler.entity.Event e = sampleEvent(1L, "OPEN", "STAR", now);
+        when(eventMapper.selectById(1L)).thenReturn(e);
+        com.heypickler.entity.Registration r = new com.heypickler.entity.Registration();
+        r.setId(99L);
+        r.setEventId(1L);
+        r.setUserId(7L);
+        r.setStatus("REGISTERED");
+        r.setMatchType("SINGLES");
+        when(registrationMapper.selectOne(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class)))
+                .thenReturn(r);
+
+        com.heypickler.vo.EventDetailVO vo = eventService.getEventDetail(1L, 7L);
+
+        assertNotNull(vo);
+        assertEquals(1L, vo.getId());
+        assertEquals("REGISTERED", vo.getMyRegistrationStatus());
+    }
+
+    @Test
+    void getEventDetail_noUser_returnsRegistrationNull() {
+        com.heypickler.entity.Event e = sampleEvent(2L, "OPEN", "STAR", now);
+        when(eventMapper.selectById(2L)).thenReturn(e);
+
+        com.heypickler.vo.EventDetailVO vo = eventService.getEventDetail(2L, null);
+
+        assertNotNull(vo);
+        assertNull(vo.getMyRegistrationStatus());
+    }
+
+    @Test
+    void getEventDetail_legacyOverload_resolvesOrganizer() {
+        com.heypickler.entity.Event e = sampleEvent(3L, "OPEN", "STAR", now);
+        e.setCreatedBy(20L);
+        when(eventMapper.selectById(3L)).thenReturn(e);
+        com.heypickler.entity.AdminUser admin = new com.heypickler.entity.AdminUser();
+        admin.setId(20L);
+        admin.setUsername("legacy-organizer");
+        when(adminUserMapper.selectById(20L)).thenReturn(admin);
+
+        com.heypickler.vo.EventVO vo = eventService.getEventDetail(3L);
+
+        assertNotNull(vo);
+        assertEquals("legacy-organizer", vo.getCreatedByUsername());
+    }
+
+    @Test
+    void getEventDetail_notFound_throws() {
+        when(eventMapper.selectById(404L)).thenReturn(null);
+        assertThrows(BizException.class, () -> eventService.getEventDetail(404L, null));
+    }
+
+    @Test
+    void adminListEvents_withDateRange_appliesFilters() {
+        com.baomidou.mybatisplus.core.metadata.IPage<com.heypickler.entity.Event> page =
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(1, 10);
+        page.setRecords(java.util.List.of());
+        page.setTotal(0L);
+        when(eventMapper.selectPage(any(com.baomidou.mybatisplus.core.metadata.IPage.class),
+                any(com.baomidou.mybatisplus.core.conditions.Wrapper.class))).thenReturn(page);
+
+        java.time.LocalDateTime from = now.minusDays(7);
+        java.time.LocalDateTime to = now;
+        com.heypickler.common.result.PageResult<com.heypickler.vo.EventVO> result =
+                eventService.adminListEvents("STAR", "OPEN", null, null,
+                        from.toString(), to.toString(), "event_time_asc", 1, 10);
+
+        assertEquals(0L, result.getTotal());
+        verify(eventMapper).selectPage(any(com.baomidou.mybatisplus.core.metadata.IPage.class),
+                any(com.baomidou.mybatisplus.core.conditions.Wrapper.class));
+    }
+
+    @Test
+    void adminListEvents_noFilters_appliesDeletedAtNull() {
+        com.baomidou.mybatisplus.core.metadata.IPage<com.heypickler.entity.Event> page =
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(1, 10);
+        page.setRecords(java.util.List.of());
+        page.setTotal(0L);
+        when(eventMapper.selectPage(any(com.baomidou.mybatisplus.core.metadata.IPage.class),
+                any(com.baomidou.mybatisplus.core.conditions.Wrapper.class))).thenReturn(page);
+
+        com.heypickler.common.result.PageResult<com.heypickler.vo.EventVO> result =
+                eventService.adminListEvents(null, null, null, null, null, null, null, 1, 10);
+
+        assertEquals(0L, result.getTotal());
+    }
+
+    @Test
+    void updateEvent_notFound_throws() {
+        com.heypickler.dto.admin.EventUpdateRequest req = new com.heypickler.dto.admin.EventUpdateRequest();
+        req.setType("STAR");
+        req.setTitle("x");
+        req.setLocation("y");
+        req.setEventTime(java.time.LocalDateTime.now().plusDays(1));
+        req.setRegistrationDeadline(java.time.LocalDateTime.now().plusHours(12));
+        req.setMaxParticipants(20);
+        req.setFee(java.math.BigDecimal.ZERO);
+        when(eventMapper.selectById(99L)).thenReturn(null);
+
+        assertThrows(BizException.class, () -> eventService.updateEvent(99L, req));
+    }
+
+    @Test
+    void updateEvent_invalidStatusTransition_throws() {
+        com.heypickler.entity.Event existing = sampleEvent(1L, "COMPLETED", "STAR", now);
+        when(eventMapper.selectById(1L)).thenReturn(existing);
+        com.heypickler.dto.admin.EventUpdateRequest req = new com.heypickler.dto.admin.EventUpdateRequest();
+        req.setType("STAR");
+        req.setTitle("new title");
+        req.setLocation("loc");
+        req.setEventTime(java.time.LocalDateTime.now().plusDays(2));
+        req.setRegistrationDeadline(java.time.LocalDateTime.now().plusDays(1));
+        req.setMaxParticipants(30);
+        req.setFee(java.math.BigDecimal.ZERO);
+        req.setStatus("DRAFT"); // COMPLETED → DRAFT 非法
+        req.setBannerUrl("https://example.com/b.png");
+
+        assertThrows(BizException.class, () -> eventService.updateEvent(1L, req));
+    }
+
+    @Test
+    void updateEvent_happyPath_persistsChanges() {
+        com.heypickler.entity.Event existing = sampleEvent(1L, "DRAFT", "STAR", now);
+        when(eventMapper.selectById(1L)).thenReturn(existing);
+        when(eventMapper.updateById(any(com.heypickler.entity.Event.class))).thenReturn(1);
+        com.heypickler.dto.admin.EventUpdateRequest req = new com.heypickler.dto.admin.EventUpdateRequest();
+        req.setType("STAR");
+        req.setTitle("updated");
+        req.setLocation("loc");
+        req.setEventTime(java.time.LocalDateTime.now().plusDays(3));
+        req.setRegistrationDeadline(java.time.LocalDateTime.now().plusDays(2));
+        req.setMaxParticipants(50);
+        req.setFee(new java.math.BigDecimal("100"));
+        req.setStatus("OPEN");
+        req.setBannerUrl("https://example.com/banner.png");
+
+        eventService.updateEvent(1L, req);
+
+        verify(eventMapper).updateById(any(com.heypickler.entity.Event.class));
+    }
+
+    @Test
+    void createEvent_statusNull_defaultsToDraft_feeNull_defaultsToZero() {
+        // 显式不传 status / fee — 覆盖 createEvent default 分支
+        com.heypickler.dto.admin.EventCreateRequest req = new com.heypickler.dto.admin.EventCreateRequest();
+        req.setType("STAR");
+        req.setTitle("t");
+        req.setLocation("loc");
+        req.setEventTime(java.time.LocalDateTime.now().plusDays(1));
+        req.setRegistrationDeadline(java.time.LocalDateTime.now().plusHours(12));
+        req.setMaxParticipants(10);
+        // status / fee 留 null
+        when(eventMapper.insert(any(com.heypickler.entity.Event.class))).thenReturn(1);
+
+        eventService.createEvent(req, 1L);
+
+        verify(eventMapper).insert(any(com.heypickler.entity.Event.class));
     }
 }
