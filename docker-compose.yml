@@ -18,7 +18,6 @@
 services:
   mysql:
     image: mysql:8.0              # ≥ 8.0.16（V12 CHECK 约束依赖）
-    container_name: hey-pickler-mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: root   # 对齐 application-dev.yml DB_PASSWORD 默认
@@ -35,7 +34,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: hey-pickler-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -53,7 +51,6 @@ services:
     profiles: ["full"]
     build:
       context: ./hey-pickler-server
-    container_name: hey-pickler-server
     restart: unless-stopped
     depends_on:
       mysql:

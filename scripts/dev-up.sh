@@ -39,28 +39,50 @@ fi
 ok "docker 可用"
 
 # ---- 2. 起依赖 ----
-log "启动依赖（MySQL + Redis）"
-if [[ "$START_SERVER" -eq 1 ]]; then
-  docker compose --profile full up -d --build
-else
-  docker compose up -d
-fi
-ok "依赖已启动"
+# 检测本机是否已有 MySQL/Redis（端口被占），若是则复用本机、跳过 compose（避免端口冲突）
+mysql_in_use=0; redis_in_use=0
+lsof -nP -iTCP:3306 -sTCP:LISTEN >/dev/null 2>&1 && mysql_in_use=1
+lsof -nP -iTCP:6379 -sTCP:LISTEN >/dev/null 2>&1 && redis_in_use=1
 
-# ---- 3. 等 MySQL 健康 ----
-log "等待 MySQL 就绪（最多 60s）"
-for i in $(seq 1 30); do
-  status=$(docker inspect --format '{{.State.Health.Status}}' hey-pickler-mysql 2>/dev/null || echo "none")
-  if [[ "$status" == "healthy" ]]; then
-    ok "MySQL 健康"
-    break
+if [[ $mysql_in_use -eq 1 || $redis_in_use -eq 1 ]]; then
+  log "检测到本机已有依赖运行（MySQL:3306=$([ $mysql_in_use -eq 1 ] && echo yes || echo no)  Redis:6379=$([ $redis_in_use -eq 1 ] && echo yes || echo no)）"
+  warn "复用本机 MySQL/Redis，跳过 docker compose（避免端口冲突）"
+  COMPOSE_USED=0
+else
+  log "启动依赖（MySQL + Redis）via docker compose"
+  if [[ "$START_SERVER" -eq 1 ]]; then
+    docker compose --profile full up -d --build
+  else
+    docker compose up -d
   fi
-  sleep 2
-  if [[ $i -eq 30 ]]; then
-    warn "MySQL 60s 内未健康，用 'docker logs hey-pickler-mysql' 排查"
-    exit 1
+  ok "依赖已启动（docker compose）"
+  COMPOSE_USED=1
+fi
+
+# ---- 3. 等 MySQL 健康 / 测本机可达 ----
+if [[ "${COMPOSE_USED:-0}" -eq 1 ]]; then
+  log "等待 MySQL 就绪（最多 60s）"
+  for i in $(seq 1 30); do
+    mysql_cid=$(docker compose ps -q mysql 2>/dev/null)
+    status=$(docker inspect --format '{{.State.Health.Status}}' "$mysql_cid" 2>/dev/null || echo "none")
+    if [[ "$status" == "healthy" ]]; then
+      ok "MySQL 健康"
+      break
+    fi
+    sleep 2
+    if [[ $i -eq 30 ]]; then
+      warn "MySQL 60s 内未健康，用 'docker compose logs mysql' 排查"
+      exit 1
+    fi
+  done
+else
+  log "检测本机 MySQL 可达性（root/root）"
+  if mysql -uroot -proot -e "SELECT 1" >/dev/null 2>&1; then
+    ok "本机 MySQL 可达"
+  else
+    warn "本机 MySQL root/root 连不上 —— 检查密码或权限（dev 默认 DB_PASSWORD=root）"
   fi
-done
+fi
 
 echo
 log "依赖就绪"

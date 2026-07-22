@@ -3,13 +3,19 @@ import type { Page } from '@playwright/test'
 
 // 适配 PR #20：管理员管理在折叠的「系统」子菜单下，需先点开
 async function gotoAdmins(adminPage: Page) {
+  // 系统组默认折叠，先展开（检查 is-opened 避免 toggle 把已展开的折叠）
   const group = adminPage.locator('.el-sub-menu__title').filter({ hasText: '系统' }).first()
   if (await group.isVisible()) {
-    await group.click()
+    const isOpen = await group.locator('xpath=..').evaluate((el: Element) => el.classList.contains('is-opened'))
+    if (!isOpen) {
+      await group.click()
+    }
   }
   await adminPage.locator('.el-menu-item').filter({ hasText: '管理员管理' }).click()
   await adminPage.waitForURL(/\/admins$/)
   await expect(adminPage.locator('h1')).toContainText('管理员管理')
+  // 等表格行渲染（adminList 加载，避免后续 count=0 误判）
+  await expect(adminPage.locator('.el-table__body-wrapper .el-table__row').first()).toBeVisible({ timeout: 10000 })
 }
 
 test.describe('管理员管理', () => {
@@ -90,39 +96,12 @@ test.describe('管理员管理', () => {
   test('重置密码', async ({ adminPage }) => {
     await gotoAdmins(adminPage)
 
-    // Backend refuses to reset password for current logged-in admin (admin/admin).
-    // Create a fresh non-admin user first, then target them.
-    const targetName = `e2e_reset_${Date.now()}`
-    await adminPage.getByRole('button', { name: '新建管理员' }).click()
-    await expect(adminPage.locator('.el-dialog:visible')).toBeVisible()
-    await adminPage
-      .locator('.el-dialog:visible .el-form-item')
-      .filter({ hasText: '用户名' })
-      .getByRole('textbox')
-      .fill(targetName)
-    await adminPage
-      .locator('.el-dialog:visible .el-form-item')
-      .filter({ hasText: '密码' })
-      .getByRole('textbox')
-      .fill('Test1234')
-    await adminPage
-      .locator('.el-dialog:visible .el-form-item')
-      .filter({ hasText: '角色' })
-      .locator('.el-select')
-      .click()
-    await adminPage.getByRole('option', { name: '管理员', exact: true }).click()
-    await adminPage.locator('.el-dialog:visible .el-dialog__footer').getByRole('button', { name: '新建' }).click()
-    await expect(adminPage.getByText('管理员创建成功')).toBeVisible({ timeout: 10000 })
+    // AdminListView 拉 page=1 size=100（id 升序），不含当前登录 admin（其 id 较大，
+    // 在后端默认排序的末尾）。第一页任意行都是可被当前 SUPER_ADMIN 重置的账号。
+    // 直接用第一行，避免新建后因分页找不到。
+    const targetRow = adminPage.locator('.el-table__body-wrapper .el-table__row').first()
+    await expect(targetRow).toBeVisible({ timeout: 10000 })
 
-    // Re-navigate to refresh list
-    await gotoAdmins(adminPage)
-
-    // Locate the freshly created row by username, then click 重置密码
-    const targetRow = adminPage
-      .locator('.el-table__body-wrapper .el-table__row')
-      .filter({ hasText: targetName })
-      .first()
-    await expect(targetRow).toBeVisible({ timeout: 5000 })
     const resetBtn = targetRow.getByRole('button', { name: '重置密码' })
     await expect(resetBtn).toBeVisible()
     await resetBtn.click()

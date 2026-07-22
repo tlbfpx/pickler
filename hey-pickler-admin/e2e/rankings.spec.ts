@@ -7,13 +7,14 @@ import type { Page } from '@playwright/test'
 //   - 录入积分弹窗里的 radio：关联竞技赛事 / 关联社交活动 / 手动录入
 //   - 刷新按钮：刷新战力排名 / 刷新活力排名
 async function gotoRankings(adminPage: Page) {
-  const group = adminPage.locator('.el-sub-menu__title').filter({ hasText: '积分与赛季' }).first()
+  // PR#53 排名工作台重设计：菜单组「积分与赛季」→「积分与排名」，菜单项「排名管理」→「积分与排名」（赛季合并）
+  const group = adminPage.locator('.el-sub-menu__title').filter({ hasText: '积分与排名' }).first()
   if (await group.isVisible()) {
     await group.click()
   }
-  await adminPage.locator('.el-menu-item').filter({ hasText: '排名管理' }).click()
+  await adminPage.locator('.el-menu-item').filter({ hasText: '积分与排名' }).click()
   await adminPage.waitForURL(/\/rankings$/)
-  await expect(adminPage.locator('h1')).toContainText('排名管理')
+  await expect(adminPage.locator('h1')).toContainText('积分与排名')
 }
 
 test.describe('排名管理', () => {
