@@ -165,5 +165,12 @@ Page({
     this.setData({
       [`banners[${index}].imageUrl`]: '/images/default-event.png'
     })
+  },
+
+  // Navigate to venue booking list (venue browse)
+  goVenues() {
+    wx.navigateTo({
+      url: '/pages/venue-list/venue-list'
+    })
   }
 })

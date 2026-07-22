@@ -1,0 +1,6 @@
+{
+  "usingComponents": {},
+  "navigationBarTitleText": "场馆预订",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
+}
