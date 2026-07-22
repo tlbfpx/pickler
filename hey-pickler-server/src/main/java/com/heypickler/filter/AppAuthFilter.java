@@ -30,7 +30,9 @@ public class AppAuthFilter extends OncePerRequestFilter {
             "/api/app/events",
             "/api/app/rankings",
             "/api/app/dict",
-            "/api/app/brand"
+            "/api/app/brand",
+            "/api/app/venues",
+            "/api/app/courts"
     );
 
     // 仅 login 真正匿名。refresh / phone 需要当前登录用户（控制器读 userId 属性），
