@@ -136,7 +136,14 @@ end_time   TIME NOT NULL
 price DECIMAL(10,2) NOT NULL
 created_at · updated_at · deleted_at【软删】
 ```
-**校验（app 层，保存时强校验）**：同 `court_id` 同 `day_type` 的 band **禁止时间段重叠**；允许有缺口——缺口段的格子**不可订**（不是免费）。
+**校验（app 层，保存时强校验）**：
+- band 时间段为**半开区间** `[start_time, end_time)`。
+- 重叠判定：两 band 重叠 ⟺ `start_A < end_B && start_B < end_A`。
+- 校验按**有效 band 集**做（不是按原始 day_type 分组）。同一 court：
+  - 工作日有效集 = `{day_type=WEEKDAY}` ∪ `{day_type=ALL}`
+  - 周末有效集 = `{day_type=WEEKEND}` ∪ `{day_type=ALL}`
+  两个有效集各自**内部禁止重叠**——即 `ALL` 的 band 不得与 `WEEKDAY` 或 `WEEKEND` 的 band 重叠。
+- 允许有缺口——缺口段的格子**不可订**（不是免费）。
 
 ### 5.6 P2：`booking` 预约主记录 + `booking_slot` 时段占用
 
@@ -171,7 +178,7 @@ INDEX(booking_id)
 **取消 = 物理删除该 booking 的所有 `booking_slot` 行**释放唯一键（复用 Team 实体套路）；`booking` 主记录保留 `status=CANCELLED` + `cancelled_at` + `cancel_reason`，审计完整。
 
 ### 5.7 软删 + UNIQUE 的老问题
-`court` 的 `UNIQUE(venue_id, name)` 与软删冲突（删了又建同名）。按 V17 套路用函数唯一索引兜底，实现阶段处理，不阻塞设计。`venue_business_hour` 用整行覆盖（无软删），无此问题。
+`court` 的 `UNIQUE(venue_id, name)` 与软删冲突（删了又建同名）。按 V17 套路用**函数唯一索引**：加生成列 `name_key VARCHAR GENERATED ALWAYS AS (CASE WHEN deleted_at IS NULL THEN name END) STORED`，`UNIQUE(venue_id, name_key)`——软删行 `name_key=NULL` 不占位（MySQL 允许多 NULL）。`venue_business_hour` 用整行覆盖（无软删），无此问题。
 
 ## 6. 预约引擎算法（SlotService 核心）
 
@@ -180,30 +187,31 @@ INDEX(booking_id)
 generateSlots(court, date) -> List<SlotVO>:
   bh = VenueBusinessHour(venue_id=court.venue_id, day_of_week=date.dayOfWeek)
   if bh == null or bh.open_time == null: return []          // 当日休
-  dayType = isWeekend(date) ? WEEKEND : WEEKDAY
-  bands  = CourtPricingBand(court_id=court.id) where day_type IN (dayType, ALL)
+  dayType = (date.dayOfWeek IN (0,6)) ? WEEKEND : WEEKDAY    // 0=周日 6=周六
+  effBands = CourtPricingBand(court_id=court.id)
+             where day_type IN (dayType, ALL)       // 有效集,保存时已保证内部无重叠
   occupied = set( slot_start where court_id=court.id
                   and DATE(slot_start)=date
-                  and exists booking.status=CONFIRMED )     // 即 booking_slot 全集
-  leadMin = 30; leadDays = venue.booking_lead_days
-  for t = alignUp(bh.open_time, slot_minutes);
-       t + slot_minutes <= bh.close_time;
+                  and exists booking.status=CONFIRMED )     // 稳态 booking_slot 只含 CONFIRMED(取消即物理删),exists 为防御性兜底
+  leadMin = 30; windowEnd = now + venue.booking_lead_days * 24h   // 单一参考点 now(滚动窗口)
+  for t = bh.open_time;                                  // 锚定 open_time(非午夜对齐)
+       t + slot_minutes <= bh.close_time;                // 半开 [t, t+slot_minutes);末尾不足一格丢弃
        t += slot_minutes:
     slotStart = date + t
-    if slotStart <= now + leadMin:        continue           // 过去/即将开始
-    if slotStart >  today + leadDays:     break              // 超出可订窗口
-    band = matchBand(bands, t)                              // t∈[start_time,end_time)
+    if slotStart <  now + leadMin:  continue             // 已开始/即将开始(留 30min 缓冲)
+    if slotStart >= windowEnd:       break               // 超出可订窗口(now + leadDays·24h)
+    band = matchBand(effBands, t)                        // 唯一命中(见下)
     available = (band != null) && (slotStart not in occupied)
     slots.push({ slotStart, slotEnd: slotStart+slot_minutes,
                  available, price: band?.price })
   return slots
 ```
-`matchBand`：返回 `t` 落入的 band；无命中 → `null` → 该格子 `available=false` 且无价格。
+`matchBand`：返回 `t` 落入半开区间 `[start_time, end_time)` 的**唯一** band（有效集保存时已去重，至多 1 个命中）；无命中 → `null` → 该格子 `available=false` 且无价格。防御兜底：若配置异常出现多命中，按 `WEEKDAY/WEEKEND` 优先于 `ALL` 取一个（正常不应发生）。
 
 ### 6.2 多格子下单（P2）
 用户提交 `slotStart` + `slotsCount`：
-1. 生成连续 N 个格子，校验每个格子 `available && band!=null` 且在可订窗口内。
-2. `price_snapshot` = Σ 各格子命中 band 的 price。
+1. 生成连续 N 个格子，**逐格独立**校验每个格子 `available && band!=null` 且在可订窗口内。
+2. `price_snapshot` = Σ 各格子命中 band 的 price（每格各自 matchBand，**跨早/午 band 边界的多格预约 = 各格单价之和**；若范围内任一格无 band 或被占用 → **整单拒绝**）。
 3. 同事务写 `booking`（CONFIRMED）+ N 行 `booking_slot`。
 4. 任一 `booking_slot` 撞 `UNIQUE(court_id, slot_start)` → `DataIntegrityViolation` → 翻译为 `SLOT_ALREADY_TAKEN` 友好错误（并发下另一请求刚抢到）。
 
@@ -222,7 +230,7 @@ generateSlots(court, date) -> List<SlotVO>:
    CANCELLED  COMPLETED  NO_SHOW        （三者皆为终态,不可再流转）
 ```
 - 下单即 `CONFIRMED`（无支付 gate）。
-- 用户取消截止：`slot_start − 2h`；过截止仅 admin 可强制取消。
+- 用户取消截止：`slot_start − hey-pickler.booking.cancel-deadline-hours`（默认 2，可配）；过截止仅 admin 可强制取消。
 - `COMPLETED` / `NO_SHOW` 由 admin 在 `slot_end` 后标记（P2 可选 `BookingStatusScheduler` 自动把过期 CONFIRMED 转 COMPLETED）。
 
 ### 7.2 错误码（新增 ErrorCode）
@@ -230,11 +238,11 @@ generateSlots(court, date) -> List<SlotVO>:
 |---|---|
 | `VENUE_NOT_FOUND` / `COURT_NOT_FOUND` | 资源不存在或已软删 |
 | `COURT_NOT_AVAILABLE` | court.status ≠ OPEN |
-| `SLOT_NOT_BOOKABLE` | 无定价 band / 超出营业时间 / 超出可订窗口 |
+| `SLOT_NOT_BOOKABLE` | 该格子无定价 band / 落在营业时间外 / court.status ≠ OPEN |
 | `SLOT_ALREADY_TAKEN` | UNIQUE 冲突（并发抢号失败） |
-| `BOOKING_WINDOW_EXCEEDED` | 早于 now+30min 或晚于 today+leadDays |
+| `BOOKING_WINDOW_EXCEEDED` | **写时**：slotStart 早于 `now+30min` 或晚于 `now+leadDays·24h`（浏览端不报错——超出窗口的格子直接不生成、无 band 的格子标 `available=false`） |
 | `CANCEL_DEADLINE_PASSED` | 用户过了取消截止且非 admin |
-| `USER_BOOKING_LIMIT_EXCEEDED` | 该用户并发有效预约 > 上限（默认 5） |
+| `USER_BOOKING_LIMIT_EXCEEDED` | 该用户未来时段内 `status=CONFIRMED` 的预约数（**按 booking 计，多格子预约算 1 条**）≥ 上限（默认 5） |
 | `INVALID_STATUS_TRANSITION` | 终态再流转 / 非法操作 |
 
 ## 8. 接口契约
@@ -304,7 +312,9 @@ POST   /bookings/{id}/cancel             自助取消(受截止约束)
 - **迁移**：V22 一次性建全 7 张表；MyBatis-Plus `@TableLogic` 用于 5 张配置表，booking/booking_slot 不软删。
 - **鉴权**：`@RequireRole`（ADMIN+）于 admin venue/court 控制器；app 预约写端点靠 `AppAuthFilter` 绑定 JWT userId。
 - **审计**：admin 写操作经 `OperationLogAspect` 自动落 `operation_log`（URL 经 `OperationLogClassifier` 归类为 venue/court/booking 模块）。
-- **Redis**：复用现有 Redis 基础设施做 `booking:seq:{yyyyMMdd}` 日计数器（P2）。
+- **Redis**：复用现有 Redis 基础设施做 `booking:seq:{yyyyMMdd}` 日计数器（P2）；`yyyyMMdd` 取**服务器本地日期**，与 `slot_date` 的本地日期语义一致，避免 UTC 跨日导致 `booking_no` 日期错位。
+- **审计分类**：`OperationLogClassifier.classify` 是现有**硬编码映射表**，需显式扩展 `/api/admin/{venues,courts,bookings}` → venue/court/booking 模块（非自动，要在代码里加分支）。
+- **无缓存是有意为之**：`GET /courts/{id}/slots` 每次实时算 band + 查 occupied，本机部署体量下足够；未来场馆/并发量上来再加缓存层（当前不做，避免 YAGNI）。
 - **错误**：统一走 `BizException` + `ErrorCode` + `Result<T>`。
 
 ## 12. 已知限制与未来工作
