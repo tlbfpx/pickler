@@ -99,4 +99,42 @@ class CourtServiceImplTest {
         when(courtMapper.selectById(99L)).thenReturn(null);
         assertThrows(BizException.class, () -> service.replacePricingBands(99L, new CourtPricingBandBatchRequest()));
     }
+
+    @Test
+    void listPricingBands_courtNotFound_throws() {
+        when(courtMapper.selectById(99L)).thenReturn(null);
+        assertThrows(BizException.class, () -> service.listPricingBands(99L));
+    }
+
+    @Test
+    void listPricingBands_ok_returnsMappedBands() {
+        when(courtMapper.selectById(1L)).thenReturn(new Court());
+        CourtPricingBand b1 = new CourtPricingBand();
+        b1.setId(11L);
+        b1.setCourtId(1L);
+        b1.setDayType("WEEKDAY");
+        b1.setStartTime(LocalTime.of(9, 0));
+        b1.setEndTime(LocalTime.of(12, 0));
+        b1.setPrice(new BigDecimal("40"));
+        CourtPricingBand b2 = new CourtPricingBand();
+        b2.setId(12L);
+        b2.setCourtId(1L);
+        b2.setDayType("WEEKEND");
+        b2.setStartTime(LocalTime.of(14, 0));
+        b2.setEndTime(LocalTime.of(18, 0));
+        b2.setPrice(new BigDecimal("60"));
+        // selectList 返回顺序即编排顺序；wrapper 由实现内部决定 orderByAsc(startTime)
+        when(bandMapper.selectList(any())).thenReturn(List.of(b1, b2));
+
+        List<com.heypickler.vo.CourtPricingBandVO> vos = service.listPricingBands(1L);
+
+        assertEquals(2, vos.size());
+        assertEquals(11L, vos.get(0).getId());
+        assertEquals("WEEKDAY", vos.get(0).getDayType());
+        assertEquals(LocalTime.of(9, 0), vos.get(0).getStartTime());
+        assertEquals(new BigDecimal("40"), vos.get(0).getPrice());
+        assertEquals(12L, vos.get(1).getId());
+        assertEquals("WEEKEND", vos.get(1).getDayType());
+        verify(bandMapper).selectList(any());
+    }
 }

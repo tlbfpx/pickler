@@ -5,6 +5,7 @@ import com.heypickler.common.enums.UserRole;
 import com.heypickler.common.result.Result;
 import com.heypickler.dto.admin.*;
 import com.heypickler.service.CourtService;
+import com.heypickler.vo.CourtPricingBandVO;
 import com.heypickler.vo.CourtVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -47,6 +48,11 @@ public class AdminCourtController {
     @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
     public Result<Void> replacePricingBands(@PathVariable Long id, @RequestBody @Valid CourtPricingBandBatchRequest req) {
         courtService.replacePricingBands(id, req); return Result.ok();
+    }
+    @GetMapping("/{id}/pricing-bands") @Operation(summary = "场地定价带列表")
+    @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR})
+    public Result<List<CourtPricingBandVO>> listPricingBands(@PathVariable Long id) {
+        return Result.ok(courtService.listPricingBands(id));
     }
     @PostMapping("/{id}/pricing-bands/copy") @Operation(summary = "从指定场地复制价目")
     @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})

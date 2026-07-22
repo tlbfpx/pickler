@@ -12,6 +12,7 @@ import com.heypickler.entity.CourtPricingBand;
 import com.heypickler.mapper.CourtMapper;
 import com.heypickler.mapper.CourtPricingBandMapper;
 import com.heypickler.service.CourtService;
+import com.heypickler.vo.CourtPricingBandVO;
 import com.heypickler.vo.CourtVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -70,6 +71,15 @@ public class CourtServiceImpl implements CourtService {
     }
 
     @Override
+    public List<CourtPricingBandVO> listPricingBands(Long courtId) {
+        mustExist(courtId);
+        return bandMapper.selectList(new LambdaQueryWrapper<CourtPricingBand>()
+                        .eq(CourtPricingBand::getCourtId, courtId)
+                        .orderByAsc(CourtPricingBand::getStartTime))
+                .stream().map(this::toBandVO).collect(Collectors.toList());
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void replacePricingBands(Long courtId, CourtPricingBandBatchRequest req) {
         mustExist(courtId);
@@ -123,6 +133,16 @@ public class CourtServiceImpl implements CourtService {
         b.setEndTime(r.getEndTime());
         b.setPrice(r.getPrice());
         return b;
+    }
+
+    private CourtPricingBandVO toBandVO(CourtPricingBand b) {
+        CourtPricingBandVO vo = new CourtPricingBandVO();
+        vo.setId(b.getId());
+        vo.setDayType(b.getDayType());
+        vo.setStartTime(b.getStartTime());
+        vo.setEndTime(b.getEndTime());
+        vo.setPrice(b.getPrice());
+        return vo;
     }
 
     private CourtVO toVO(Court c) {

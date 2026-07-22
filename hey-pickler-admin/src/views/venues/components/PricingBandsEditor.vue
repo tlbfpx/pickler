@@ -166,6 +166,7 @@ import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   replacePricingBands,
+  getPricingBands,
   copyPricingBands
 } from '@/api/venues'
 import type { Court, CourtPricingBand } from '@/types'
@@ -216,10 +217,26 @@ const refreshSiblingCourts = () => {
   siblingCourts.value = props.courts.filter(c => c.id !== props.court?.id)
 }
 
-const initBands = () => {
-  // 后端暂无 admin 侧 GET pricing-bands 端点（仅 PUT/POST copy）。
-  // 打开编辑器即按空表 + 一条默认行初始化，由用户录入或从其它场地复制。
-  bands.value = [newBand()]
+const loadBands = async () => {
+  if (!props.court) return
+  const res = await getPricingBands(props.court.id)
+  if (res.code !== 0) {
+    ElMessage.error(res.message || '加载定价带失败')
+    bands.value = [newBand()]
+    return
+  }
+  // 后端 LocalTime 序列化为 "HH:mm" / "HH:mm:ss"；前端 time-select 步长 30min，统一截断到 HH:mm
+  bands.value = (res.data || []).map(b => ({
+    id: b.id,
+    dayType: b.dayType,
+    startTime: (b.startTime || '').slice(0, 5),
+    endTime: (b.endTime || '').slice(0, 5),
+    price: b.price
+  }))
+  if (bands.value.length === 0) {
+    // 空表给一条默认行，避免空白让用户无起点
+    bands.value = [newBand()]
+  }
 }
 
 const handleOpen = async () => {
@@ -229,7 +246,7 @@ const handleOpen = async () => {
   refreshSiblingCourts()
   loading.value = true
   try {
-    initBands()
+    await loadBands()
   } finally {
     loading.value = false
   }

@@ -65,6 +65,9 @@ export const deleteCourt = (id: number) =>
 export const replacePricingBands = (courtId: number, bands: CourtPricingBand[]) =>
   request.put<unknown, ApiResponse<void>>(`/courts/${courtId}/pricing-bands`, { bands })
 
+export const getPricingBands = (courtId: number) =>
+  request.get<unknown, ApiResponse<CourtPricingBand[]>>(`/courts/${courtId}/pricing-bands`)
+
 export const copyPricingBands = (courtId: number, from: number) =>
   request.post<unknown, ApiResponse<void>>(`/courts/${courtId}/pricing-bands/copy`, undefined, {
     params: { from }
