@@ -1,5 +1,6 @@
 package com.heypickler.controller.app;
 
+import com.heypickler.common.annotation.PublicAnonymousAccess;
 import com.heypickler.common.result.PageResult;
 import com.heypickler.common.result.Result;
 import com.heypickler.dto.admin.VenueQueryRequest;
@@ -18,9 +19,11 @@ import org.springframework.web.bind.annotation.*;
 public class AppVenueController {
     private final VenueService venueService;
 
+    @PublicAnonymousAccess
     @GetMapping @Operation(summary = "场馆列表(匿名)")
     public Result<PageResult<VenueVO>> list(VenueQueryRequest req) { return Result.ok(venueService.appList(req)); }
 
+    @PublicAnonymousAccess
     @GetMapping("/{id}") @Operation(summary = "场馆详情(匿名)")
     public Result<VenueDetailVO> get(@PathVariable Long id) { return Result.ok(venueService.appGet(id)); }
 }

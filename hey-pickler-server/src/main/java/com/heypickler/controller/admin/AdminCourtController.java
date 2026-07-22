@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/courts")
@@ -30,8 +31,8 @@ public class AdminCourtController {
 
     @PostMapping @Operation(summary = "新建场地")
     @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
-    public Result<java.util.Map<String, Object>> create(@RequestBody @Valid CourtCreateRequest req) {
-        return Result.ok(java.util.Map.of("id", courtService.create(req)));
+    public Result<Map<String, Object>> create(@RequestBody @Valid CourtCreateRequest req) {
+        return Result.ok(Map.of("id", courtService.create(req)));
     }
     @PutMapping("/{id}") @Operation(summary = "更新场地")
     @RequireRole({UserRole.SUPER_ADMIN, UserRole.ADMIN})
