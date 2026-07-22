@@ -1,0 +1,200 @@
+/* Venue detail page styles */
+.page {
+  min-height: 100vh;
+  background-color: #f5f5f5;
+  padding-bottom: 40rpx;
+}
+
+.venue-header {
+  background-color: #fff;
+}
+
+.venue-cover {
+  width: 100%;
+  height: 360rpx;
+  background-color: #f5f5f5;
+}
+
+.venue-body {
+  padding: 24rpx;
+}
+
+.venue-name {
+  font-size: 38rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16rpx;
+}
+
+.venue-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10rpx;
+}
+
+.row-icon {
+  font-size: 26rpx;
+  margin-right: 10rpx;
+}
+
+.row-text {
+  font-size: 28rpx;
+  color: #666;
+}
+
+.venue-desc {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  color: #888;
+  line-height: 1.6;
+}
+
+.section {
+  margin-top: 20rpx;
+  padding: 24rpx;
+  background-color: #fff;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 20rpx;
+}
+
+.hours-list {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.hours-item {
+  width: 50%;
+  display: flex;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.hours-day {
+  font-size: 26rpx;
+  color: #666;
+  width: 80rpx;
+}
+
+.hours-range {
+  font-size: 26rpx;
+  color: #333;
+}
+
+.court-scroll,
+.date-scroll {
+  white-space: nowrap;
+}
+
+.court-row,
+.date-row {
+  display: flex;
+  flex-direction: row;
+}
+
+.date-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 110rpx;
+  padding: 16rpx 0;
+  margin-right: 16rpx;
+  border-radius: 12rpx;
+  border: 2rpx solid #eee;
+  background-color: #fff;
+}
+
+.date-item.active {
+  border-color: #4CAF50;
+  background-color: #4CAF50;
+}
+
+.date-label {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #333;
+}
+
+.date-weekday {
+  font-size: 22rpx;
+  color: #999;
+  margin-top: 6rpx;
+}
+
+.date-item.active .date-label,
+.date-item.active .date-weekday {
+  color: #fff;
+}
+
+.hint {
+  padding: 40rpx 0;
+  text-align: center;
+  color: #999;
+  font-size: 26rpx;
+}
+
+.slot-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.slot-cell {
+  width: 31%;
+  margin-right: 3.5%;
+  margin-bottom: 20rpx;
+  padding: 20rpx 0;
+  border-radius: 12rpx;
+  background-color: #F1F8E9;
+  border: 2rpx solid #C5E1A5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.slot-cell:nth-child(3n) {
+  margin-right: 0;
+}
+
+.slot-cell.unavailable {
+  background-color: #f2f2f2;
+  border-color: #e0e0e0;
+}
+
+.slot-time {
+  font-size: 24rpx;
+  color: #333;
+  margin-bottom: 8rpx;
+}
+
+.slot-price {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #4CAF50;
+}
+
+.slot-off {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.slot-cell.unavailable .slot-time {
+  color: #999;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 120rpx 0;
+  color: #999;
+}
+
+.empty-icon {
+  font-size: 96rpx;
+  margin-bottom: 20rpx;
+}
