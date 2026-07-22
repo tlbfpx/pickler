@@ -141,6 +141,25 @@ function getRemainingTime(deadline) {
 }
 
 /**
+ * Format a price to a ¥-prefixed 2-decimal string (venue booking)
+ * @param {number} n - Price value
+ */
+function formatPrice(n) {
+  if (n === null || n === undefined) return ''
+  return '¥' + Number(n).toFixed(2)
+}
+
+/**
+ * Format a slot datetime to HH:mm (venue booking)
+ * Backend returns ISO 'YYYY-MM-DDTHH:mm:ss' (or 'YYYY-MM-DD HH:mm:ss') → take 'HH:mm'
+ * @param {string} dt - Datetime string
+ */
+function formatSlotTime(dt) {
+  const s = String(dt || '')
+  return s.length >= 16 ? s.slice(11, 16) : s
+}
+
+/**
  * Show loading toast
  * @param {string} title - Loading message
  */
@@ -206,6 +225,8 @@ export default {
   formatEventStatus,
   getEventStatusColor,
   formatPoints,
+  formatPrice,
+  formatSlotTime,
   isRegistrationOpen,
   getRemainingTime,
   showLoading,

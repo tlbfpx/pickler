@@ -88,6 +88,16 @@ function isRegistrationOpen(event) {
   return now.getTime() < deadline.getTime()
 }
 
+function formatPrice(n) {
+  if (n === null || n === undefined) return ''
+  return '¥' + n.toFixed(2)
+}
+
+function formatSlotTime(dt) {
+  var s = dt ? dt.toString() : ''
+  return s.length >= 16 ? s.substring(11, 16) : s
+}
+
 module.exports = {
   formatDate: formatDate,
   formatEventStatus: formatEventStatus,
@@ -95,5 +105,7 @@ module.exports = {
   formatTier: formatTier,
   formatMatchType: formatMatchType,
   formatPoints: formatPoints,
+  formatPrice: formatPrice,
+  formatSlotTime: formatSlotTime,
   isRegistrationOpen: isRegistrationOpen
 }

@@ -40,5 +40,17 @@ const TIER_NAME = {
   MASTER: '王者'
 }
 
-export default { TERMS, TIER_NAME, FORMAT, TEAM_STATUS }
-export { TERMS, TIER_NAME, FORMAT, TEAM_STATUS }
+// 场地类型 → 展示文本（与后端 court.court_type INDOOR/OUTDOOR 对齐）
+const COURT_TYPE = {
+  INDOOR: { label: '室内', color: '#3B82F6' },
+  OUTDOOR: { label: '室外', color: '#10B981' }
+}
+
+// 场馆状态 → 展示文本 / 颜色（与后端 venue.status ACTIVE/INACTIVE 对齐）
+const VENUE_STATUS = {
+  ACTIVE: { label: '营业中', color: '#10B981' },
+  INACTIVE: { label: '停业', color: '#9CA3AF' }
+}
+
+export default { TERMS, TIER_NAME, FORMAT, TEAM_STATUS, COURT_TYPE, VENUE_STATUS }
+export { TERMS, TIER_NAME, FORMAT, TEAM_STATUS, COURT_TYPE, VENUE_STATUS }
