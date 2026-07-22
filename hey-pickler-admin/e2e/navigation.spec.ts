@@ -1,13 +1,16 @@
 import { test, expect } from './fixtures/admin.fixture'
 import type { Page } from '@playwright/test'
 
-// 适配 PR #20：侧边栏改用 4 个折叠的 el-sub-menu
-// 运营管理 / 积分与赛季 / 内容运营 / 系统
+// 侧边栏用 el-sub-menu 折叠组：运营管理 / 积分与排名 / 内容运营 / 数据 / 系统
 // 进入子菜单前必须先点击 .el-sub-menu__title 展开
 async function expandGroup(page: Page, groupName: string) {
   const title = page.locator('.el-sub-menu__title').filter({ hasText: groupName }).first()
   if (await title.isVisible()) {
-    await title.click()
+    // 检查是否已展开，避免盲目 click 把已展开的组折叠（el-menu toggle 语义）
+    const isOpen = await title.locator('xpath=..').evaluate((el: Element) => el.classList.contains('is-opened'))
+    if (!isOpen) {
+      await title.click()
+    }
   }
 }
 
@@ -19,10 +22,9 @@ test.describe('导航', () => {
     await expect(adminPage.locator('.el-menu-item').filter({ hasText: '竞技赛事' })).toBeVisible()
     await expect(adminPage.locator('.el-menu-item').filter({ hasText: '社交活动' })).toBeVisible()
 
-    // 积分与赛季
-    await expandGroup(adminPage, '积分与赛季')
-    await expect(adminPage.locator('.el-menu-item').filter({ hasText: '排名管理' })).toBeVisible()
-    await expect(adminPage.locator('.el-menu-item').filter({ hasText: '赛季管理' })).toBeVisible()
+    // 积分与排名（PR#53 排名工作台重设计：排名+赛季合并为单菜单「积分与排名」）
+    await expandGroup(adminPage, '积分与排名')
+    await expect(adminPage.locator('.el-menu-item').filter({ hasText: '积分与排名' })).toBeVisible()
 
     // 内容运营
     await expandGroup(adminPage, '内容运营')
@@ -46,6 +48,7 @@ test.describe('导航', () => {
   })
 
   test('导航到竞技赛事', async ({ adminPage }) => {
+    await expandGroup(adminPage, '运营管理')
     await adminPage.locator('.el-menu-item').filter({ hasText: '竞技赛事' }).click()
     await expect(adminPage).toHaveURL(/\/events$/)
     // h1 仍为旧文案（视图内未改）
@@ -58,9 +61,9 @@ test.describe('导航', () => {
     await expect(adminPage.locator('h1')).toContainText('活动管理')
   })
 
-  test('导航到排名管理', async ({ adminPage }) => {
-    await expandGroup(adminPage, '积分与赛季')
-    await adminPage.locator('.el-menu-item').filter({ hasText: '排名管理' }).click()
+  test('导航到积分与排名', async ({ adminPage }) => {
+    await expandGroup(adminPage, '积分与排名')
+    await adminPage.locator('.el-menu-item').filter({ hasText: '积分与排名' }).click()
     await expect(adminPage).toHaveURL(/\/rankings/)
   })
 

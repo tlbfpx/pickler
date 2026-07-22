@@ -20,8 +20,9 @@ test.describe('安全与权限', () => {
     // Items grouped under each <el-sub-menu> are only rendered when the
     // group is expanded. The sidebar only auto-opens the group that
     // contains the active route (here 工作台 → 运营管理), so expand every
-    // other group ("积分与赛季", "内容运营", "系统") before asserting.
-    const groupTitles = ['运营管理', '积分与赛季', '内容运营', '系统']
+    // other group ("积分与排名", "内容运营", "系统") before asserting.
+    // PR#53 排名工作台重设计：排名+赛季合并为「积分与排名」单菜单
+    const groupTitles = ['运营管理', '积分与排名', '内容运营', '系统']
     for (const group of groupTitles) {
       const title = adminPage
         .locator('.el-sub-menu__title')
@@ -40,8 +41,7 @@ test.describe('安全与权限', () => {
       '用户管理',
       '竞技赛事',
       '社交活动',
-      '排名管理',
-      '赛季管理',
+      '积分与排名',
       'Banner 管理',
       '管理员管理',
       '封禁记录',
