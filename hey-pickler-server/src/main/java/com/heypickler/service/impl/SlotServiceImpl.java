@@ -19,6 +19,7 @@ import com.heypickler.vo.SlotVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -36,6 +37,7 @@ public class SlotServiceImpl implements SlotService {
     private final CourtPricingBandMapper bandMapper;
     private final BookingSlotMapper bookingSlotMapper;
     private final SlotCalculator calculator;
+    private final Clock clock;
 
     @Override
     public List<SlotVO> getCourtSlots(Long courtId, LocalDate date) {
@@ -65,7 +67,7 @@ public class SlotServiceImpl implements SlotService {
                 .stream().map(BookingSlot::getSlotStart).collect(Collectors.toSet());
 
         return calculator.generate(open, close, court.getSlotMinutes(), effBands, occupied,
-                        date, LocalDateTime.now(), leadDays).stream().map(r -> {
+                        date, LocalDateTime.now(clock), leadDays).stream().map(r -> {
                     SlotVO vo = new SlotVO();
                     vo.setStart(r.start());
                     vo.setEnd(r.end());
