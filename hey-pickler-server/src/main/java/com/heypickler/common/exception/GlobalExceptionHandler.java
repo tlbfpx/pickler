@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -37,6 +38,21 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Result<Void> handleConstraintViolation(ConstraintViolationException e) {
         return Result.fail(ErrorCode.PARAM_ERROR.getCode(), e.getMessage());
+    }
+
+    /**
+     * Translate DB-level integrity violations (e.g. the V22 venue_business_hour
+     * UNIQUE(venue_id, day_of_week) rejecting a duplicate day in
+     * {@code VenueServiceImpl.replaceBusinessHours}) into a friendly PARAM_ERROR
+     * response rather than a generic 500.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Result<Void> handleDataIntegrityViolation(DataIntegrityViolationException e) {
+        String root = e.getRootCause() != null && e.getRootCause().getMessage() != null
+                ? e.getRootCause().getMessage()
+                : e.getMessage();
+        return Result.fail(ErrorCode.PARAM_ERROR.getCode(), "数据冲突：" + root);
     }
 
     @ExceptionHandler(Exception.class)
