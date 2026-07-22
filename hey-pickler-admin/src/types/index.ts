@@ -363,6 +363,69 @@ export interface StandingRow {
   gamesFor: number | null; gamesAgainst: number | null; displayName: string | null
 }
 
+// ==================== Venue Types ====================
+
+export interface VenueContact {
+  id: number
+  type: string
+  value: string
+  label?: string
+  sortOrder: number
+}
+
+export interface BusinessHour {
+  dayOfWeek: number
+  openTime?: string
+  closeTime?: string
+}
+
+export interface Court {
+  id: number
+  venueId: number
+  name: string
+  courtType: 'INDOOR' | 'OUTDOOR'
+  slotMinutes: number
+  status: 'OPEN' | 'CLOSED' | 'MAINTENANCE'
+  sortOrder: number
+}
+
+export interface Venue {
+  id: number
+  name: string
+  address: string
+  latitude?: string
+  longitude?: string
+  coverUrl?: string
+  description?: string
+  status: 'ACTIVE' | 'INACTIVE'
+  bookingLeadDays: number
+  contacts?: VenueContact[]
+}
+
+export interface VenueDetail extends Venue {
+  businessHours: BusinessHour[]
+  courts: Court[]
+}
+
+export interface CreateVenueRequest {
+  name: string
+  address: string
+  latitude?: string
+  longitude?: string
+  coverUrl?: string
+  description?: string
+  status?: 'ACTIVE' | 'INACTIVE'
+  bookingLeadDays?: number
+}
+
+export interface CourtPricingBand {
+  id?: number
+  dayType: 'WEEKDAY' | 'WEEKEND' | 'ALL'
+  startTime: string
+  endTime: string
+  price: number
+}
+
 // ==================== Loop-v15 types ====================
 export * from './event-summary'
 export * from './bulk-check-in'
