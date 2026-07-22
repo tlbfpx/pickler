@@ -45,6 +45,7 @@ public class CourtServiceImpl implements CourtService {
     @Transactional(rollbackFor = Exception.class)
     public Long create(CourtCreateRequest req) {
         Court c = new Court();
+        c.setVenueId(req.getVenueId()); // venueId 仅 create 设置;update 忽略(不跨场馆搬移,见 CourtCreateRequest)
         apply(req, c);
         if (c.getVenueId() == null) throw new BizException(ErrorCode.PARAM_ERROR, "venueId 不能为空");
         if (c.getSlotMinutes() == null) c.setSlotMinutes(60);
@@ -107,7 +108,7 @@ public class CourtServiceImpl implements CourtService {
     }
 
     private void apply(CourtCreateRequest req, Court c) {
-        if (req.getVenueId() != null) c.setVenueId(req.getVenueId());
+        // venueId 不在 apply 内设置:create 显式赋值,update 保持原值
         c.setName(req.getName());
         if (req.getCourtType() != null) c.setCourtType(req.getCourtType());
         if (req.getSlotMinutes() != null) c.setSlotMinutes(req.getSlotMinutes());
