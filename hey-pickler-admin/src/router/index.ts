@@ -46,6 +46,18 @@ const router = createRouter({
           meta: { title: '赛事详情', hidden: true }
         },
         {
+          path: 'venues',
+          name: 'Venues',
+          component: () => import('@/views/venues/VenueListView.vue'),
+          meta: { title: '场馆', icon: 'Location', group: '场馆管理' }
+        },
+        {
+          path: 'venues/:id',
+          name: 'VenueDetail',
+          component: () => import('@/views/venues/VenueFormView.vue'),
+          meta: { title: '场馆编辑', hidden: true }
+        },
+        {
           path: 'activities',
           name: 'Activities',
           component: () => import('@/views/activities/ActivityListView.vue'),
