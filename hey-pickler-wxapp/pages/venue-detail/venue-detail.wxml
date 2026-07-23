@@ -85,10 +85,43 @@ module.exports = { weekday: weekday, hm: hm }
       <view
         class="slot-cell {{item.available ? '' : 'unavailable'}}"
         wx:for="{{slots}}"
-        wx:key="start">
+        wx:key="start"
+        data-slot="{{item}}"
+        bindtap="onSlotTap">
         <text class="slot-time">{{util.formatSlotTime(item.start)}}-{{util.formatSlotTime(item.end)}}</text>
         <text wx:if="{{item.available}}" class="slot-price">{{util.formatPrice(item.price)}}</text>
         <text wx:else class="slot-off">不可订</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- P2 一键确认弹窗 -->
+  <view class="confirm-mask" wx:if="{{confirmVisible}}" bindtap="onConfirmCancel">
+    <view class="confirm-box" catchtap="">
+      <view class="confirm-title">确认预约</view>
+      <view class="confirm-row" wx:if="{{pendingSlot}}">
+        <text class="confirm-label">场馆</text>
+        <text class="confirm-value">{{pendingSlot.venueName}}</text>
+      </view>
+      <view class="confirm-row" wx:if="{{pendingSlot}}">
+        <text class="confirm-label">场地</text>
+        <text class="confirm-value">{{pendingSlot.courtName}}</text>
+      </view>
+      <view class="confirm-row" wx:if="{{pendingSlot}}">
+        <text class="confirm-label">日期</text>
+        <text class="confirm-value">{{pendingSlot.date}}</text>
+      </view>
+      <view class="confirm-row" wx:if="{{pendingSlot}}">
+        <text class="confirm-label">时段</text>
+        <text class="confirm-value">{{pendingSlot.start}} - {{pendingSlot.end}}</text>
+      </view>
+      <view class="confirm-row" wx:if="{{pendingSlot}}">
+        <text class="confirm-label">金额</text>
+        <text class="confirm-value price">{{pendingSlot.priceText}}</text>
+      </view>
+      <view class="confirm-actions">
+        <view class="btn btn-cancel" bindtap="onConfirmCancel">取消</view>
+        <view class="btn btn-ok" bindtap="onConfirmOk">确认预约</view>
       </view>
     </view>
   </view>

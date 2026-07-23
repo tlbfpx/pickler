@@ -1,0 +1,53 @@
+<view class="page">
+  <!-- tabs -->
+  <view class="tabs">
+    <view class="tab {{group === 'upcoming' ? 'active' : ''}}"
+          data-group="upcoming" bindtap="switchGroup">待履约</view>
+    <view class="tab {{group === 'history' ? 'active' : ''}}"
+          data-group="history" bindtap="switchGroup">历史</view>
+  </view>
+
+  <view class="loading" wx:if="{{loading && list.length === 0}}">加载中...</view>
+
+  <block wx:if="{{!loading || list.length > 0}}">
+    <view class="empty" wx:if="{{list.length === 0}}">
+      <view class="empty-icon">📅</view>
+      <view class="empty-text">{{group === 'upcoming' ? '暂无待履约预约' : '暂无历史记录'}}</view>
+      <view class="empty-btn" bindtap="onTapVenue">去预约</view>
+    </view>
+
+    <view wx:else class="booking-list">
+      <view wx:for="{{list}}" wx:key="id" class="booking-card">
+        <view class="card-head">
+          <text class="booking-no">{{item.bookingNo}}</text>
+          <view class="status" style="background-color:{{item._statusColor}}">{{item._statusLabel}}</view>
+        </view>
+        <view class="card-row">
+          <text class="row-label">场地</text>
+          <text class="row-value">{{item.venueName}} · {{item.courtName}}</text>
+        </view>
+        <view class="card-row">
+          <text class="row-label">时段</text>
+          <text class="row-value">{{item.slotDate}} {{item._startText}}-{{item._endText}}</text>
+        </view>
+        <view class="card-row">
+          <text class="row-label">金额</text>
+          <text class="row-value price">{{item._priceText}}</text>
+        </view>
+        <view wx:if="{{item.cancelReason}}" class="card-row sub">
+          <text class="row-label">取消原因</text>
+          <text class="row-value">{{item.cancelReason}}</text>
+        </view>
+        <view wx:if="{{item.status === 'CONFIRMED'}}"
+              class="card-action">
+          <button class="btn-cancel"
+                  loading="{{cancelingId === item.id}}"
+                  data-id="{{item.id}}"
+                  data-no="{{item.bookingNo}}"
+                  bindtap="onCancelBooking">取消预约</button>
+        </view>
+      </view>
+      <view class="no-more" wx:if="{{!hasMore}}">没有更多了</view>
+    </view>
+  </block>
+</view>

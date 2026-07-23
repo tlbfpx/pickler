@@ -1,0 +1,151 @@
+.page {
+  padding: 20rpx 20rpx 40rpx;
+}
+
+.tabs {
+  display: flex;
+  background-color: #fff;
+  border-radius: 12rpx;
+  padding: 8rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04);
+}
+
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 18rpx 0;
+  font-size: 28rpx;
+  color: #666;
+  border-radius: 8rpx;
+}
+
+.tab.active {
+  background-color: #4CAF50;
+  color: #fff;
+  font-weight: 500;
+}
+
+.loading {
+  text-align: center;
+  color: #999;
+  font-size: 26rpx;
+  padding: 80rpx 0;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 160rpx 0;
+}
+
+.empty-icon {
+  font-size: 96rpx;
+  margin-bottom: 24rpx;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #999;
+  margin-bottom: 32rpx;
+}
+
+.empty-btn {
+  padding: 16rpx 48rpx;
+  background-color: #4CAF50;
+  color: #fff;
+  border-radius: 32rpx;
+  font-size: 28rpx;
+}
+
+.booking-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.booking-card {
+  background-color: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.06);
+}
+
+.card-head {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.booking-no {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+  font-family: monospace;
+}
+
+.status {
+  font-size: 22rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 20rpx;
+  color: #fff;
+}
+
+.card-row {
+  display: flex;
+  flex-direction: row;
+  padding: 10rpx 0;
+  font-size: 26rpx;
+}
+
+.row-label {
+  color: #999;
+  width: 100rpx;
+}
+
+.row-value {
+  color: #333;
+  flex: 1;
+}
+
+.row-value.price {
+  color: #4CAF50;
+  font-weight: 600;
+}
+
+.card-row.sub .row-value {
+  color: #999;
+  font-size: 24rpx;
+}
+
+.card-action {
+  margin-top: 16rpx;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-cancel {
+  background-color: #fff;
+  color: #f44336;
+  border: 2rpx solid #f44336;
+  font-size: 26rpx;
+  border-radius: 8rpx;
+  padding: 0 32rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  margin: 0;
+}
+
+.btn-cancel[loading] {
+  color: #f44336;
+}
+
+.no-more {
+  text-align: center;
+  font-size: 24rpx;
+  color: #ccc;
+  padding: 40rpx 0;
+}
