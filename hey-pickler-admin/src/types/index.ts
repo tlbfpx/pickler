@@ -426,6 +426,50 @@ export interface CourtPricingBand {
   price: number
 }
 
+// ==================== Venue Booking Types (P2) ====================
+
+export type BookingStatus = 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW'
+
+export interface BookingAdmin {
+  id: number
+  bookingNo: string
+  userId: number
+  userNickname?: string
+  userPhone?: string
+  venueId: number
+  venueName?: string
+  courtId: number
+  courtName?: string
+  courtType?: string
+  /** 后端 LocalDate → 'yyyy-MM-dd' */
+  slotDate: string
+  /** 后端 LocalDateTime → 'yyyy-MM-dd HH:mm' */
+  slotStart: string
+  slotEnd: string
+  slotsCount: number
+  priceSnapshot: number
+  status: BookingStatus
+  cancelReason?: string
+  cancelledAt?: string
+  createdAt: string
+}
+
+export interface BookingQuery {
+  venueId?: number
+  courtId?: number
+  /** yyyy-MM-dd */
+  dateFrom?: string
+  dateTo?: string
+  status?: BookingStatus
+  keyword?: string
+  page?: number
+  size?: number
+}
+
+export interface BookingForceCancelRequest {
+  reason?: string
+}
+
 // ==================== Loop-v15 types ====================
 export * from './event-summary'
 export * from './bulk-check-in'
