@@ -86,4 +86,11 @@ public class RedisKey {
     public static String dashboardCompare(String metric, String currentRange, String previousRange) {
         return PREFIX + "dashboard:compare:" + metric + ":" + currentRange + ":" + previousRange;
     }
+
+    // ============ Booking 缓存键 ============
+
+    /** 某日场地预订序号 / booking_no 日计数器。date 用服务器本地日期 yyyy-MM-dd(ISOLocalDate)。 */
+    public static String bookingSeq(String date) {
+        return PREFIX + "booking:seq:" + date;
+    }
 }
