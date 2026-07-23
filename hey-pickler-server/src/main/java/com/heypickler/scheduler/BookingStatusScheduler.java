@@ -43,10 +43,11 @@ public class BookingStatusScheduler {
 
         if (rows == 0) return;
         if (rows < batchSize) {
-            log.info("BookingStatusScheduler: 自动完成 {} 条预约(末批)", rows);
+            // spec §10: 本批完成(此次扫到末尾)
+            log.info("BookingStatusScheduler: 自动完成 {} 条预约(本批完成)", rows);
         } else {
-            // rows == batchSize 表示可能还有更多;下次周期继续扫
-            log.info("BookingStatusScheduler: 自动完成 {} 条预约(满批,可能还有)", rows);
+            // spec §10: rows == batchSize 表示可能还有更多;下次周期继续扫
+            log.info("BookingStatusScheduler: 自动完成 {} 条预约(可能还有)", rows);
         }
     }
 }

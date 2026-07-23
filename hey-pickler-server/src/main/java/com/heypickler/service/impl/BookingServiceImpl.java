@@ -215,6 +215,9 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void forceCancel(Long bookingId, BookingForceCancelRequest body) {
+        // 区分存在性 vs CAS(spec §9):不存在的 id→BOOKING_NOT_FOUND,存在但 CAS=0→INVALID_STATUS_TRANSITION
+        Booking exists = bookingMapper.selectById(bookingId);
+        if (exists == null) throw new BizException(ErrorCode.BOOKING_NOT_FOUND);
         // 单一 CAS:状态推进 + cancel_reason + cancelled_at 在同一 UPDATE
         String reason = "ADMIN:" + (body == null || body.getReason() == null ? "" : body.getReason());
         LocalDateTime now = LocalDateTime.now(clock);
@@ -234,6 +237,7 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void complete(Long id) {
+        if (bookingMapper.selectById(id) == null) throw new BizException(ErrorCode.BOOKING_NOT_FOUND);
         int rows = bookingMapper.update(null,
                 new LambdaUpdateWrapper<Booking>()
                         .eq(Booking::getId, id)
@@ -245,6 +249,7 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void markNoShow(Long id) {
+        if (bookingMapper.selectById(id) == null) throw new BizException(ErrorCode.BOOKING_NOT_FOUND);
         int rows = bookingMapper.update(null,
                 new LambdaUpdateWrapper<Booking>()
                         .eq(Booking::getId, id)
@@ -257,12 +262,15 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public PageResult<BookingVO> listMine(HttpServletRequest httpReq, String group, int page, int size) {
+        if (group == null || (!group.equalsIgnoreCase("upcoming") && !group.equalsIgnoreCase("history"))) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "group must be one of: upcoming, history");
+        }
         Long userId = ((Number) httpReq.getAttribute("userId")).longValue();
         LocalDateTime now = LocalDateTime.now(clock);
         LambdaQueryWrapper<Booking> w = new LambdaQueryWrapper<Booking>().eq(Booking::getUserId, userId);
         if ("upcoming".equalsIgnoreCase(group)) {
             w.eq(Booking::getStatus, "CONFIRMED").ge(Booking::getSlotStart, now);
-        } else if ("history".equalsIgnoreCase(group)) {
+        } else { // history
             // 双层 lambda(或(状态非 CONFIRMED, 或 slot_start < now)) — 避免"非 CONFIRMED 确已出席完"的订单漏掉
             w.and(wq -> wq.ne(Booking::getStatus, "CONFIRMED").or(wq2 -> wq2.lt(Booking::getSlotStart, now)));
         }
@@ -282,7 +290,12 @@ public class BookingServiceImpl implements BookingService {
         if (q.getStatus() != null && !q.getStatus().isEmpty()) w.eq(Booking::getStatus, q.getStatus());
         if (q.getKeyword() != null && !q.getKeyword().isEmpty()) {
             String kw = q.getKeyword();
-            w.and(x -> x.like(Booking::getBookingNo, kw).or().eq(Booking::getUserId, Long.valueOf(kw).longValue()));
+            // 关键字 = bookingNo 模糊 OR 纯数字 userId 等值;非数字 kw 不会抛 NumberFormatException
+            w.and(x -> {
+                x.like(Booking::getBookingNo, kw);
+                try { long uid = Long.parseLong(kw); x.or().eq(Booking::getUserId, uid); }
+                catch (NumberFormatException ignore) { /* 纯文本关键字:只看 bookingNo */ }
+            });
         }
         w.orderByDesc(Booking::getSlotStart);
         Page<Booking> pg = bookingMapper.selectPage(new Page<>(q.getPage(), q.getSize()), w);
@@ -305,12 +318,12 @@ public class BookingServiceImpl implements BookingService {
         Set<Long> venueIds = bookings.stream().map(Booking::getVenueId).collect(Collectors.toSet());
         Set<Long> courtIds = bookings.stream().map(Booking::getCourtId).collect(Collectors.toSet());
 
-        Map<Long, String>  userNames  = userIds.isEmpty()  ? Map.of() :
-                userMapper.selectBatchIds(userIds).stream()
-                        .collect(Collectors.toMap(User::getId, u -> Optional.ofNullable(u.getNickname()).orElse("用户" + u.getId())));
-        Map<Long, String>  userPhones = userIds.isEmpty()  ? Map.of() :
-                userMapper.selectBatchIds(userIds).stream()
-                        .collect(Collectors.toMap(User::getId, u -> Optional.ofNullable(u.getPhone()).orElse("")));
+        // 一次性取 user,投影 nickname + phone(spec §8.1 要求批量加载,避免 N+1)
+        List<User> users = userIds.isEmpty() ? List.of() : userMapper.selectBatchIds(userIds);
+        Map<Long, String>  userNames  = users.stream()
+                .collect(Collectors.toMap(User::getId, u -> Optional.ofNullable(u.getNickname()).orElse("用户" + u.getId())));
+        Map<Long, String>  userPhones = users.stream()
+                .collect(Collectors.toMap(User::getId, u -> Optional.ofNullable(u.getPhone()).orElse("")));
         Map<Long, String>  venueNames = venueIds.isEmpty() ? Map.of() :
                 venueMapper.selectBatchIds(venueIds).stream()
                         .collect(Collectors.toMap(Venue::getId, Venue::getName));
