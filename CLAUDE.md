@@ -63,28 +63,48 @@ controller/
   admin/    → AdminAuthController, AdminUserController, AdminEventController,
               AdminBannerController, AdminRankingController, AdminAdminController,
               AdminBanRecordController, AdminDashboardController, AdminOperationLogController,
-              AdminGroupingController (match grouping lifecycle)
-  app/      → AppAuthController, AppEventController, AppTeamController (team decline)
+              AdminGroupingController (match grouping lifecycle),
+              AdminVenueController, AdminCourtController,           ← P1
+              AdminBookingController                                ← P2
+  app/      → AppAuthController, AppEventController, AppTeamController (team decline),
+              AppVenueController, AppCourtController,               ← P1
+              AppBookingController                                 ← P2
 filter/     → AppAuthFilter, AdminAuthFilter, RateLimitFilter, XssFilter, SecurityHeadersFilter
 service/    → Interface definitions (incl. PointService 发分、PointWallet 商城预留、SeasonService 赛季管理、
-              TeamService 队伍状态机、GroupingService 分组生命周期、GroupingStrategy 分组策略接口)
+              TeamService 队伍状态机、GroupingService 分组生命周期、GroupingStrategy 分组策略接口、
+              VenueService / CourtService / BookingService          ← 场馆预约领域 P1+P2)
   impl/     → Service implementations (incl. OperationLogService, HeadBasedImageUrlValidator,
-              TeamServiceImpl, GroupingServiceImpl, SerpentineStrategy, RandomStrategy)
+              TeamServiceImpl, GroupingServiceImpl, SerpentineStrategy, RandomStrategy,
+              VenueServiceImpl, CourtServiceImpl, SlotServiceImpl, BookingServiceImpl  ← P1+P2)
+  PricingBandValidator / SlotCalculator    ← P1 纯工具(定价/时段算法,可表驱动测试)
+scheduler/  → EventStatusScheduler,
+              BookingStatusScheduler                              ← P2 自动 complete
 mapper/     → MyBatis-Plus mappers (one per entity)
 entity/     → User, Event, Registration, AdminUser, Banner, Ranking, BanRecord, PointRecord, OperationLog, Season,
-              Team (双打/混打 2 人队), MatchGroup, GroupAssignment
+              Team (双打/混打 2 人队), MatchGroup, GroupAssignment,
+              Venue, Court, VenueBusinessHour, VenueContact, CourtPricingBand,  ← P1
+              Booking (append-only), BookingSlot                    ← P2
 dto/        → Request DTOs split by admin/ and app/; common/dto for shared (e.g. OperationLogQuery);
-              Participant (grouping userId/teamId + rankScore)
-vo/         → Response VOs (View Objects, e.g. OperationLogVO, TeamVO, GroupVO, AssignmentVO)
-config/     → SecurityConfig, CorsConfig, RedisConfig, MyBatisPlusConfig, SwaggerConfig, AsyncConfig, AppConfig
+              Participant (grouping userId/teamId + rankScore);
+              Venue / Court / BookingCreate/Query/ForceCancel (P1+P2)
+vo/         → Response VOs (View Objects, e.g. OperationLogVO, TeamVO, GroupVO, AssignmentVO,
+              VenueVO, VenueDetailVO, CourtVO, SlotVO,                ← P1
+              BookingVO, BookingAdminVO, BookingCreateResultVO     ← P2)
+config/     → SecurityConfig, CorsConfig, RedisConfig, MyBatisPlusConfig, SwaggerConfig, AsyncConfig, AppConfig,
+              BookingProperties (@ConfigurationProperties + @Component)  ← P2
 common/
-  annotation/ → @RequireRole
-  aspect/     → RoleCheckAspect (role enforcement), OperationLogAspect (audit capture)
-  exception/  → BizException, ErrorCode
+  annotation/ → @RequireRole, @RequireAppUser, @PublicAnonymousAccess
+  aspect/     → RoleCheckAspect (role enforcement), OperationLogAspect (audit capture),
+                AppAuthContractValidator (D9 startup handler-annotation audit)
+  exception/  → BizException, ErrorCode, GlobalExceptionHandler (含 P2 SLOT_ALREADY_TAKEN root-cause 鉴别)
   result/     → Result wrapper, PageResult
   util/       → JwtUtil, AesUtil, StatusTransitionValidator, WxBizDataCrypt,
-                OperationLogClassifier (URL → module/action), SensitiveDataUtil (JSON field masking)
-  enums/      → UserRole, etc.
+                OperationLogClassifier (URL → module/action, 含 venues/courts/bookings),
+                SensitiveDataUtil (JSON field masking),
+                PricingBandValidator (P1 定价带有效集校验),
+                SlotCalculator (P1 时段/可用性纯算法,含跨午夜守卫)
+  enums/      → UserRole, etc.,
+                PricingDayType                                    ← P1 枚举
 scheduler/  → EventStatusScheduler (auto-transitions event statuses)
 listener/   → PointChangeListener (Spring event listener; PointChangeEvent 携 seasonCode)
 ```
@@ -97,7 +117,9 @@ listener/   → PointChangeListener (Spring event listener; PointChangeEvent 携
 - **Rate limiting**: `RateLimitFilter` uses Redis + Lua scripts, per-IP and per-user limits configured in `application.yml` under `hey-pickler.rate-limit`.
 - **Soft delete**: MyBatis-Plus logical delete via `deletedAt` field (NULL = not deleted, timestamp = deleted). **Exception**: `operation_log` is append-only (no `deleted_at`) — audit data must never be erased.
 - **CORS split**: `CorsConfig` applies different origins for `/api/admin` vs `/api/app` paths.
-- **Database migration**: Flyway scripts in `src/main/resources/db/migration/`. Always add new migrations as incremental versions (V9__, V10__, etc.). Current head: V15.
+- **Database migration**: Flyway scripts in `src/main/resources/db/migration/`. Always add new migrations as incremental versions (V9__, V10__, etc.). Current head: **V22** (V22 一次性建 7 张表 — venue / court / venue_business_hour / venue_contact / court_pricing_band / **booking / booking_slot**)。
+- **Two-stage CAS on terminal transitions (场地预约 P2)**:`BookingService` 的 4 个写终态方法 (`cancelMine` / `forceCancel` / `complete` / `markNoShow`) **必须**用 `bookingMapper.update(null, new LambdaUpdateWrapper<Booking>().eq(id).eq(status, "CONFIRMED").set(...))`,并先 `bookingMapper.selectById(id)` 区分 `BOOKING_NOT_FOUND`(id 不存在)与 `INVALID_STATUS_TRANSITION`(CAS 失竞争)。`forceCancel` 单一 CAS 同时 set status / cancelReason / cancelledAt。
+- **BookingSlot 释放唯一键**:取消 = CAS first → 仅当 rows=1 → 物理删除 `booking_slot` 行(释放 `UNIQUE(court_id, slot_start)`),避免误删 COMPLETED 历史(与 Team/V12 `uk_event_member` 套路一致)。
 
 ### Match Grouping Lifecycle (Specs 1–3)
 
@@ -110,7 +132,33 @@ Events carry a fixed `format` (SINGLES / DOUBLES / MIXED) plus a `groupingLocked
 
 ### App Auth Filter Caveat
 
-`AppAuthFilter.shouldNotFilter` short-circuits all `GET` requests under `/api/app/{events,banners,rankings}` so event browsing works anonymously. User-scoped GETs under those prefixes (currently only `GET /api/app/events/{id}/my-team`) need to be explicitly **excluded from the bypass** so the JWT userId is bound — the filter handles this with an `endsWith("/my-team")` check. Don't add new user-scoped GETs under those prefixes without updating the filter.
+`AppAuthFilter.shouldNotFilter` short-circuits all `GET` requests under `/api/app/{events,banners,rankings,dict,brand}` so event browsing works anonymously. **P1 已扩展**:`/api/app/venues` 与 `/api/app/courts`(包括 `/courts/{id}/slots`)加入匿名 bypass(README:这些前缀下没有用户态 GET,所以无需 `endsWith` 守卫)。User-scoped GETs under those prefixes (currently only `GET /api/app/events/{id}/my-team`) need to be explicitly **excluded from the bypass** so the JWT userId is bound — the filter handles this with an `endsWith("/my-team")` check. Don't add new user-scoped GETs under these prefixes without updating the filter.
+
+### Venue Booking Lifecycle (Specs P1 + P2)
+
+V22 一次性建 7 张表 — venue / court / venue_business_hour / venue_contact / court_pricing_band / **booking / booking_slot**。
+
+**P1 = 配置 + 浏览(only)**:
+- **Terminology**:Venue (场馆) → Court (场地, 每块有 `slot_minutes` + `day_type=ALL/WEEKDAY/WEEKEND` 价目) → 时段格子(由 SlotCalculator 实时算)。
+- **SlotCalculator (`common/util/`)** 纯类:锚定 `open_time`、半开 `[t, t+slot_minutes)`、跨午夜守卫、单一 `now` 窗口、`matchBand` 半开 + specific-over-ALL 守卫。`@Component` 注入(让 SlotService 测试 Clock 可控)。
+- **PricingBandValidator** 纯类:按"工作日有效集=WEEKDAY∪ALL / 周末=WEEKEND∪ALL"合并半开重叠校验,缺口段格子不可订无价。
+- **`court.name_key` STORED 生成列** + 列唯一键 `uk_venue_court_name(venue_id, name_key)` —— 软删后重名复用(V17 函数唯一索引是另一种机制,勿混淆)。
+- **wxapp 一键浏览**:`venue-detail` 选场地 + 选日期 → GET slots(`available` + `price` 由 SlotCalculator + BookingSlot 占用集算得)。
+- P1 没预约:仅读 `booking_slot`,不写。
+
+**P2 = 预约引擎(本次 PR 主题)**:
+- `Booking` append-only,**无 `@TableLogic`**;`BookingSlot` 单格一条,**取消时物理删除释放唯一键**。
+- **CAS 一票否决**:`Booking` 任何写终态转换(`cancel` / `complete` / `noShow` / `adminForceCancel` / `scheduler.autoComplete`)**全部** `UPDATE … WHERE id=? AND status='CONFIRMED'`,`affectedRows==0` 则抛 `INVALID_STATUS_TRANSITION`(SPEC §7.2)。`forceCancel` / `complete` / `noShow` 额外先 `selectById` 区分 `BOOKING_NOT_FOUND`(id 不存在)与 `INVALID_STATUS_TRANSITION`(CAS 输)。
+- **取消次序 = CAS first → 失败不删 slot row → 否则按 booking_id 删 slot**(避免误删 COMPLETED 历史的占用行)。
+- **booking_no** = `BK{yyyyMMdd}-{4位序号}`,Redis key `booking:seq:{LocalDate}` 本地日,与 `booking_no` 编号一致。
+- **GlobalExceptionHandler `handleDataIntegrityViolation` 内嵌 root-cause 鉴别**:`uk_court_slot` 或 message 含 `slot_start` → `SLOT_ALREADY_TAKEN`(1012);否则保留 P1 的 PARAM_ERROR 兜底(V22 `venue_business_hour` dup-dayOfWeek 仍走原路径,不建独立 SQLIntegrityConstraintViolation handler)。
+- **`BookingStatusScheduler`** (`@Component`,`@Scheduled fixedDelayString=${hey-pickler.booking.complete-cadence}`):阈值 `LocalDateTime.now(clock).minusHours(grace)` 作 bind param 入 `LambdaUpdateWrapper<Booking>.lt(slotEnd, threshold).last("LIMIT N")`;Clock 可注入(与 P1 测试约定一致);本批完成/可能还有 三态日志。
+- **配置**:`hey-pickler.booking.{cancel-deadline-hours:2, max-concurrent:5, complete-grace-hours:2, complete-cadence:PT5M, complete-batch-size:200, initial-delay-seconds:30}`。
+- **跨域 TOCTOU 防护**:scheduler/admin/user 三个路径都用 CAS,任一写者赢了就不再动其行。
+- **BookingService enums**:无 Java enum(与 StatusTransitionValidator 等弱耦合),全部 `String`。
+- **AppAuthFilter bypass 不含 bookings**(全部 JWT 强制);wxapp 端加 `@RequireAppUser` 满足 D9 约定。
+- **admin BookingListView**:读 + 三项手动(完成/爽约/强制取消带可选 reason);操作经 OperationLogAspect 自动入 `operation_log` 模块 BOOKING。
+- **不做 P3**:在线支付 / 赛事打通 / 节假日营业时间 / 地图 / admin 代下单。
 - **Async executors** (`AsyncConfig`): `rankingExecutor` (queue=100) for ranking refresh; `auditLogExecutor` (queue=500, `DiscardOldestPolicy`) for audit log writes — must never block an admin request.
 - **Audit log capture**: `OperationLogAspect` is an `@Around` aspect on `com.heypickler.controller.admin..*` that records every non-GET admin request to `operation_log`. Captures operator (from request attributes), IP (X-Forwarded-For first hop), params (Jackson-serialized + `SensitiveDataUtil.maskJson` + truncated to 2000 chars), status (1=success / 0=fail with errorCode/errorMsg), latency. Writes are fire-and-forget via `@Async("auditLogExecutor")` — any persistence failure is swallowed and logged.
 - **URL classification**: `OperationLogClassifier.classify(method, path)` maps `/api/admin/{resource}[/{id}][/{sub-action}]` to `(module, action, targetType, targetId)`. Unknown resources fall back to `module=RAW, action=RAW`; the full path is still preserved in the `path` column for forensics.
@@ -121,15 +169,18 @@ Events carry a fixed `format` (SINGLES / DOUBLES / MIXED) plus a `groupingLocked
 ```
 src/
   api/         → One module per resource (auth, users, events, banners, rankings, admins,
-                 ban-records, admin-logs, dashboard, files), all use axios instance from request.ts
+                 ban-records, admin-logs, dashboard, files,
+                 venues, bookings                                      ← P1+P2 场馆预约领域),
+                 all use axios instance from request.ts
   stores/      → Pinia stores (auth, app)
   router/      → Vue Router with auth guard (redirects to /login if no valid token)
   views/       → One folder per resource page (login/, dashboard/, events/, users/, activities/,
-                 rankings/, banners/, admins/, ban-records/, admin-logs/)
+                 rankings/, banners/, admins/, ban-records/, admin-logs/,
+                 venues/, bookings/                                  ← P1+P2)
   components/
-    layout/    → AppLayout, AppHeader, AppSidebar
+    layout/    → AppLayout, AppHeader, AppSidebar (`GROUP_ORDER` arrays dictates sidebar groups — 加新模块时必须同步)
     common/    → Pagination, ImageUpload
-  types/       → TypeScript interfaces
+  types/       → TypeScript interfaces (Venue / Court / Booking 等集中于文件末尾)
 ```
 
 Admin auth token stored in `localStorage` as `admin_token`. The auth store (`stores/auth.ts`) checks token expiry with 30s clock skew tolerance.
@@ -138,7 +189,7 @@ Admin auth token stored in `localStorage` as `admin_token`. The auth store (`sto
 
 ### WeChat Mini Program Structure
 
-Pages: `index` (home), `login`, `profile`, `my-events`. Components: `event-card`, `ranking-item`, `tier-badge`. HTTP wrapper in `utils/request.js` handles token injection, 401/403 redirect, and token refresh.
+Pages: `index` (home), `login`, `profile`, `my-events`, `venue-list`, `venue-detail`, `my-bookings`  ← 后三个为场馆预约(P1+P2)。Components: `event-card`, `ranking-item`, `tier-badge`, `court-card`(场地卡片)。HTTP wrapper in `utils/request.js` handles token injection, 401/403 redirect, and token refresh.
 
 ## Workflow (from AGENTS.md)
 
