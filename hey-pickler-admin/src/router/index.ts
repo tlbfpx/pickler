@@ -58,6 +58,12 @@ const router = createRouter({
           meta: { title: '场馆编辑', hidden: true }
         },
         {
+          path: 'bookings',
+          name: 'Bookings',
+          component: () => import('@/views/bookings/BookingListView.vue'),
+          meta: { title: '预约管理', icon: 'Calendar', group: '场馆管理' }
+        },
+        {
           path: 'activities',
           name: 'Activities',
           component: () => import('@/views/activities/ActivityListView.vue'),
