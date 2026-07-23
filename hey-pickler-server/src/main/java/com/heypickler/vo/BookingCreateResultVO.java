@@ -10,7 +10,9 @@ import java.time.LocalDateTime;
 public class BookingCreateResultVO {
     private Long id;
     private String bookingNo;
+    private Long courtId;
     private String courtName;
+    private Long venueId;
     private String venueName;
     private LocalDate slotDate;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm") private LocalDateTime slotStart;
