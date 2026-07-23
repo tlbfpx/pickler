@@ -32,6 +32,13 @@ hey-pickler:
       2: 60
       3: 30
       4: 15
+  booking:
+    cancel-deadline-hours: 2
+    max-concurrent: 5
+    complete-grace-hours: 2
+    complete-cadence: PT5M
+    complete-batch-size: 200
+    initial-delay-seconds: 30
 
 # Loop-v17 — actuator endpoints. /health is exposed for Docker HEALTHCHECK
 # and Kubernetes liveness probes. All other endpoints are disabled to keep
