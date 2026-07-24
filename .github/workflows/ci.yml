@@ -139,6 +139,7 @@ jobs:
       # Tests are pure-logic-layer (utils / api / stores / composables / constants / router).
       # 35 modules / 617 tests / 100% coverage enforced via vitest threshold (perFile 100%).
       # Initial run took ~25s; well within the 10min frontend timeout.
+      # Note:直接调 vitest run 而不是 npm test --(npm pass-through 在 coverage 标志上有兼容问题)。
       - name: Unit tests + coverage gate
         working-directory: hey-pickler-admin
-        run: npm test -- --coverage --reporter=dot
+        run: npx vitest run --coverage --reporter=dot
