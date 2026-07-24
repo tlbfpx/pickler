@@ -23,6 +23,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -75,12 +76,19 @@ class DashboardServiceImplTest {
         @Override public String toString() { return String.format("%04d-%02d-%02d", y, m, d); }
     }
 
+    /** 将 java.time.LocalDate 适配为 LocalDateSim，让 mock 数据落在当前 7d 窗口内（避免日期漂移导致 flake）。 */
+    private static LocalDateSim toSim(LocalDate d) {
+        return new LocalDateSim(d.getYear(), d.getMonthValue(), d.getDayOfMonth());
+    }
+
     // ---------- R2 trends ----------
     @Test
     void getTrends_7dReturns7Buckets_evenWhenDataSparse() {
         // GROUP BY 只返回有数据的日期，service 端按天 0 填值
-        when(userMapper.dailyNewUsers(any(), any())).thenReturn(List.of(row(new LocalDateSim(2026, 7, 17), 5L)));
-        when(registrationMapper.dailyRegistrations(any(), any())).thenReturn(List.of(row(new LocalDateSim(2026, 7, 18), 3L)));
+        // 用 today-2 / today-1 相对日期，避免日历漂移导致 mock 数据落到 7d 窗口外变 flake
+        LocalDate today = LocalDate.now();
+        when(userMapper.dailyNewUsers(any(), any())).thenReturn(List.of(row(toSim(today.minusDays(2)), 5L)));
+        when(registrationMapper.dailyRegistrations(any(), any())).thenReturn(List.of(row(toSim(today.minusDays(1)), 3L)));
         when(eventMapper.dailyNewEvents(any(), any())).thenReturn(List.of());
         when(registrationMapper.revenueInRange(any(), any())).thenReturn(new BigDecimal("0"));
 

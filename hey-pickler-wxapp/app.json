@@ -6,7 +6,10 @@
     "pages/event-results/event-results",
     "pages/profile/profile",
     "pages/ranking/ranking",
-    "pages/my-events/my-events"
+    "pages/my-events/my-events",
+    "pages/venue-list/venue-list",
+    "pages/venue-detail/venue-detail",
+    "pages/my-bookings/my-bookings"
   ],
   "window": {
     "navigationBarTitleText": "Hey Pickler",

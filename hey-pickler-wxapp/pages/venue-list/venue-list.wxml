@@ -1,0 +1,59 @@
+<!-- Venue list page (venue booking browse) -->
+<view class="page">
+  <!-- Search bar -->
+  <view class="search-bar">
+    <view class="search-box">
+      <text class="search-icon">🔍</text>
+      <input
+        class="search-input"
+        value="{{keyword}}"
+        placeholder="搜索场馆名称"
+        confirm-type="search"
+        bindinput="onKeywordInput"
+        bindconfirm="onSearch" />
+    </view>
+    <view class="search-btn" bindtap="onSearch">搜索</view>
+  </view>
+
+  <!-- Venue list -->
+  <view class="venue-list">
+    <view
+      class="venue-card"
+      wx:for="{{venues}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="goDetail">
+      <image
+        class="venue-cover"
+        src="{{item.coverUrl || '/images/default-event.png'}}"
+        mode="aspectFill"></image>
+      <view class="venue-info">
+        <view class="venue-name">{{item.name}}</view>
+        <view class="venue-meta" wx:if="{{item.address}}">
+          <text class="meta-icon">📍</text>
+          <text class="meta-text">{{item.address}}</text>
+        </view>
+        <view class="venue-contacts" wx:if="{{item.contacts.length > 0}}">
+          <text class="meta-icon">📞</text>
+          <text class="meta-text">{{item.contacts[0].value}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- Loading -->
+    <view wx:if="{{loading}}" class="loading">
+      <text>加载中...</text>
+    </view>
+
+    <!-- No more -->
+    <view wx:if="{{!hasMore && venues.length > 0}}" class="no-more">
+      <text>没有更多了</text>
+    </view>
+
+    <!-- Empty state -->
+    <view wx:if="{{venues.length === 0 && !loading}}" class="empty">
+      <text class="empty-icon">🏟</text>
+      <text>暂无场馆</text>
+    </view>
+  </view>
+</view>

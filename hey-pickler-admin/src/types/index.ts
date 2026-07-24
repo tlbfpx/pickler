@@ -363,6 +363,113 @@ export interface StandingRow {
   gamesFor: number | null; gamesAgainst: number | null; displayName: string | null
 }
 
+// ==================== Venue Types ====================
+
+export interface VenueContact {
+  id: number
+  type: string
+  value: string
+  label?: string
+  sortOrder: number
+}
+
+export interface BusinessHour {
+  dayOfWeek: number
+  openTime?: string
+  closeTime?: string
+}
+
+export interface Court {
+  id: number
+  venueId: number
+  name: string
+  courtType: 'INDOOR' | 'OUTDOOR'
+  slotMinutes: number
+  status: 'OPEN' | 'CLOSED' | 'MAINTENANCE'
+  sortOrder: number
+}
+
+export interface Venue {
+  id: number
+  name: string
+  address: string
+  latitude?: string
+  longitude?: string
+  coverUrl?: string
+  description?: string
+  status: 'ACTIVE' | 'INACTIVE'
+  bookingLeadDays: number
+  contacts?: VenueContact[]
+}
+
+export interface VenueDetail extends Venue {
+  businessHours: BusinessHour[]
+  courts: Court[]
+}
+
+export interface CreateVenueRequest {
+  name: string
+  address: string
+  latitude?: string
+  longitude?: string
+  coverUrl?: string
+  description?: string
+  status?: 'ACTIVE' | 'INACTIVE'
+  bookingLeadDays?: number
+}
+
+export interface CourtPricingBand {
+  id?: number
+  dayType: 'WEEKDAY' | 'WEEKEND' | 'ALL'
+  startTime: string
+  endTime: string
+  price: number
+}
+
+// ==================== Venue Booking Types (P2) ====================
+
+export type BookingStatus = 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW'
+
+export interface BookingAdmin {
+  id: number
+  bookingNo: string
+  userId: number
+  userNickname?: string
+  userPhone?: string
+  venueId: number
+  venueName?: string
+  courtId: number
+  courtName?: string
+  courtType?: string
+  /** 后端 LocalDate → 'yyyy-MM-dd' */
+  slotDate: string
+  /** 后端 LocalDateTime → 'yyyy-MM-dd HH:mm' */
+  slotStart: string
+  slotEnd: string
+  slotsCount: number
+  priceSnapshot: number
+  status: BookingStatus
+  cancelReason?: string
+  cancelledAt?: string
+  createdAt: string
+}
+
+export interface BookingQuery {
+  venueId?: number
+  courtId?: number
+  /** yyyy-MM-dd */
+  dateFrom?: string
+  dateTo?: string
+  status?: BookingStatus
+  keyword?: string
+  page?: number
+  size?: number
+}
+
+export interface BookingForceCancelRequest {
+  reason?: string
+}
+
 // ==================== Loop-v15 types ====================
 export * from './event-summary'
 export * from './bulk-check-in'

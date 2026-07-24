@@ -1,0 +1,73 @@
+/* Court card styles (venue booking browse) */
+.court-card {
+  min-width: 220rpx;
+  background-color: #fff;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  margin-right: 16rpx;
+  border: 2rpx solid #eee;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+  transition: all 0.2s;
+}
+
+.court-card.selected {
+  border-color: #4CAF50;
+  background-color: #F1F8E9;
+}
+
+.court-card.disabled {
+  opacity: 0.55;
+}
+
+.court-card:active {
+  transform: translateY(2rpx);
+}
+
+.court-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+
+.court-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 160rpx;
+}
+
+.court-type {
+  padding: 4rpx 12rpx;
+  border-radius: 12rpx;
+  font-size: 22rpx;
+  color: #fff;
+  font-weight: 500;
+}
+
+.court-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.court-slot {
+  font-size: 24rpx;
+  color: #666;
+}
+
+.court-status {
+  font-size: 24rpx;
+  font-weight: 500;
+}
+
+.court-status.ok {
+  color: #4CAF50;
+}
+
+.court-status.off {
+  color: #999;
+}

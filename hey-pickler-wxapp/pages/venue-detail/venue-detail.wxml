@@ -1,0 +1,134 @@
+<!-- Venue detail page (venue booking browse — read only, P1) -->
+<wxs src="../../utils/util.wxs" module="util" />
+<wxs module="fmt">
+var WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+function weekday(dow) { return WEEKDAYS[dow] || '' }
+function hm(t) {
+  var s = t ? t.toString() : ''
+  return s.length >= 5 ? s.substring(0, 5) : s
+}
+module.exports = { weekday: weekday, hm: hm }
+</wxs>
+
+<view class="page">
+  <!-- Venue header -->
+  <view class="venue-header" wx:if="{{venue}}">
+    <image class="venue-cover" src="{{venue.coverUrl || '/images/default-event.png'}}" mode="aspectFill"></image>
+    <view class="venue-body">
+      <view class="venue-name">{{venue.name}}</view>
+      <view class="venue-row" wx:if="{{venue.address}}">
+        <text class="row-icon">📍</text>
+        <text class="row-text">{{venue.address}}</text>
+      </view>
+      <view class="venue-row" wx:for="{{venue.contacts}}" wx:key="id" wx:for-item="c">
+        <text class="row-icon">📞</text>
+        <text class="row-text">{{c.label ? c.label + '：' : ''}}{{c.value}}</text>
+      </view>
+      <view class="venue-desc" wx:if="{{venue.description}}">{{venue.description}}</view>
+    </view>
+  </view>
+
+  <!-- Business hours -->
+  <view class="section" wx:if="{{businessHours.length > 0}}">
+    <view class="section-title">营业时间</view>
+    <view class="hours-list">
+      <view class="hours-item" wx:for="{{businessHours}}" wx:key="dayOfWeek" wx:for-item="h">
+        <text class="hours-day">{{fmt.weekday(h.dayOfWeek)}}</text>
+        <text class="hours-range">{{fmt.hm(h.openTime)}} - {{fmt.hm(h.closeTime)}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Court selector -->
+  <view class="section" wx:if="{{courts.length > 0}}">
+    <view class="section-title">选择场地</view>
+    <scroll-view class="court-scroll" scroll-x>
+      <view class="court-row">
+        <court-card
+          wx:for="{{courts}}"
+          wx:key="id"
+          court="{{item}}"
+          selected="{{item.id === selectedCourtId}}"
+          bind:select="onSelectCourt">
+        </court-card>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- Date strip -->
+  <view class="section" wx:if="{{courts.length > 0}}">
+    <view class="section-title">选择日期</view>
+    <scroll-view class="date-scroll" scroll-x>
+      <view class="date-row">
+        <view
+          class="date-item {{item.value === selectedDate ? 'active' : ''}}"
+          wx:for="{{dates}}"
+          wx:key="value"
+          data-date="{{item.value}}"
+          bindtap="onSelectDate">
+          <text class="date-label">{{item.label}}</text>
+          <text class="date-weekday">{{item.weekday}}</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- Slot grid -->
+  <view class="section" wx:if="{{selectedCourtId}}">
+    <view class="section-title">可预订时段</view>
+
+    <view wx:if="{{loadingSlots}}" class="hint">加载中...</view>
+
+    <view wx:elif="{{slots.length === 0}}" class="hint">当日暂无可预订时段</view>
+
+    <view wx:else class="slot-grid">
+      <view
+        class="slot-cell {{item.available ? '' : 'unavailable'}}"
+        wx:for="{{slots}}"
+        wx:key="start"
+        data-slot="{{item}}"
+        bindtap="onSlotTap">
+        <text class="slot-time">{{util.formatSlotTime(item.start)}}-{{util.formatSlotTime(item.end)}}</text>
+        <text wx:if="{{item.available}}" class="slot-price">{{util.formatPrice(item.price)}}</text>
+        <text wx:else class="slot-off">不可订</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- P2 一键确认弹窗 -->
+  <view class="confirm-mask" wx:if="{{confirmVisible}}" bindtap="onConfirmCancel">
+    <view class="confirm-box" catchtap="">
+      <view class="confirm-title">确认预约</view>
+      <view class="confirm-row" wx:if="{{pendingSlot}}">
+        <text class="confirm-label">场馆</text>
+        <text class="confirm-value">{{pendingSlot.venueName}}</text>
+      </view>
+      <view class="confirm-row" wx:if="{{pendingSlot}}">
+        <text class="confirm-label">场地</text>
+        <text class="confirm-value">{{pendingSlot.courtName}}</text>
+      </view>
+      <view class="confirm-row" wx:if="{{pendingSlot}}">
+        <text class="confirm-label">日期</text>
+        <text class="confirm-value">{{pendingSlot.date}}</text>
+      </view>
+      <view class="confirm-row" wx:if="{{pendingSlot}}">
+        <text class="confirm-label">时段</text>
+        <text class="confirm-value">{{pendingSlot.start}} - {{pendingSlot.end}}</text>
+      </view>
+      <view class="confirm-row" wx:if="{{pendingSlot}}">
+        <text class="confirm-label">金额</text>
+        <text class="confirm-value price">{{pendingSlot.priceText}}</text>
+      </view>
+      <view class="confirm-actions">
+        <view class="btn btn-cancel" bindtap="onConfirmCancel">取消</view>
+        <view class="btn btn-ok" bindtap="onConfirmOk">确认预约</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- No courts empty state -->
+  <view wx:if="{{venue && courts.length === 0}}" class="empty">
+    <text class="empty-icon">🏸</text>
+    <text>该场馆暂无可预订场地</text>
+  </view>
+</view>

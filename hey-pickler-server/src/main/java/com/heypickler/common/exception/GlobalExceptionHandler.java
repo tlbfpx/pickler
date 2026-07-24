@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -37,6 +38,37 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Result<Void> handleConstraintViolation(ConstraintViolationException e) {
         return Result.fail(ErrorCode.PARAM_ERROR.getCode(), e.getMessage());
+    }
+
+    /**
+     * Translate DB-level integrity violations into a friendly error response.
+     *
+     * <p>P2 added: booking_slot UNIQUE(court_id, slot_start) concurrent-take →
+     * SLOT_ALREADY_TAKEN. We must NOT create a separate
+     * {@code @ExceptionHandler(SQLIntegrityConstraintViolationException.class)} —
+     * Spring routes {@link DataIntegrityViolationException} through the higher-priority
+     * handler, so the dedicated one would be unreachable.
+     *
+     * <p>P1 preserved: dup dayOfWeek (venue_business_hour UNIQUE) and any other
+     * integrity conflict → PARAM_ERROR (P1 behavior must not regress).
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Result<Void> handleDataIntegrityViolation(DataIntegrityViolationException e) {
+        Throwable root = e.getRootCause();
+        String rootMsg = root != null && root.getMessage() != null ? root.getMessage() : e.getMessage();
+
+        // P2: booking_slot UNIQUE(court_id, slot_start) concurrent take → SLOT_ALREADY_TAKEN
+        boolean isBookingSlotConflict =
+                root != null && "SQLIntegrityConstraintViolationException".equals(root.getClass().getSimpleName())
+                        && (rootMsg != null
+                            && (rootMsg.contains("uk_court_slot") || rootMsg.contains("slot_start")));
+        if (isBookingSlotConflict) {
+            return Result.fail(ErrorCode.SLOT_ALREADY_TAKEN.getCode(), "该时段刚被占用");
+        }
+
+        // P1 default: dup-dayOfWeek and any other UNIQUE conflict → PARAM_ERROR
+        return Result.fail(ErrorCode.PARAM_ERROR.getCode(), "数据冲突：" + rootMsg);
     }
 
     @ExceptionHandler(Exception.class)

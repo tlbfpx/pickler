@@ -27,6 +27,13 @@
     </view>
   </view>
 
+  <!-- Venue booking entry -->
+  <view class="venue-entry" bindtap="goVenues">
+    <text class="venue-entry-icon">🏟</text>
+    <text class="venue-entry-text">场馆预订</text>
+    <text class="venue-entry-arrow">›</text>
+  </view>
+
   <!-- Event list -->
   <view class="event-list">
     <event-card

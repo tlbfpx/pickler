@@ -22,6 +22,9 @@ public final class OperationLogClassifier {
         MODULE_MAP.put("dashboard", "DASHBOARD");
         MODULE_MAP.put("auth", "AUTH");
         MODULE_MAP.put("operation-logs", "OPERATION_LOG");
+        MODULE_MAP.put("venues", "VENUE");
+        MODULE_MAP.put("courts", "COURT");
+        MODULE_MAP.put("bookings", "BOOKING");
 
         SINGULAR_MAP.put("users", "User");
         SINGULAR_MAP.put("events", "Event");
@@ -30,6 +33,9 @@ public final class OperationLogClassifier {
         SINGULAR_MAP.put("rankings", "Ranking");
         SINGULAR_MAP.put("ban-records", "BanRecord");
         SINGULAR_MAP.put("operation-logs", "OperationLog");
+        SINGULAR_MAP.put("venues", "Venue");
+        SINGULAR_MAP.put("courts", "Court");
+        SINGULAR_MAP.put("bookings", "Booking");
     }
 
     private OperationLogClassifier() {}

@@ -1,0 +1,7 @@
+{
+  "usingComponents": {
+    "court-card": "/components/court-card/court-card"
+  },
+  "navigationBarTitleText": "场馆详情",
+  "backgroundTextStyle": "dark"
+}

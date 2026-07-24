@@ -1,0 +1,11 @@
+<!-- Court card component (venue booking browse) -->
+<view class="court-card {{selected ? 'selected' : ''}} {{isActive ? '' : 'disabled'}}" bindtap="handleTap">
+  <view class="court-head">
+    <text class="court-name">{{court.name}}</text>
+    <view wx:if="{{typeText}}" class="court-type" style="background-color: {{typeColor}}">{{typeText}}</view>
+  </view>
+  <view class="court-meta">
+    <text wx:if="{{slotText}}" class="court-slot">⏱ {{slotText}}</text>
+    <text class="court-status {{isActive ? 'ok' : 'off'}}">{{statusText}}</text>
+  </view>
+</view>
