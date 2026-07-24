@@ -2,6 +2,7 @@ node_modules/
 dist/
 test-results/
 playwright-report/
+coverage/             # vitest --coverage 产物(每次跑都会重生成)
 *.local
 .DS_Store
 # Added by code-review-graph

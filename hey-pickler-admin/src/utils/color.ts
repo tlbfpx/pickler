@@ -1,6 +1,7 @@
 // hex 解析 / 混色 + Element Plus 运行时主题（覆盖 --el-color-primary 及其明暗档变量）。
 
-function parseHex(hex: string): { r: number; g: number; b: number } | null {
+/** 内部工具,导出仅供测试 (toHexByte 的防御性 clamp 无法经 mixHex 触达)。 */
+export function parseHex(hex: string): { r: number; g: number; b: number } | null {
   const m = /^#?([0-9a-fA-F]{6})$/.exec((hex || '').trim())
   if (!m) return null
   const v = m[1]
@@ -11,11 +12,13 @@ function parseHex(hex: string): { r: number; g: number; b: number } | null {
   }
 }
 
-function toHexByte(n: number): string {
+/** 内部工具,导出仅供测试 (clamp 防御代码需直接访问)。 */
+export function toHexByte(n: number): string {
   return Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0')
 }
 
-function toHex({ r, g, b }: { r: number; g: number; b: number }): string {
+/** 内部工具,导出仅供测试。 */
+export function toHex({ r, g, b }: { r: number; g: number; b: number }): string {
   return `#${toHexByte(r)}${toHexByte(g)}${toHexByte(b)}`
 }
 
