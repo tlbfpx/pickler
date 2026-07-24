@@ -18,7 +18,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'text-summary', 'json-summary', 'html'],
-      include: ['src/utils/**', 'src/api/**', 'src/stores/**', 'src/composables/**', 'src/constants/**'],
+      include: ['src/utils/**', 'src/api/**', 'src/stores/**', 'src/composables/**', 'src/constants/**', 'src/router/**'],
       exclude: ['src/main.ts', 'src/router/**', 'src/types/**'],
       thresholds: {
         lines: 100,
