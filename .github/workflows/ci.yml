@@ -134,3 +134,11 @@ jobs:
       - name: Build
         working-directory: hey-pickler-admin
         run: npm run build
+
+      # Loop-v20 — unit tests with coverage gate.
+      # Tests are pure-logic-layer (utils / api / stores / composables / constants / router).
+      # 35 modules / 617 tests / 100% coverage enforced via vitest threshold (perFile 100%).
+      # Initial run took ~25s; well within the 10min frontend timeout.
+      - name: Unit tests + coverage gate
+        working-directory: hey-pickler-admin
+        run: npm test -- --coverage --reporter=dot
