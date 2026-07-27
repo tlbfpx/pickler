@@ -148,6 +148,7 @@
       v-model="pricingOpen"
       :court="pricingCourt"
       :courts="rows"
+      :business-hours="businessHours"
     />
   </div>
 </template>
@@ -160,12 +161,13 @@ import {
   updateCourt,
   deleteCourt
 } from '@/api/venues'
-import type { Court } from '@/types'
+import type { Court, BusinessHour } from '@/types'
 import PricingBandsEditor from './PricingBandsEditor.vue'
 
 const props = defineProps<{
   venueId: number | null
   courts: Court[]
+  businessHours?: BusinessHour[]
 }>()
 
 const emit = defineEmits<{
