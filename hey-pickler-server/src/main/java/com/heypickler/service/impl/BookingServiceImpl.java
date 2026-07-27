@@ -86,6 +86,15 @@ public class BookingServiceImpl implements BookingService {
         Venue venue = venueMapper.selectById(court.getVenueId());
         int leadDays = venue != null && venue.getBookingLeadDays() != null ? venue.getBookingLeadDays() : 14;
 
+        // 序列化同一用户的并发 create:user 行级悲观锁(X lock on PK)让下面的
+        // selectCount + insert 成为原子区,杜绝并发请求双双通过 max-concurrent
+        // 检查后双双 insert 突破上限的 TOCTOU。user 表无 @TableLogic,行存在即加锁;
+        // 锁随本事务 commit/rollback 自动释放。AppAuthFilter 的 user 读是快照读且
+        // 在另一事务,不与该 X 锁冲突。
+        userMapper.selectOne(new LambdaQueryWrapper<User>()
+                .eq(User::getId, userId)
+                .last("FOR UPDATE"));
+
         // user concurrent cap
         long current = bookingMapper.selectCount(new LambdaQueryWrapper<Booking>()
                 .eq(Booking::getUserId, userId)

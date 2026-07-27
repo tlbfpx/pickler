@@ -3,8 +3,11 @@ package com.heypickler.integration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.jdbc.core.JdbcTemplate;
+
+import com.heypickler.config.BookingProperties;
 
 import java.math.BigDecimal;
 import java.sql.Time;
@@ -43,6 +46,9 @@ class VenueBookingIntegrationTest extends IntegrationTestConfig {
     private Long venueId;
     private Long courtId;
     private final List<Long> bookingIdsToCleanup = new ArrayList<>();
+
+    @Autowired
+    private BookingProperties bookingProps;
 
     @AfterEach
     void cleanup() {
@@ -361,5 +367,62 @@ class VenueBookingIntegrationTest extends IntegrationTestConfig {
                 "SELECT booking_id FROM booking_slot WHERE court_id = ? AND slot_start = ?",
                 Long.class, courtId, slotStart);
         assertEquals(retryBookingId, bookingIdForSlot);
+    }
+
+    /**
+     * (e) 用户并发上限 TOCTOU 防护:同一用户并发下 (maxConcurrent + 2) 单(每个落在
+     * 不同 slot,避免 SLOT_ALREADY_TAKEN 干扰),必须恰 maxConcurrent 单成功、
+     * 恰 2 单得 USER_BOOKING_LIMIT_EXCEEDED(1015)。
+     *
+     * <p>无 user 行级 FOR UPDATE 锁时,并发 selectCount 会双双读到 &lt; max 的计数
+     * 并双双 insert,突破上限;加锁后 create() 对同一 user 串行,计数检查原子可信。
+     */
+    @Test
+    @org.junit.jupiter.api.Order(5)
+    void concurrentUserCap_sameUserOverLimit_excessRejected() throws Exception {
+        seedUser(8808L);
+        seedVenueAndCourt();
+
+        int cap = bookingProps.getMaxConcurrent();
+        int total = cap + 2;                                   // 故意超出 2 单
+        assertTrue(total <= 13, "test assumes default band 09-22 fits " + total + " hourly slots");
+
+        LocalDate d = nextWeekdayInsideWindow();
+        List<LocalDateTime> starts = new ArrayList<>();
+        for (int i = 0; i < total; i++) starts.add(LocalDateTime.of(d, LocalTime.of(9 + i, 0)));
+
+        ExecutorService exec = Executors.newFixedThreadPool(total);
+        CountDownLatch ready = new CountDownLatch(1);
+        List<Future<ResponseEntity<Map>>> futures = new ArrayList<>();
+        for (LocalDateTime s : starts) {
+            Map<String, Object> body = createBody(s, 1);       // 每单 1 格,各占不同 slot
+            futures.add(exec.submit(() -> { ready.await(); return postCreate(8808L, body); }));
+        }
+        ready.countDown();
+
+        int ok = 0, limited = 0;
+        for (Future<ResponseEntity<Map>> f : futures) {
+            ResponseEntity<Map> r = f.get(30, TimeUnit.SECONDS);
+            int code = resultCode(r);
+            if (code == 0) {
+                ok++;
+                Map<String, Object> data = (Map<String, Object>) resultData(r);
+                bookingIdsToCleanup.add(((Number) data.get("id")).longValue());
+            } else if (code == 1015) {
+                limited++;
+            }
+            // 其它码(如 1012 同格撞)不应出现:每个 slot 独立,无竞争
+            assertTrue(code == 0 || code == 1015, "unexpected code " + code + " for distinct slots");
+        }
+        exec.shutdown();
+
+        assertEquals(cap, ok, "exactly maxConcurrent(" + cap + ") bookings must succeed");
+        assertEquals(2, limited, "exactly 2 must be rejected with USER_BOOKING_LIMIT_EXCEEDED");
+
+        // DB 不变量:该用户未来 CONFIRMED 预约数恰等于 cap
+        Integer activeCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM booking WHERE user_id = ? AND status = 'CONFIRMED'",
+                Integer.class, 8808L);
+        assertEquals(cap, activeCount.intValue(), "DB must hold exactly maxConcurrent active bookings");
     }
 }
