@@ -57,18 +57,39 @@
         <el-table-column label="金额" width="90">
           <template #default="{ row }">¥{{ Number(row.priceSnapshot).toFixed(2) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column
+          label="操作"
+          width="220"
+          fixed="right"
+        >
           <template #default="{ row }">
-            <el-button type="primary" size="small" @click="openDetail(row)">详情</el-button>
-            <el-button type="success" size="small"
-                       :disabled="row.status !== 'CONFIRMED'"
-                       @click="handleComplete(row)">完成</el-button>
-            <el-button type="warning" size="small"
-                       :disabled="row.status !== 'CONFIRMED'"
-                       @click="handleNoShow(row)">爽约</el-button>
-            <el-button type="danger" size="small"
-                       :disabled="row.status !== 'CONFIRMED'"
-                       @click="handleForceCancel(row)">强制取消</el-button>
+            <el-button
+              type="primary"
+              link
+              size="small"
+              @click="openDetail(row)"
+            >详情</el-button>
+            <template v-if="row.status === 'CONFIRMED'">
+              <el-divider direction="vertical" />
+              <el-button
+                type="success"
+                link
+                size="small"
+                @click="handleComplete(row)"
+              >完成</el-button>
+              <el-button
+                type="warning"
+                link
+                size="small"
+                @click="handleNoShow(row)"
+              >爽约</el-button>
+              <el-button
+                type="danger"
+                link
+                size="small"
+                @click="handleForceCancel(row)"
+              >强制取消</el-button>
+            </template>
           </template>
         </el-table-column>
       </el-table>
@@ -216,6 +237,13 @@ onMounted(() => { fetchBookings() })
 </script>
 
 <style scoped>
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
 .cell-sub {
   font-size: 12px;
   color: #909399;
