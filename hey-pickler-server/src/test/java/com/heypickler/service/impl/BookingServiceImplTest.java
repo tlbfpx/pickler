@@ -124,6 +124,8 @@ class BookingServiceImplTest {
         assertTrue(vo.getBookingNo().startsWith("BK20260722-"));
         verify(bookingMapper).insert(any(Booking.class));
         verify(bookingSlotMapper, times(2)).insert(any(BookingSlot.class));   // 2 格
+        // TOCTOU 防护:create 必须先拿 user 行级 FOR UPDATE 锁再查 count
+        verify(userMapper).selectOne(any(LambdaQueryWrapper.class));
     }
 
     /* ---------- create multi-slot band ---------------- */

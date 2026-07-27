@@ -83,17 +83,34 @@ module.exports = { weekday: weekday, hm: hm }
 
     <view wx:else class="slot-grid">
       <view
-        class="slot-cell {{item.available ? '' : 'unavailable'}}"
+        class="slot-cell {{item.available ? (item._selected ? 'selected' : '') : 'unavailable'}}"
         wx:for="{{slots}}"
         wx:key="start"
         data-slot="{{item}}"
         bindtap="onSlotTap">
         <text class="slot-time">{{util.formatSlotTime(item.start)}}-{{util.formatSlotTime(item.end)}}</text>
-        <text wx:if="{{item.available}}" class="slot-price">{{util.formatPrice(item.price)}}</text>
-        <text wx:else class="slot-off">不可订</text>
+        <text wx:if="{{!item.available}}" class="slot-off">不可订</text>
+        <text wx:elif="{{item._selected}}" class="slot-selected-mark">✓ 已选</text>
+        <text wx:else class="slot-price">{{util.formatPrice(item.price)}}</text>
+      </view>
+      <view class="slot-tip">点格选时段,相邻格可连订(单次最多 8 格)</view>
+    </view>
+  </view>
+
+  <!-- 多格选择条(已选 ≥1 格时浮现) -->
+  <view class="select-bar" wx:if="{{selectedCount > 0}}">
+    <view class="select-bar-info">
+      <view class="select-bar-count">已选 {{selectedCount}} 格</view>
+      <view class="select-bar-range">{{selectedRangeText}}</view>
+    </view>
+    <view class="select-bar-right">
+      <view class="select-bar-price">{{selectedPriceText}}</view>
+      <view class="select-bar-btn {{submitting ? 'loading' : ''}}" bindtap="onConfirmBook">
+        {{submitting ? '提交中' : '确认预约'}}
       </view>
     </view>
   </view>
+  <view class="bottom-spacer" wx:if="{{selectedCount > 0}}"></view>
 
   <!-- P2 一键确认弹窗 -->
   <view class="confirm-mask" wx:if="{{confirmVisible}}" bindtap="onConfirmCancel">
@@ -114,6 +131,10 @@ module.exports = { weekday: weekday, hm: hm }
       <view class="confirm-row" wx:if="{{pendingSlot}}">
         <text class="confirm-label">时段</text>
         <text class="confirm-value">{{pendingSlot.start}} - {{pendingSlot.end}}</text>
+      </view>
+      <view class="confirm-row" wx:if="{{pendingSlot}}">
+        <text class="confirm-label">时长</text>
+        <text class="confirm-value">{{pendingSlot.slotsCount}} 格</text>
       </view>
       <view class="confirm-row" wx:if="{{pendingSlot}}">
         <text class="confirm-label">金额</text>

@@ -79,6 +79,19 @@ public class BookingServiceImpl implements BookingService {
     @Transactional(rollbackFor = Exception.class)
     public BookingCreateResultVO create(HttpServletRequest httpReq, BookingCreateRequest body) {
         Long userId = ((Number) httpReq.getAttribute("userId")).longValue();
+
+        // ⚠️ 必须是事务内第一个 DB 读操作。user 行级 FOR UPDATE(X lock on PK)做两件事:
+        //  (1) 序列化同一用户的并发 create(X 锁互斥,第二者阻塞至前序 tx 提交);
+        //  (2) 让后续非锁定读(courtMapper.selectById 起)的 REPEATABLE-READ 一致性快照
+        //      在锁释放——即前序并发 tx 提交——之后才建立。
+        // 若放在 selectById 之后,快照会在加锁前由 selectById 建立,selectCount 就看不到
+        // 并发已提交的 insert,TOCTOU 防护失效(实测 7 并发全读到 count=0 突破上限)。
+        // user 表无 @TableLogic,行存在即加锁;锁随本事务 commit/rollback 自动释放,
+        // 不与 AppAuthFilter 的快照读(另一事务)冲突。
+        userMapper.selectOne(new LambdaQueryWrapper<User>()
+                .eq(User::getId, userId)
+                .last("FOR UPDATE"));
+
         Court court = courtMapper.selectById(body.getCourtId());
         if (court == null) throw new BizException(ErrorCode.COURT_NOT_FOUND);
         if (!"OPEN".equals(court.getStatus())) throw new BizException(ErrorCode.COURT_NOT_AVAILABLE);

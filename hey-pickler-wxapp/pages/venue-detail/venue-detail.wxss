@@ -270,3 +270,78 @@
   background-color: #4CAF50;
   color: #fff;
 }
+
+/* 多格连订:已选格态 */
+.slot-cell.selected {
+  background-color: #4CAF50;
+  border-color: #4CAF50;
+}
+.slot-cell.selected .slot-time {
+  color: #fff;
+}
+.slot-selected-mark {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #fff;
+}
+.slot-tip {
+  width: 100%;
+  text-align: center;
+  font-size: 24rpx;
+  color: #999;
+  padding: 12rpx 0 4rpx;
+}
+
+/* 多格连订:底部选择条 */
+.select-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #fff;
+  border-top: 1rpx solid #eee;
+  box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 32rpx;
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+  z-index: 50;
+}
+.select-bar-info {
+  display: flex;
+  flex-direction: column;
+}
+.select-bar-count {
+  font-size: 26rpx;
+  color: #333;
+}
+.select-bar-range {
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 4rpx;
+}
+.select-bar-right {
+  display: flex;
+  align-items: center;
+}
+.select-bar-price {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #4CAF50;
+  margin-right: 24rpx;
+}
+.select-bar-btn {
+  background-color: #4CAF50;
+  color: #fff;
+  font-size: 28rpx;
+  padding: 16rpx 40rpx;
+  border-radius: 40rpx;
+}
+.select-bar-btn.loading {
+  background-color: #a5d6a7;
+}
+.bottom-spacer {
+  height: 140rpx;
+}
+
