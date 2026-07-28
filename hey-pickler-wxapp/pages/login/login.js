@@ -44,6 +44,15 @@ Page({
       wx.switchTab({
         url: '/pages/index/index'
       })
+      return
+    }
+
+    // Dev 模式(开发者工具)自动登录:后端 WX_DEV_MODE=true 会让 wx.login 的 code
+    // 直接换到 token,本机联调无需手动点按钮。正式/体验版仍走手动微信授权。
+    let env = 'release'
+    try { env = wx.getAccountInfoSync().miniProgram.envVersion } catch (e) {}
+    if (env === 'develop') {
+      this.handleLogin()
     }
   },
 
