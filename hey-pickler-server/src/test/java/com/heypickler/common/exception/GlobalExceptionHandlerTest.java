@@ -10,6 +10,8 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -116,5 +118,21 @@ class GlobalExceptionHandlerTest {
         handler.handleBizException(new BizException(ErrorCode.NOT_FOUND, "n"));
         handler.handleBizException(new BizException(ErrorCode.RATE_LIMITED, "r"));
         handler.handleBizException(new BizException(ErrorCode.PARAM_ERROR, "p"));
+    }
+
+    @Test
+    void handleMissingParam_returnsParamErrorWithParamName() {
+        var e = new MissingServletRequestParameterException("venueId", "Long");
+        var result = handler.handleMissingParam(e);
+        assertEquals(ErrorCode.PARAM_ERROR.getCode(), result.getCode());
+        assertEquals(true, result.getMessage().contains("venueId"));
+    }
+
+    @Test
+    void handleTypeMismatch_returnsParamError() {
+        var e = new MethodArgumentTypeMismatchException("abc", Long.class, "venueId", null, null);
+        var result = handler.handleTypeMismatch(e);
+        assertEquals(ErrorCode.PARAM_ERROR.getCode(), result.getCode());
+        assertEquals(true, result.getMessage().contains("venueId"));
     }
 }
