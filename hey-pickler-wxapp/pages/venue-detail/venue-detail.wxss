@@ -144,13 +144,15 @@
 }
 
 .slot-cell {
-  width: 31%;
-  margin-right: 3.5%;
+  /* 3 列均分撑满 section 宽:2 个 16rpx 间隙,(100% - 32rpx)/3 每格 */
+  width: calc((100% - 32rpx) / 3);
+  margin-right: 16rpx;
   margin-bottom: 16rpx;
   padding: 18rpx 0;
   border-radius: 10rpx;
   background-color: #fff;
   border: 2rpx solid #e5e7eb;
+  box-sizing: border-box; /* 边框算入宽度,防 3 格溢出折成 2 格留白 */
   display: flex;
   flex-direction: column;
   align-items: center;
