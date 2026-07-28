@@ -15,29 +15,30 @@
     <view class="search-btn" bindtap="onSearch">搜索</view>
   </view>
 
-  <!-- Venue list -->
+  <!-- Venue list (表格行式) -->
   <view class="venue-list">
     <view
-      class="venue-card"
+      class="venue-row"
       wx:for="{{venues}}"
       wx:key="id"
       data-id="{{item.id}}"
       bindtap="goDetail">
-      <image
-        class="venue-cover"
-        src="{{item.coverUrl || '/images/default-event.png'}}"
-        mode="aspectFill"></image>
-      <view class="venue-info">
-        <view class="venue-name">{{item.name}}</view>
-        <view class="venue-meta" wx:if="{{item.address}}">
-          <text class="meta-icon">📍</text>
-          <text class="meta-text">{{item.address}}</text>
+      <view class="row-main">
+        <view class="row-name">{{item.name}}</view>
+        <view
+          class="row-line"
+          wx:if="{{item.address}}">
+          <text class="line-icon">📍</text>
+          <text class="line-text">{{item.address}}</text>
         </view>
-        <view class="venue-contacts" wx:if="{{item.contacts.length > 0}}">
-          <text class="meta-icon">📞</text>
-          <text class="meta-text">{{item.contacts[0].value}}</text>
+        <view
+          class="row-line"
+          wx:if="{{item.contacts && item.contacts.length > 0}}">
+          <text class="line-icon">📞</text>
+          <text class="line-text">{{item.contacts[0].value}}</text>
         </view>
       </view>
+      <text class="row-arrow">›</text>
     </view>
 
     <!-- Loading -->

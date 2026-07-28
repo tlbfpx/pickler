@@ -49,60 +49,64 @@
   padding: 20rpx 24rpx;
 }
 
-.venue-card {
+/* 表格行式场馆列表:无封面图,名称+地址+联系方式 左对齐成列,右侧箭头 */
+.venue-row {
   display: flex;
+  align-items: center;
   background-color: #fff;
-  border-radius: 16rpx;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  box-shadow: 0 1rpx 6rpx rgba(0, 0, 0, 0.05);
+}
+
+.venue-row:active {
+  background-color: #f9fafb;
+}
+
+.row-main {
+  flex: 1;
   overflow: hidden;
-  margin-bottom: 20rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
+  min-width: 0;
 }
 
-.venue-card:active {
-  transform: translateY(2rpx);
+.row-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 12rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.venue-cover {
-  width: 200rpx;
-  height: 160rpx;
-  background-color: #f5f5f5;
+.row-line {
+  display: flex;
+  align-items: center;
+  margin-top: 6rpx;
+}
+
+.line-icon {
+  font-size: 24rpx;
+  margin-right: 8rpx;
   flex-shrink: 0;
 }
 
-.venue-info {
+.line-text {
+  font-size: 24rpx;
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   flex: 1;
-  padding: 20rpx;
-  overflow: hidden;
+  min-width: 0;
 }
 
-.venue-name {
-  font-size: 32rpx;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 16rpx;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.venue-meta,
-.venue-contacts {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10rpx;
-}
-
-.meta-icon {
-  font-size: 26rpx;
-  margin-right: 8rpx;
-}
-
-.meta-text {
-  font-size: 26rpx;
-  color: #666;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.row-arrow {
+  color: #c0c4cc;
+  font-size: 36rpx;
+  margin-left: 16rpx;
+  flex-shrink: 0;
 }
 
 .loading,
