@@ -33,4 +33,11 @@ class AppAuthFilterBypassTest {
         MockHttpServletRequest req = new MockHttpServletRequest("GET", "/api/admin/dict");
         assertTrue(filter.shouldNotFilter(req));
     }
+
+    @Test
+    void trackEventPostIsBypassed() {
+        // 埋点上报匿名 + best-effort,tracker.js 不带 token;POST /track/event 必须放行避免 401 噪声
+        MockHttpServletRequest req = new MockHttpServletRequest("POST", "/api/app/track/event");
+        assertTrue(filter.shouldNotFilter(req), "POST /api/app/track/event 应匿名放行");
+    }
 }
