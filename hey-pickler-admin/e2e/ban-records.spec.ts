@@ -1,9 +1,9 @@
 import { test, expect } from './fixtures/admin.fixture'
 import type { Page } from '@playwright/test'
 
-// 适配 PR #20：封禁记录在折叠的「系统」子菜单下；h1 仍是「用户日志」（视图未迁）
+// 适配 PR #20：封禁记录在折叠的「系统管理」子菜单下；h1 仍是「用户日志」（视图未迁）
 async function gotoBanRecords(adminPage: Page) {
-  const group = adminPage.locator('.el-sub-menu__title').filter({ hasText: '系统' }).first()
+  const group = adminPage.locator('.el-sub-menu__title').filter({ hasText: '系统管理' }).first()
   if (await group.isVisible()) {
     await group.click()
   }

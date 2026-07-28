@@ -7,12 +7,12 @@ async function gotoBanners(adminPage: Page) {
   if (await group.isVisible()) {
     await group.click()
   }
-  await adminPage.locator('.el-menu-item').filter({ hasText: 'Banner 管理' }).click()
+  await adminPage.locator('.el-menu-item').filter({ hasText: '横幅管理' }).click()
   await adminPage.waitForURL(/\/banners$/)
-  await expect(adminPage.locator('h1')).toContainText('Banner管理')
+  await expect(adminPage.locator('h1')).toContainText('横幅管理')
 }
 
-test.describe('Banner 管理', () => {
+test.describe('横幅管理', () => {
   test('Banner 列表展示', async ({ adminPage }) => {
     await gotoBanners(adminPage)
     await expect(adminPage.locator('.el-table')).toBeVisible()

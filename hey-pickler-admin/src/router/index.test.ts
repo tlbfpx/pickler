@@ -103,7 +103,7 @@ describe('router — routes registration', () => {
     }
   })
 
-  it('groups used: 运营管理 / 场馆管理 / 积分与排名 / 内容运营 / 系统 / 数据', () => {
+  it('groups used: 运营管理 / 场馆预约 / 积分排名 / 内容运营 / 数据中心 / 系统管理', () => {
     const layout: any = router.options.routes[1]
     const groups = new Set<string>()
     for (const c of layout.children) {
@@ -111,11 +111,11 @@ describe('router — routes registration', () => {
       if (c.meta?.group) groups.add(c.meta.group)
     }
     expect(groups).toContain('运营管理')
-    expect(groups).toContain('场馆管理')
-    expect(groups).toContain('积分与排名')
+    expect(groups).toContain('场馆预约')
+    expect(groups).toContain('积分排名')
     expect(groups).toContain('内容运营')
-    expect(groups).toContain('系统')
-    expect(groups).toContain('数据')
+    expect(groups).toContain('数据中心')
+    expect(groups).toContain('系统管理')
   })
 
   it('redirect /seasons has no meta (excluded from menu)', () => {

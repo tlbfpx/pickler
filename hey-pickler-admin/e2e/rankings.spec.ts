@@ -8,13 +8,13 @@ import type { Page } from '@playwright/test'
 //   - 刷新按钮：刷新战力排名 / 刷新活力排名
 async function gotoRankings(adminPage: Page) {
   // PR#53 排名工作台重设计：菜单组「积分与赛季」→「积分与排名」，菜单项「排名管理」→「积分与排名」（赛季合并）
-  const group = adminPage.locator('.el-sub-menu__title').filter({ hasText: '积分与排名' }).first()
+  const group = adminPage.locator('.el-sub-menu__title').filter({ hasText: '积分排名' }).first()
   if (await group.isVisible()) {
     await group.click()
   }
-  await adminPage.locator('.el-menu-item').filter({ hasText: '积分与排名' }).click()
+  await adminPage.locator('.el-menu-item').filter({ hasText: '积分排名' }).click()
   await adminPage.waitForURL(/\/rankings$/)
-  await expect(adminPage.locator('h1')).toContainText('积分与排名')
+  await expect(adminPage.locator('h1')).toContainText('积分排名')
 }
 
 test.describe('排名管理', () => {
