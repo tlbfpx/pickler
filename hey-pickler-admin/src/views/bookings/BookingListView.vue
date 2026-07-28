@@ -42,7 +42,12 @@
             <div class="cell-sub">{{ row.courtName }}（{{ row.courtType === 'INDOOR' ? '室内' : '室外' }}）</div>
           </template>
         </el-table-column>
-        <el-table-column prop="slotDate" label="日期" width="110" />
+        <el-table-column label="日期" width="165">
+          <template #default="{ row }">
+            <div>预约 <span class="date-main">{{ row.slotDate }}</span></div>
+            <div class="cell-sub">下单 {{ formatCreated(row.createdAt) }}</div>
+          </template>
+        </el-table-column>
         <el-table-column label="起止" width="170">
           <template #default="{ row }">
             <div>{{ (row.slotStart || '').slice(11, 16) }}</div>
@@ -159,6 +164,13 @@ const statusLabel = (s: BookingStatus) =>
 const statusColor = (s: BookingStatus) =>
   ({ CONFIRMED: 'primary', CANCELLED: 'danger', COMPLETED: 'success', NO_SHOW: 'warning' } as const)[s]
 
+/** 下单时间(createdAt)格式化成 'MM-DD HH:mm'(后端 LocalDateTime: 'yyyy-MM-ddTHH:mm:ss' 或带空格)*/
+const formatCreated = (dt?: string) => {
+  if (!dt) return '-'
+  const d = dt.replace('T', ' ')
+  return `${d.slice(5, 10)} ${d.slice(11, 16)}`
+}
+
 const buildQuery = () => ({
   venueId: filterVenueId.value,
   courtId: filterCourtId.value,
@@ -247,5 +259,10 @@ onMounted(() => { fetchBookings() })
 .cell-sub {
   font-size: 12px;
   color: #909399;
+}
+
+.date-main {
+  font-weight: 500;
+  color: #1f2937;
 }
 </style>
