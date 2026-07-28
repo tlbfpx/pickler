@@ -426,6 +426,16 @@ export interface CourtPricingBand {
   price: number
 }
 
+/** GET /api/app/courts/{id}/slots 返回的单格时段(匿名接口,admin 定价预览复用) */
+export interface Slot {
+  /** 后端 LocalDateTime → ISO 'yyyy-MM-ddTHH:mm:ss' */
+  start: string
+  /** 后端 LocalDateTime → ISO 'yyyy-MM-ddTHH:mm:ss' */
+  end: string
+  available: boolean
+  price: number
+}
+
 // ==================== Venue Booking Types (P2) ====================
 
 export type BookingStatus = 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW'

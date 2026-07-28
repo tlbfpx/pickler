@@ -37,7 +37,8 @@ import {
   deleteCourt,
   replacePricingBands,
   getPricingBands,
-  copyPricingBands
+  copyPricingBands,
+  getCourtSlots
 } from './venues'
 
 const ok = { code: 0, data: null }
@@ -261,5 +262,26 @@ describe('copyPricingBands', () => {
   it('forwards response', async () => {
     requestPost.mockReturnValue(Promise.resolve(ok))
     expect(await copyPricingBands(1, 2)).toBe(ok)
+  })
+})
+
+// ============ Court Slots (anon /api/app) ============
+describe('getCourtSlots', () => {
+  it('calls request.get with /api/app/courts/{id}/slots + baseURL override + { date }', () => {
+    requestGet.mockReturnValue(Promise.resolve(ok))
+    getCourtSlots(11, '2026-07-27')
+    // baseURL:'' 覆盖是关键——否则会被拼到 /api/admin/... 打错地址
+    expect(requestGet).toHaveBeenCalledWith('/api/app/courts/11/slots', {
+      baseURL: '',
+      params: { date: '2026-07-27' }
+    })
+  })
+  it('forwards response', async () => {
+    const fake = {
+      code: 0,
+      data: [{ start: '2026-07-27T09:00:00', end: '2026-07-27T10:00:00', available: true, price: 80 }]
+    }
+    requestGet.mockReturnValue(Promise.resolve(fake))
+    expect(await getCourtSlots(1, '2026-07-27')).toBe(fake)
   })
 })

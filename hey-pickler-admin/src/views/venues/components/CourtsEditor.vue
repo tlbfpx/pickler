@@ -55,7 +55,7 @@
       </el-table-column>
       <el-table-column
         label="单场时长(分钟)"
-        width="160"
+        width="150"
       >
         <template #default="{ row }">
           <el-input-number
@@ -63,6 +63,7 @@
             :min="15"
             :max="240"
             :step="15"
+            controls-position="right"
             style="width: 100%"
           />
         </template>
@@ -93,12 +94,13 @@
       </el-table-column>
       <el-table-column
         label="排序"
-        width="110"
+        width="90"
       >
         <template #default="{ row }">
           <el-input-number
             v-model="row.sortOrder"
             :min="0"
+            :controls="false"
             style="width: 100%"
           />
         </template>
@@ -148,6 +150,7 @@
       v-model="pricingOpen"
       :court="pricingCourt"
       :courts="rows"
+      :business-hours="businessHours"
     />
   </div>
 </template>
@@ -160,12 +163,13 @@ import {
   updateCourt,
   deleteCourt
 } from '@/api/venues'
-import type { Court } from '@/types'
+import type { Court, BusinessHour } from '@/types'
 import PricingBandsEditor from './PricingBandsEditor.vue'
 
 const props = defineProps<{
   venueId: number | null
   courts: Court[]
+  businessHours?: BusinessHour[]
 }>()
 
 const emit = defineEmits<{

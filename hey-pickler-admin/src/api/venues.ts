@@ -5,6 +5,7 @@ import type {
   CreateVenueRequest,
   Court,
   CourtPricingBand,
+  Slot,
   ApiResponse,
   PageResult
 } from '@/types'
@@ -71,4 +72,14 @@ export const getPricingBands = (courtId: number) =>
 export const copyPricingBands = (courtId: number, from: number) =>
   request.post<unknown, ApiResponse<void>>(`/courts/${courtId}/pricing-bands/copy`, undefined, {
     params: { from }
+  })
+
+/**
+ * 某场地某日的可订时段网格(匿名 app 接口,admin 定价预览复用)。
+ * 注意:axios 实例 baseURL='/api/admin',此处需 { baseURL: '' } 覆盖以打到 /api/app/*。
+ */
+export const getCourtSlots = (courtId: number, date: string) =>
+  request.get<unknown, ApiResponse<Slot[]>>(`/api/app/courts/${courtId}/slots`, {
+    baseURL: '',
+    params: { date }
   })

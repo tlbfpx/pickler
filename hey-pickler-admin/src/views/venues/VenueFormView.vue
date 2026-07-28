@@ -150,6 +150,7 @@
           <CourtsEditor
             :venue-id="venueId"
             :courts="detail?.courts || []"
+            :business-hours="detail?.businessHours || []"
             @changed="reloadDetail"
           />
         </el-tab-pane>
