@@ -31,7 +31,7 @@ const router = createRouter({
           path: '',
           name: 'Dashboard',
           component: () => import('@/views/dashboard/DashboardView.vue'),
-          meta: { title: '工作台', icon: 'DataBoard', group: '运营管理' }
+          meta: { title: '运营首页', icon: 'DataBoard', group: '运营管理' }
         },
         {
           path: 'events',
@@ -49,7 +49,7 @@ const router = createRouter({
           path: 'venues',
           name: 'Venues',
           component: () => import('@/views/venues/VenueListView.vue'),
-          meta: { title: '场馆', icon: 'Location', group: '场馆管理' }
+          meta: { title: '场馆列表', icon: 'Location', group: '场馆预约' }
         },
         {
           path: 'venues/:id',
@@ -61,7 +61,7 @@ const router = createRouter({
           path: 'bookings',
           name: 'Bookings',
           component: () => import('@/views/bookings/BookingListView.vue'),
-          meta: { title: '预约管理', icon: 'Calendar', group: '场馆管理' }
+          meta: { title: '预约管理', icon: 'Calendar', group: '场馆预约' }
         },
         {
           path: 'activities',
@@ -79,7 +79,7 @@ const router = createRouter({
           path: 'rankings',
           name: 'Rankings',
           component: () => import('@/views/rankings/RankingView.vue'),
-          meta: { title: '积分与排名', icon: 'Trophy', group: '积分与排名' }
+          meta: { title: '积分排名', icon: 'Trophy', group: '积分排名' }
         },
         {
           path: 'seasons',
@@ -89,55 +89,55 @@ const router = createRouter({
           path: 'banners',
           name: 'Banners',
           component: () => import('@/views/banners/BannerListView.vue'),
-          meta: { title: 'Banner 管理', icon: 'Picture', group: '内容运营' }
+          meta: { title: '横幅管理', icon: 'Picture', group: '内容运营' }
         },
         {
           path: 'admins',
           name: 'Admins',
           component: () => import('@/views/admins/AdminListView.vue'),
-          meta: { title: '管理员管理', icon: 'UserFilled', group: '系统' }
+          meta: { title: '账号管理', icon: 'UserFilled', group: '系统管理' }
         },
         {
           path: 'ban-records',
           name: 'BanRecords',
           component: () => import('@/views/ban-records/BanRecordListView.vue'),
-          meta: { title: '封禁记录', icon: 'Document', group: '系统' }
+          meta: { title: '封禁记录', icon: 'Document', group: '系统管理' }
         },
         {
           path: 'admin-logs',
           name: 'AdminLogs',
           component: () => import('@/views/admin-logs/AdminLogListView.vue'),
-          meta: { title: '操作日志', icon: 'List', group: '系统' }
+          meta: { title: '操作日志', icon: 'List', group: '系统管理' }
         },
         {
           path: 'dict',
           name: 'Dict',
           component: () => import('@/views/dict/DictListView.vue'),
-          meta: { title: '字典管理', icon: 'Collection', group: '系统' }
+          meta: { title: '字典管理', icon: 'Collection', group: '系统管理' }
         },
         {
           path: 'tier',
           name: 'Tier',
           component: () => import('@/views/tier/TierListView.vue'),
-          meta: { title: '段位管理', icon: 'Medal', group: '系统' }
+          meta: { title: '段位管理', icon: 'Medal', group: '积分排名' }
         },
         {
           path: 'brand',
           name: 'Brand',
           component: () => import('@/views/brand/BrandView.vue'),
-          meta: { title: '品牌管理', icon: 'Brush', group: '系统' }
+          meta: { title: '品牌管理', icon: 'Brush', group: '内容运营' }
         },
         {
           path: 'notifications',
           name: 'Notifications',
           component: () => import('@/views/notifications/NotificationsView.vue'),
-          meta: { title: '通知中心', icon: 'Bell', group: '系统' }
+          meta: { title: '通知中心', icon: 'Bell', group: '内容运营' }
         },
         {
           path: 'analytics',
           name: 'Analytics',
           component: () => import('@/views/admin/AdminAnalyticsView.vue'),
-          meta: { title: '数据分析', icon: 'DataAnalysis', group: '数据' }
+          meta: { title: '数据分析', icon: 'DataAnalysis', group: '数据中心' }
         }
       ]
     }

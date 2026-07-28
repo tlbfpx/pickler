@@ -4,21 +4,21 @@ import type { Page } from '@playwright/test'
 // 适配 PR #20：管理员管理在折叠的「系统」子菜单下，需先点开
 async function gotoAdmins(adminPage: Page) {
   // 系统组默认折叠，先展开（检查 is-opened 避免 toggle 把已展开的折叠）
-  const group = adminPage.locator('.el-sub-menu__title').filter({ hasText: '系统' }).first()
+  const group = adminPage.locator('.el-sub-menu__title').filter({ hasText: '系统管理' }).first()
   if (await group.isVisible()) {
     const isOpen = await group.locator('xpath=..').evaluate((el: Element) => el.classList.contains('is-opened'))
     if (!isOpen) {
       await group.click()
     }
   }
-  await adminPage.locator('.el-menu-item').filter({ hasText: '管理员管理' }).click()
+  await adminPage.locator('.el-menu-item').filter({ hasText: '账号管理' }).click()
   await adminPage.waitForURL(/\/admins$/)
-  await expect(adminPage.locator('h1')).toContainText('管理员管理')
+  await expect(adminPage.locator('h1')).toContainText('账号管理')
   // 等表格行渲染（adminList 加载，避免后续 count=0 误判）
   await expect(adminPage.locator('.el-table__body-wrapper .el-table__row').first()).toBeVisible({ timeout: 10000 })
 }
 
-test.describe('管理员管理', () => {
+test.describe('账号管理', () => {
   test('管理员列表展示', async ({ adminPage }) => {
     await gotoAdmins(adminPage)
 

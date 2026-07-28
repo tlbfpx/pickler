@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="page-header">
-      <h1>积分与排名</h1>
+      <h1>积分排名</h1>
       <div class="header-actions">
         <el-button @click="seasonDialogVisible = true">
           赛季管理

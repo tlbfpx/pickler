@@ -22,7 +22,7 @@ test.describe('安全与权限', () => {
     // contains the active route (here 工作台 → 运营管理), so expand every
     // other group ("积分与排名", "内容运营", "系统") before asserting.
     // PR#53 排名工作台重设计：排名+赛季合并为「积分与排名」单菜单
-    const groupTitles = ['运营管理', '积分与排名', '内容运营', '系统']
+    const groupTitles = ['运营管理', '积分排名', '内容运营', '系统管理']
     for (const group of groupTitles) {
       const title = adminPage
         .locator('.el-sub-menu__title')
@@ -37,13 +37,13 @@ test.describe('安全与权限', () => {
     }
 
     const menuItems = [
-      '工作台',
+      '运营首页',
       '用户管理',
       '竞技赛事',
       '社交活动',
-      '积分与排名',
-      'Banner 管理',
-      '管理员管理',
+      '积分排名',
+      '横幅管理',
+      '账号管理',
       '封禁记录',
       '操作日志',
     ]

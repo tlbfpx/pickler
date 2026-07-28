@@ -2,7 +2,7 @@ import { test, expect } from './fixtures/admin.fixture'
 
 // Dashboard 之前没有 e2e 覆盖，导致 echarts 图表回归（不渲染）没被发现。
 // 这个测试锁定：KPI 卡片 + echarts canvas 渲染。
-test.describe('工作台 Dashboard', () => {
+test.describe('运营首页 Dashboard', () => {
   test('KPI 卡片与所有 echarts 图表渲染', async ({ adminPage }) => {
     await adminPage.goto('/')
     // KPI 卡片可见

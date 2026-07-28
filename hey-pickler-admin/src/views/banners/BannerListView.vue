@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="page-header">
-      <h1>Banner管理</h1>
+      <h1>横幅管理</h1>
       <el-button
         type="primary"
         @click="handleCreate"
