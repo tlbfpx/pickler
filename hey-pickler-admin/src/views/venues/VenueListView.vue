@@ -91,10 +91,20 @@
         </el-table-column>
         <el-table-column
           label="联系方式"
-          width="100"
+          width="140"
         >
           <template #default="{ row }">
-            {{ (row.contacts || []).length }}
+            <span v-if="(row.contacts || []).length">
+              {{ row.contacts[0].value }}
+              <span
+                v-if="row.contacts.length > 1"
+                class="cell-sub"
+              >+{{ row.contacts.length - 1 }}</span>
+            </span>
+            <span
+              v-else
+              class="cell-sub"
+            >—</span>
           </template>
         </el-table-column>
         <el-table-column
