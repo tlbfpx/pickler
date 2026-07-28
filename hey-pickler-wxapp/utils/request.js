@@ -119,18 +119,27 @@ function refreshToken() {
   })
 }
 
+// 单例锁:并发 401 只触发一次重定向,避免多次 wx.reLaunch 撞栈
+let isRedirectingToLogin = false
+
 // Redirect to login page
 function redirectToLogin() {
+  if (isRedirectingToLogin) return
+  isRedirectingToLogin = true
   const app = getAppInstance()
   // Clear token
   wx.removeStorageSync('token')
   app.globalData.token = null
   app.globalData.userInfo = null
 
-  // Redirect to login page
-  wx.reLaunch({
-    url: '/pages/login/login'
-  })
+  // 延迟到下一个 macro task:避开 onLaunch / 首屏 onLoad 期间调 wx.reLaunch
+  // 触发的 "appLaunch with non-empty page stack" 系统错误
+  setTimeout(() => {
+    wx.reLaunch({
+      url: '/pages/login/login',
+      complete: () => { isRedirectingToLogin = false }
+    })
+  }, 0)
 }
 
 // Export convenience methods

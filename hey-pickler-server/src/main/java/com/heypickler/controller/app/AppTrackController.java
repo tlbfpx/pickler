@@ -1,5 +1,6 @@
 package com.heypickler.controller.app;
 
+import com.heypickler.common.annotation.PublicAnonymousAccess;
 import com.heypickler.common.dto.TrackEventRequest;
 import com.heypickler.common.result.Result;
 import com.heypickler.entity.AccessLog;
@@ -38,6 +39,7 @@ public class AppTrackController {
     private final AccessLogService accessLogService;
 
     @PostMapping("/event")
+    @PublicAnonymousAccess
     public Result<Void> track(@Valid @RequestBody TrackEventRequest req,
                               HttpServletRequest httpRequest) {
         // props 体积校验：序列化后超 2 KB 直接 400

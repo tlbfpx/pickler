@@ -49,6 +49,10 @@ public class AppAuthFilter extends OncePerRequestFilter {
 
         if (PUBLIC_PATHS.contains(path)) return true;
 
+        // /track/event 是 best-effort 埋点上报(tracker.js 显式不带 Authorization,匿名;
+        // 控制器读 userId 属性做可选归因)。放行避免未登录时 401 噪声 + 启动期 401 级联。
+        if (path.startsWith("/api/app/track/")) return true;
+
         if ("GET".equals(request.getMethod()) && PUBLIC_GET_PREFIXES.stream().anyMatch(path::startsWith)) {
             // my-team is user-scoped: it must run through the auth filter to bind the
             // caller's userId, even though it lives under the public /api/app/events prefix
