@@ -90,7 +90,10 @@ function isRegistrationOpen(event) {
 
 function formatPrice(n) {
   if (n === null || n === undefined) return ''
-  return '¥' + n.toFixed(2)
+  var x = Number(n)
+  if (isNaN(x)) return ''
+  // 整数去掉 .00(¥80 而非 ¥80.00),非整数保留两位(¥80.50)
+  return '¥' + (x % 1 === 0 ? x.toString() : x.toFixed(2))
 }
 
 function formatSlotTime(dt) {
